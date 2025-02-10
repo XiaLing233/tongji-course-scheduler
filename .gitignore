@@ -1,0 +1,5 @@
+.venv
+config.ini
+cookies.json
+__pycache__/
+node_modules/
