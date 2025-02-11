@@ -60,24 +60,24 @@ def fetchCourseList(session):
 
 if __name__ == "__main__":
     # Login
-    # session = loginout.login()
+    session = loginout.login()
 
-    # if (session == None):
-        # exit(-1)
+    if (session == None):
+        exit(-1)
 
-    import json
+    # import json
     # 测试环境，记录 cookies
     # with open("cookies.json", "w") as f:
         # json.dump(session.cookies.get_dict(), f)
 
     # read cookies
-    with open("cookies.json", "r") as f:
-        cookies = json.load(f)
+    # with open("cookies.json", "r") as f:
+        # cookies = json.load(f)
 
-    import requests
+    # import requests
 
-    session = requests.Session()
-    session.cookies.update(cookies)
+    # session = requests.Session()
+    # session.cookies.update(cookies)
 
     # Fetch course list
     fetchCourseList(session)

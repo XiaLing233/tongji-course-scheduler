@@ -1,6 +1,6 @@
 import mysql.connector
 import configparser
-from .tjSqlTableStruct import *
+from ...shared_lib.tjSqlTableStruct import *
 
 # 读取配置文件
 CONFIG = configparser.ConfigParser()
