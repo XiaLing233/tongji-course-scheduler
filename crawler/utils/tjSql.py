@@ -1,6 +1,5 @@
 import mysql.connector
 import configparser
-from ...shared_lib.tjSqlTableStruct import *
 
 # 读取配置文件
 CONFIG = configparser.ConfigParser()
@@ -44,7 +43,7 @@ class tjSql:
         Insert calendar into database
         '''
         # if exists, return
-        sql = f"SELECT * FROM {CALENDAR_TABLE['table_name']} WHERE {CALENDAR_TABLE['fields']['id']} = %s"
+        sql = f"SELECT * FROM calendar WHERE calendarId = %s"
 
         val = (course['calendarId'], )
 
@@ -54,7 +53,7 @@ class tjSql:
             return
         
         # Insert
-        sql = f"INSERT INTO {CALENDAR_TABLE['table_name']} ({CALENDAR_TABLE['fields']['id']}, {CALENDAR_TABLE['fields']['name']}) VALUES (%s, %s)"
+        sql = f"INSERT INTO calendar (calendarId, calendarIdI18n) VALUES (%s, %s)"
 
         val = (course['calendarId'], course['calendarIdI18n'])
 
@@ -67,7 +66,7 @@ class tjSql:
         Insert courseLabel into database
         '''
         # if exists, return
-        sql = f"SELECT * FROM {COURSENATURE_TABLE['table_name']} WHERE {COURSENATURE_TABLE['fields']['id']} = %s"
+        sql = f"SELECT * FROM coursenature WHERE courseLabelId = %s"
 
         val = (course['courseLabelId'], )
 
@@ -77,7 +76,7 @@ class tjSql:
             return
         
         # Insert
-        sql = f"INSERT INTO {COURSENATURE_TABLE['table_name']} ({COURSENATURE_TABLE['fields']['id']}, {COURSENATURE_TABLE['fields']['name']}) VALUES (%s, %s)"
+        sql = f"INSERT INTO coursenature (courseLabelId, courseLabelName) VALUES (%s, %s)"
 
         val = (course['courseLabelId'], course['courseLabelName'])
 
@@ -90,7 +89,7 @@ class tjSql:
         Insert assessmentMode into database
         '''
         # if exists, return
-        sql = f"SELECT * FROM {ASSESSMENT_TABLE['table_name']} WHERE {ASSESSMENT_TABLE['fields']['id']} = %s"
+        sql = f"SELECT * FROM assessment WHERE assessmentMode = %s"
 
         val = (course['assessmentMode'], )
 
@@ -100,7 +99,7 @@ class tjSql:
             return
         
         # Insert
-        sql = f"INSERT INTO {ASSESSMENT_TABLE['table_name']} ({ASSESSMENT_TABLE['fields']['id']}, {ASSESSMENT_TABLE['fields']['name']}) VALUES (%s, %s)"
+        sql = f"INSERT INTO assessment (assessmentMode, assessmentModeI18n) VALUES (%s, %s)"
 
         val = (course['assessmentMode'], course['assessmentModeI18n'])
 
@@ -113,7 +112,7 @@ class tjSql:
         Insert campus into database
         '''
         # if exists, return
-        sql = f"SELECT * FROM {CAMPUS_TABLE['table_name']} WHERE {CAMPUS_TABLE['fields']['id']} = %s"
+        sql = f"SELECT * FROM campus WHERE campus = %s"
 
         val = (course['campus'], )
 
@@ -123,7 +122,7 @@ class tjSql:
             return
         
         # Insert
-        sql = f"INSERT INTO {CAMPUS_TABLE['table_name']} ({CAMPUS_TABLE['fields']['id']}, {CAMPUS_TABLE['fields']['name']}) VALUES (%s, %s)"
+        sql = f"INSERT INTO campus (campus, campusI18n) VALUES (%s, %s)"
 
         val = (course['campus'], course['campusI18n'])
 
@@ -136,7 +135,7 @@ class tjSql:
         Insert faculty into database
         '''
         # if exists, return
-        sql = f"SELECT * FROM {FACULTY_TABLE['table_name']} WHERE {FACULTY_TABLE['fields']['id']} = %s"
+        sql = f"SELECT * FROM faculty WHERE faculty = %s"
 
         val = (course['faculty'], )
 
@@ -146,7 +145,7 @@ class tjSql:
             return
         
         # Insert
-        sql = f"INSERT INTO {FACULTY_TABLE['table_name']} ({FACULTY_TABLE['fields']['id']}, {FACULTY_TABLE['fields']['name']}) VALUES (%s, %s)"
+        sql = f"INSERT INTO faculty (faculty, facultyI18n) VALUES (%s, %s)"
 
         val = (course['faculty'], course['facultyI18n'])
 
@@ -172,7 +171,7 @@ class tjSql:
             }
 
             # if exists, skip
-            sql = f"SELECT * FROM {MAJOR_TABLE['table_name']} WHERE {MAJOR_TABLE['fields']['code']} = %s AND {MAJOR_TABLE['fields']['grade']} = %s"
+            sql = f"SELECT * FROM major WHERE code = %s AND grade = %s"
 
             val = (processedMajor['code'], processedMajor['grade'])
 
@@ -182,7 +181,7 @@ class tjSql:
                 continue
 
             # Insert
-            sql = f"INSERT INTO {MAJOR_TABLE['table_name']} ({MAJOR_TABLE['fields']['code']}, {MAJOR_TABLE['fields']['grade']}, {MAJOR_TABLE['fields']['name']}) VALUES (%s, %s, %s)"
+            sql = f"INSERT INTO major (code, grade, name) VALUES (%s, %s, %s)"
 
             val = (processedMajor['code'], processedMajor['grade'], processedMajor['name'])
 
@@ -208,7 +207,7 @@ class tjSql:
                     teacherSchedule += info + '\n'
             
             # Insert teacher
-            sql = f"INSERT INTO {TEACHER_TABLE['table_name']} ({TEACHER_TABLE['fields']['id']}, {TEACHER_TABLE['fields']['teachingClassId']}, {TEACHER_TABLE['fields']['teacherCode']}, {TEACHER_TABLE['fields']['teacherName']}, {TEACHER_TABLE['fields']['arrangeInfoText']}) VALUES (%s, %s, %s, %s, %s)"
+            sql = f"INSERT INTOteacher (id, teachingClassId, teacherCode, teacherName, arrangeInfoText) VALUES (%s, %s, %s, %s, %s)"
 
             val = (teacher['id'], teacher['teachingClassId'], teacher['teacherCode'], teacher['teacherName'], teacherSchedule)
 
@@ -226,7 +225,7 @@ class tjSql:
         
         for major in majors:
             # Get majorId
-            sql = f"SELECT {MAJOR_TABLE['fields']['id']} FROM {MAJOR_TABLE['table_name']} WHERE {MAJOR_TABLE['fields']['name']} = %s"
+            sql = f"SELECT id FROM major WHERE name = %s"
 
             val = (major, )
 
@@ -235,7 +234,7 @@ class tjSql:
             majorId = self.cursor.fetchone()[0]
 
             # Insert
-            sql = f"INSERT INTO {MAJORANDCOURSE_TABLE['table_name']} ({MAJORANDCOURSE_TABLE['fields']['majorId']}, {MAJORANDCOURSE_TABLE['fields']['courseId']}) VALUES (%s, %s)"
+            sql = f"INSERT INTO majorandcourse (majorId, courseId) VALUES (%s, %s)"
 
             val = (majorId, courseId)
 
@@ -271,23 +270,23 @@ class tjSql:
 
             # Insert course
             sql = (
-                f"INSERT INTO {COURSEDETAIL_TABLE['table_name']} ("
-                f"{COURSEDETAIL_TABLE['fields']['id']}, "
-                f"{COURSEDETAIL_TABLE['fields']['code']}, "
-                f"{COURSEDETAIL_TABLE['fields']['name']}, "
-                f"{COURSEDETAIL_TABLE['fields']['courseLabelId']}, "
-                f"{COURSEDETAIL_TABLE['fields']['assessmentMode']}, "
-                f"{COURSEDETAIL_TABLE['fields']['period']}, "
-                f"{COURSEDETAIL_TABLE['fields']['weekHour']}, "
-                f"{COURSEDETAIL_TABLE['fields']['campus']}, "
-                f"{COURSEDETAIL_TABLE['fields']['number']}, "
-                f"{COURSEDETAIL_TABLE['fields']['elcNumber']}, "
-                f"{COURSEDETAIL_TABLE['fields']['startWeek']}, "
-                f"{COURSEDETAIL_TABLE['fields']['endWeek']}, "
-                f"{COURSEDETAIL_TABLE['fields']['courseCode']}, "
-                f"{COURSEDETAIL_TABLE['fields']['courseName']}, "
-                f"{COURSEDETAIL_TABLE['fields']['faculty']}, "
-                f"{COURSEDETAIL_TABLE['fields']['calendarId']}"
+                f"INSERT INTO coursedetail ("
+                f"id "
+                f"code "
+                f"name "
+                f"courseLabelId "
+                f"assessmentMode "
+                f"period "
+                f"weekHour "
+                f"campus "
+                f"number "
+                f"elcNumber "
+                f"startWeek "
+                f"endWeek "
+                f"courseCode "
+                f"courseName "
+                f"faculty "
+                f"calendarId "
                 ") VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
             )
 

@@ -109,7 +109,8 @@ Payload：
 ```json
 {
     "grade": 2023,
-    "code": "10054"
+    "code": "10054",
+    "calendarId": 119
 }
 ```
 
@@ -266,7 +267,8 @@ Payload：
 
 ```json
 {
-    "ids": [958, 957, 956, 955, 947]
+    "ids": [958, 957, 956, 955, 947],
+    "calendarId": 119
 }
 ```
 
@@ -369,7 +371,8 @@ Payload：
 
 ```json
 {
-    "courseCode": "340012"
+    "courseCode": "340012",
+    "calendarId": 119
 }
 ```
 
