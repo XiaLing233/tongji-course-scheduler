@@ -1,5 +1,6 @@
 import mysql.connector
 import configparser
+import json
 
 # 读取配置文件
 CONFIG = configparser.ConfigParser()
@@ -13,7 +14,7 @@ DB_DATABASE = CONFIG['Sql']['database']
 DB_PORT = int(CONFIG['Sql']['port'])
 DB_CHARSET = CONFIG['Sql']['charset']
 
-class tjSql:
+class bckndSql:
     '''
     A class for handling MySQL database
     '''
@@ -41,49 +42,73 @@ class tjSql:
         '''
         Get all calendar data
         '''
-        self.cursor.execute(f'SELECT * FROM calendar')
+        self.cursor.execute(f'SELECT JSON_OBJECT("calendarId", calendarId, "calendarIdI18n", calendarIdI18n) FROM calendar')
         return self.cursor.fetchall()
     def findGradeByCalendarId(self, calendarId):
         '''
         Find grade by calendarId
         '''
-        self.cursor.execute(f'SELECT DISTINCT m.grade FROM major AS m'
-                            f' JOIN majorandcourse AS mac ON mac.majorId = m.id'
-                            f' JOIN coursedetail AS c ON c.id = mac.courseId'
-                            f' WHERE c.calendarId = {calendarId}'
-                            f' ORDER BY m.grade DESC')
+
+        query = (
+        f'SELECT DISTINCT m.grade FROM major AS m'
+        f' JOIN majorandcourse AS mac ON mac.majorId = m.id'
+        f' JOIN coursedetail AS c ON c.id = mac.courseId'
+        f' WHERE c.calendarId = %s'
+        f' ORDER BY m.grade DESC')
+
+        self.cursor.execute(query, (calendarId, ))
         
-        return self.cursor.fetchall()
+        result = self.cursor.fetchall()
+
+        # Convert to list
+        return [grade[0] for grade in result]
+
     def findMajorByGrade(self, grade):
         '''
         Find major by grade
         '''
-        self.cursor.execute(f"SELECT m.code, m.name FROM major AS m"
-                            f" WHERE m.grade = {grade}")
+
+        query = (
+            "SELECT JSON_OBJECT("
+            " 'code', m.code,"
+            " 'name', m.name"
+            " )"
+            " FROM major AS m"
+            " WHERE m.grade = %s")
+
+        self.cursor.execute(query, (grade, ))
         
-        return self.cursor.fetchall()
+        result = self.cursor.fetchall()
+
+        # json str result to json
+        return [json.loads(major[0]) for major in result]
+
+    
     def findCourseByMajor(self, grade, code, calendarId):
         '''
         Find course by major
         '''
         query = f"""
         SELECT
-            c.courseCode,
-            c.courseName,
-            f.facultyI18n,
-            codes.grade,
-            CAST(CONCAT('[', GROUP_CONCAT(DISTINCT JSON_QUOTE(n.courseLabelName)), ']') AS JSON) AS courseNature,  -- 去重
-            JSON_ARRAYAGG(
-                JSON_OBJECT(
-                    'code', c.code,
-                    'teachers', teachers.teachers,
-                    'campus', ca.campusI18n,
-                    'locations', locations.locations,
-                    'isExclusive', 
-                        -- 判断是否存在关联的专业课程记录
-                        IF(mac_exclusive.majorId IS NOT NULL, TRUE, FALSE)
-                )
-            ) AS courses
+            JSON_OBJECT(
+                'courseCode', courseCode,
+                'courseName', courseName,
+                'facultyI18n', facultyI18n,
+                'grade', grade,
+                'courseNature', CAST(CONCAT('[', GROUP_CONCAT(DISTINCT JSON_QUOTE(n.courseLabelName)), ']') AS JSON),  -- 去重
+                'courses',
+                    JSON_ARRAYAGG(
+                        JSON_OBJECT(
+                            'code', c.code,
+                            'teachers', teachers.teachers,
+                            'campus', ca.campusI18n,
+                            'locations', locations.locations,
+                            'isExclusive', 
+                                -- 判断是否存在关联的专业课程记录
+                                IF(mac_exclusive.majorId IS NOT NULL, TRUE, FALSE)
+                        )
+                    )
+            )
         FROM coursedetail as c
         JOIN faculty as f ON f.faculty = c.faculty
         JOIN coursenature as n ON n.courseLabelId = c.courseLabelId
@@ -103,9 +128,8 @@ class tjSql:
         -- 获取地点信息
         JOIN (
             SELECT t.teachingClassid, 
-                   JSON_ARRAYAGG(t.arrangeInfoText) AS locations
+                   t.arrangeInfoText AS locations
             FROM teacher AS t
-            GROUP BY t.teachingClassid
         ) AS locations ON c.id = locations.teachingClassid
         -- 获取筛选条件和grade，并关联专业课程关系
         JOIN (
@@ -117,56 +141,69 @@ class tjSql:
             JOIN majorandcourse AS mac ON m.id = mac.majorId
             JOIN coursedetail as c ON mac.courseid = c.id
             WHERE 
-                m.grade <= {grade} 
-                AND m.code = '{code}'
+                m.grade <= %s
+                AND m.code = %s
         ) AS codes ON c.courseCode = codes.myCode
         -- 检查是否属于专属专业（新增LEFT JOIN）
         LEFT JOIN majorandcourse AS mac_exclusive 
             ON mac_exclusive.courseid = c.id 
             AND mac_exclusive.majorId = codes.targetMajorId  -- 关联目标专业ID
-        WHERE c.calendarId = {calendarId}
+        WHERE c.calendarId = %s
         GROUP BY c.courseCode, c.courseName, f.facultyI18n, codes.grade
         ORDER BY codes.grade desc;
         """
-        self.cursor.execute(query)
-        return self.cursor.fetchall()
+        self.cursor.execute(query, (grade, code, calendarId))
+
+        result = self.cursor.fetchall()
+        
+        result = [json.loads(course[0]) for course in result]
+
+        return result
+
         
     def findOptionalCourseType(self, labelList, calendarId):
         '''
         Find optional course type
         '''
-        # Convert Array to suitable format
-        labelList = str(tuple(labelList)).replace(",)", ")") # Trailing comma
 
-        self.cursor.execute(f"SELECT DISTINCT n.courseLabelId, n.courseLabelName FROM coursenature AS n"
-                            f" JOIN coursedetail AS c ON n.courseLabelId = c.courseLabelId"
-                            f" WHERE n.courseLabelId IN {labelList}"
-                            f" AND c.calendarId = {calendarId}"
-                            f" ORDER BY n.courseLabelId DESC")
+        query = (
+            f"SELECT DISTINCT"
+            f" n.courseLabelId,"
+            f" n.courseLabelName"
+            f" FROM coursenature AS n"
+            f" JOIN coursedetail AS c ON n.courseLabelId = c.courseLabelId"
+            f" WHERE n.courseLabelId IN ({','.join(['%s' for _ in labelList])})"
+            f" AND c.calendarId = %s"
+            f" ORDER BY n.courseLabelId DESC")
+
+        self.cursor.execute(query, tuple(labelList + [calendarId]))
         
-        return self.cursor.fetchall()
+        result = self.cursor.fetchall()
+
+        # 添加头部
+        result = [{"courseLabelId": course[0], "courseLabelName": course[1]} for course in result]
+
+        return result
     
     def findCourseByNatureId(self, natureIds, calendarId):
         '''
         Find course by natureId
         '''
 
-        sql = f"""
-        SELECT 
-            courseLabelId,
-            courseLabelName,
-            CONCAT(
-            '[',
-            GROUP_CONCAT(
-                JSON_OBJECT(
-                    'courseCode', courseCode,
-                    'courseName', courseName,
-                    'facultyI18n', facultyI18n,
-                    'campus', campus_list
-                )
-                ORDER BY courseCode),
-                ']'
-                ) AS courses
+        query = f"""
+        SELECT
+            JSON_OBJECT(
+                'courseLabelId', courseLabelId,
+                'courseLabelName', courseLabelName,
+                'courses', JSON_ARRAYAGG(
+                            JSON_OBJECT(
+                                'courseCode', courseCode,
+                                'courseName', courseName,
+                                'facultyI18n', facultyI18n,
+                                'campus', campus_list
+                            )
+                        )
+            )
         FROM (
             SELECT
                 c.courseLabelId,
@@ -180,34 +217,45 @@ class tjSql:
             JOIN coursenature as n ON n.courseLabelId = c.courseLabelId
             JOIN campus as ca ON c.campus = ca.campus
             JOIN calendar as cal ON c.calendarId = cal.calendarId
-            WHERE c.courseLabelId IN {natureIds}
-            AND c.calendarId = {calendarId}
+            WHERE c.courseLabelId IN ({','.join(['%s' for _ in natureIds])})
+            AND c.calendarId = %s
             GROUP BY 
                 c.courseLabelId,
                 c.courseCode,  -- 按课程代码分组
                 c.courseName,
                 f.facultyI18n
         ) AS grouped_courses
-
         GROUP BY courseLabelId, courseLabelName
-        ORDER BY courseLabelId;
+        ORDER BY courseLabelId DESC;
         """
 
-        self.cursor.execute(sql)
+        self.cursor.execute(query, tuple(natureIds + [calendarId]))
 
-        return self.cursor.fetchall()
+        result = self.cursor.fetchall()
+
+        # json
+        result = [json.loads(res[0]) for res in result]
+
+        # 再对courses字段进行json解析
+        # for res in result:
+        #     print(res["courses"])
+        #     res["courses"] = json.loads(res["courses"])
+
+        return result
     
     def findCourseDetailByCode(self, code, calendarId):
         '''
         Find course detail by code
         '''
-        
-        sql = f"""
+        3
+        query = f"""
         SELECT
-            c.code,
-            teachers.teachers,
-            ca.campusI18n,
-            locations.locations
+            JSON_OBJECT(
+            'code', c.code,
+            'teachers', teachers.teachers,
+            'campusI18n', ca.campusI18n,
+            'locations', locations.locations
+            )
         FROM coursedetail as c
         JOIN faculty as f ON f.faculty = c.faculty
         JOIN coursenature as n ON n.courseLabelId = c.courseLabelId
@@ -227,18 +275,24 @@ class tjSql:
         -- 获取地点信息
         JOIN (
             SELECT t.teachingClassid, 
-                JSON_ARRAYAGG(t.arrangeInfoText) AS locations
+                t.arrangeInfoText AS locations
             FROM teacher AS t
-            GROUP BY t.teachingClassid
         ) AS locations ON c.id = locations.teachingClassid
-        WHERE c.courseCode = '{code}'
-        AND c.calendarId = {calendarId}
+        WHERE c.courseCode = %s
+        AND c.calendarId = %s
         ORDER BY c.code asc;
         """
 
-        self.cursor.execute(sql)
+        self.cursor.execute(query, (code, calendarId))
 
-        return self.cursor.fetchall()
+        result = self.cursor.fetchall()
+
+        # json
+        result = [json.loads(res[0]) for res in result]
+
+        print(result)
+
+        return result
     
     def findCourseBySearch(self, searchBody, sizeLimit=50):
         '''
@@ -262,49 +316,66 @@ class tjSql:
 
         condition = ""
 
-        # Generate condition
-        # enumerate
+        # Generate condition using parameterized query
+        query_params = []
+        condition = ""
         if (searchBody['courseName'] != ""):
-            condition += f' AND c.courseName LIKE "%{searchBody["courseName"]}%"'
+            condition += " AND c.courseName LIKE %s"
+            query_params.append("%" + searchBody["courseName"] + "%")
         if (searchBody['courseCode'] != ""):
-            condition += f' AND (c.courseCode = "{searchBody["courseCode"]}" OR c.code = "{searchBody["courseCode"]}")'
+            condition += " AND (c.courseCode = %s OR c.code = %s)"
+            query_params.extend([searchBody["courseCode"], searchBody["courseCode"]])
         if (searchBody['teacherCode'] != ""):
-            condition += f' AND t.teacherCode = "{searchBody["teacherCode"]}"'
+            condition += " AND t.teacherCode = %s"
+            query_params.append(searchBody["teacherCode"])
         if (searchBody['teacherName'] != ""):
-            condition += f' AND t.teacherName = "{searchBody["teacherName"]}"'
+            condition += " AND t.teacherName = %s"
+            query_params.append(searchBody["teacherName"])
         if (searchBody['campus'] != ""):
-            condition += f' AND ca.campusI18n = "{searchBody["campus"]}"'
+            condition += " AND ca.campusI18n = %s"
+            query_params.append(searchBody["campus"])
         if (searchBody['faculty'] != ""):
-            condition += f' AND f.facultyI18n = "{searchBody["faculty"]}"'
+            condition += " AND f.facultyI18n = %s"
+            query_params.append(searchBody["faculty"])
         
-        sql=f"""
-        SELECT 
-            c.courseCode,
-            c.courseName,
-            f.facultyI18n,
-            CAST(CONCAT('[', GROUP_CONCAT(DISTINCT JSON_QUOTE(n.courseLabelName)), ']') AS JSON) AS courseNature,  -- 去重
-            CAST(CONCAT('[', GROUP_CONCAT(DISTINCT JSON_QUOTE(ca.campusI18n) ORDER BY ca.campusI18n), ']') AS JSON) AS campus_list  -- 去重校区列表，并按校区名排序
+        sql = f"""
+        SELECT
+            JSON_OBJECT(
+                'courseCode', c.courseCode,
+                'courseName', c.courseName,
+                'faculty', f.facultyI18n,
+                'courseNature', CAST(CONCAT('[', GROUP_CONCAT(DISTINCT JSON_QUOTE(n.courseLabelName)), ']') AS JSON),  -- 去重
+                'campus_list', CAST(CONCAT('[', GROUP_CONCAT(DISTINCT JSON_QUOTE(ca.campusI18n) ORDER BY ca.campusI18n), ']') AS JSON) -- 去重校区列表，并按校区名排序
+            )
         FROM coursedetail as c
         JOIN faculty AS f ON f.faculty = c.faculty
         JOIN campus as ca ON ca.campus = c.campus
         JOIN coursenature as n ON c.courseLabelId = n.courseLabelId
         JOIN teacher as t ON t.teachingClassid = c.id
-        WHERE c.calendarId = {searchBody['calendarId']}
+        WHERE c.calendarId = %s
         {condition}
-        GROUP BY c.courseCode, c.courseName, f.facultyI18n,n.courseLabelName
+        GROUP BY c.courseCode, c.courseName, f.facultyI18n, n.courseLabelName
         ORDER BY courseCode desc
-        LIMIT {sizeLimit};
+        LIMIT %s;
         """
+        
+        query_params.insert(0, searchBody['calendarId'])
+        query_params.append(sizeLimit)
+        
+        self.cursor.execute(sql, tuple(query_params))
 
-        self.cursor.execute(sql)
+        result = self.cursor.fetchall()
 
-        return self.cursor.fetchall()
+        # json
+        result = [json.loads(res[0]) for res in result]
+
+        return result
 
 testObject = {
     "calendarId": 119,
-    "courseName": "",
+    "courseName": "上海",
     "courseCode": "",
-    "teacherCode": "06061",
+    "teacherCode": "",
     "teacherName": "",
     "campus": "",
     "faculty": "",
@@ -312,5 +383,12 @@ testObject = {
 
 # debug
 if __name__ == '__main__':
-    with tjSql() as db:
-        print(db.findCourseBySearch(testObject))
+    with bckndSql() as db:
+        # print(db.findCourseDetailByCode("124004", 119))
+        # print(db.findCourseByMajor(2023, "10065", 119)) ok
+        # print(db.findGradeByCalendarId(119))
+        print(db.findMajorByGrade(2023))
+        # print(db.findCourseBySearch(testObject)) ok
+        # print(db.findCourseDetailByCode("124004", 119)) ok
+        # print(db.findCourseByNatureId([955, 956, 957, 958, 947], 119)) ok
+        # print(db.findOptionalCourseType([955, 956, 957, 958, 947], 119))

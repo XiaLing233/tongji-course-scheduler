@@ -1,0 +1,130 @@
+# 存放了工具函数
+
+def dayTextToNum(text):
+    '''
+    输入："星期一"
+    输出：1
+    从星期一到星期日对应 1 到 7
+    '''
+    day_mapping = {
+        "星期一": 1,
+        "星期二": 2,
+        "星期三": 3,
+        "星期四": 4,
+        "星期五": 5,
+        "星期六": 6,
+        "星期日": 7
+    }
+    return day_mapping.get(text, None)
+
+def timeTextToArray(text):
+    '''
+    输入："2-4节"
+    输出：[2, 3, 4]
+    '''
+    # 忽略最后的节字
+    text = text[:-1]
+    
+    # 以 - 分割
+    time = text.split("-")
+    
+    # 转换为数字
+    result = []
+    for i in range(int(time[0]), int(time[1]) + 1):
+        result.append(i)
+
+    return result
+
+def weekTextToArray(text):
+    '''
+    输入："2-4双 5-6 10-12 14 17"
+    输出：[2, 4, 5, 6, 10, 11, 12, 14, 15, 16, 17]
+    '''
+    # 去掉中括号
+    # text = text[1:-1]
+
+    # 以空格分割
+    weeks = text.split(" ")
+
+    # 有这样几种类型
+    # 没有 - 的，直接转换为数字，最简单
+    # 有 -，且没有单/双，遍历区间
+    # 有 -，如果有单/双，遍历区间，步长为 2，不需要判断单双是因为起始值已经保证了
+
+    result = []
+
+    for week in weeks:
+        if "-" not in week:
+            result.append(int(week))
+        elif "单" in week or "双" in week:
+            week = week[:-1]
+            week = week.split("-")
+            for i in range(int(week[0]), int(week[1]) + 1, 2):
+                result.append(i)
+        else:
+            week = week.split("-")
+            for i in range(int(week[0]), int(week[1]) + 1):
+                result.append(i)
+    
+    return result
+
+    
+
+def arrangementTextToObj(text):
+    '''
+    输入："李华(13060) 星期三7-8节 [2-4双 5-6 10-12 14 17] 北214"
+    输出：{
+        "arrangementText": "星期三7-8节 [2-4双 5-6 10-12 14 17] 北214",
+        "occupyDay": 3,
+        "occupyTime": [7, 8],
+        "occupyWeek": [2, 4, 5, 6, 10, 11, 12, 14, 17],
+        "occupyRoom": "北214"
+    }
+    '''
+
+    result = {
+        "arrangementText": text.split(" ", 1)[1],
+        "occupyDay": None,
+        "occupyTime": None,
+        "occupyWeek": None,
+        "occupyRoom": None
+    }
+
+    # 以空格分割
+    splitPieces = text.split(" ")
+
+    # 星期几
+    result["occupyDay"] = dayTextToNum(splitPieces[1][:3])
+
+    # 节次
+    result["occupyTime"] = timeTextToArray(splitPieces[1][3:])
+
+    # 周次
+    result["occupyWeek"] = weekTextToArray(text.split("[")[1].split("]")[0])
+
+    # 教室
+    result["occupyRoom"] = splitPieces[-1]
+
+    return result
+
+def splitEndline(text):
+    '''
+    输入： "关佶红(05222) 星期一3-4节 [1-17] 南129\n关佶红(05222) 星期三3-4节 [1-17单] 北301\n"
+    输出： ["关佶红(05222) 星期一3-4节 [1-17] 南129", "关佶红(05222) 星期三3-4节 [1-17单] 北301"]
+    '''
+    
+    # print(text.split("\n")[:-1])
+
+    return text.split("\n")[:-1]
+
+# debug
+
+if __name__ == "__main__":
+    # print(dayTextToNum("星期一"))
+    # print(timeTextToArray(debugText))
+    # print(weekTextToArray(debugText))
+    # while True:
+    debugText =  "关佶红(05222) 星期一3-4节 [1-17] 南129\n关佶红(05222) 星期三3-4节 [1-17单] 北301\n"
+    print(splitEndline(debugText))
+    for de in splitEndline(debugText):
+        print(arrangementTextToObj(de))
