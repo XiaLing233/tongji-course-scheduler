@@ -598,7 +598,7 @@ def findCourseBySearch():
         if payload[key]:
             filledCnt += 1
 
-    if filledCnt < 2:
+    if filledCnt < 2 + 1:
         return jsonify({
             "code": 400,
             "msg": "请至少指定两个查询条件",
