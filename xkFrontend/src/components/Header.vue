@@ -6,7 +6,7 @@
                 <a-button>
                     <div class="flex flex-row space-x-2 items-center">
                         <p>从个人课表导入</p>
-                        <div><ImportOutlined /></div>
+                        <div><CalendarOutlined /></div>
                     </div>
                 </a-button>
             </div>
@@ -15,8 +15,10 @@
                     <template #overlay>
                         <a-menu class="text-center">
                         <a-menu-item key="wakeUp">
-                            <p>WakeUp 课程表支持的 csv 格式</p>
-                            <p><a href="https://www.wakeup.fun/" target="_blank">[官网]</a></p>
+                            <div class="flex flex-row space-x-2 items-center">
+                                <p>WakeUp 课程表支持的 csv 格式</p>
+                                <p><a href="https://www.wakeup.fun/" target="_blank">[官网]</a></p>
+                            </div>
                         </a-menu-item>
                         <a-menu-item key="excel">
                             <p>便于选课的 xls 文件</p>
@@ -71,7 +73,7 @@
 </template>
 
 <script>
-import { DownOutlined, ExportOutlined, GithubOutlined, ImportOutlined, LinkOutlined, ReadOutlined } from '@ant-design/icons-vue';
+import { DownOutlined, ExportOutlined, GithubOutlined, CalendarOutlined, LinkOutlined, ReadOutlined } from '@ant-design/icons-vue';
 
 export default {
     name: 'Header',
@@ -81,7 +83,7 @@ export default {
         GithubOutlined,
         ReadOutlined,
         LinkOutlined,
-        ImportOutlined
+        CalendarOutlined
     }
 }
 </script>

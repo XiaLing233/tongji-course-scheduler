@@ -13,6 +13,7 @@
     "@tailwindcss/postcss": "^4.0.6",
     "@tailwindcss/vite": "^4.0.6",
     "ant-design-vue": "^4.2.6",
+    "axios": "^1.7.9",
     "postcss": "^8.5.2",
     "tailwindcss": "^4.0.6",
     "vue": "^3.5.13"

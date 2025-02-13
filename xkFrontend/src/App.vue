@@ -1,26 +1,31 @@
 <template>
   <a-config-provider :locale="locale">
-    <a-layout>
+    <a-layout class="space-y-4">
       <!-- 所有 layout 放在了组件里, 不要嵌套! -->
       <Header />
+      <MajorInfo />
       <a-layout>
-        <CourseList />
+        <div class="flex flex-row space-x-4">
+          <CourseRoughList />
+          <CourseDetailList title="test123" />
+        </div>
       </a-layout>
-      <a-layout-content>
-        <TimeTable :timeTableData="timeTableData" />
-      </a-layout-content>
+      <TimeTable :timeTableData="timeTableData" />
     </a-layout>
   </a-config-provider>
 </template>
 
 <script>
 import Header from './components/Header.vue';
-import CourseList from './components/CourseList.vue';
+import CourseRoughList from './components/CourseRoughList.vue';
+import CourseDetailList from './components/CourseDetailList.vue';
 import TimeTable from './components/TimeTable.vue';
+import MajorInfo from './components/MajorInfo.vue';
 
 import zhCN from 'ant-design-vue/es/locale/zh_CN';
 import dayjs from 'dayjs';
 import 'dayjs/locale/zh-cn';
+
 
 dayjs.locale('zh-cn');
 
@@ -28,8 +33,10 @@ export default {
   name: 'App',
   components: {
     Header,
-    CourseList,
+    CourseRoughList,
+    CourseDetailList,
     TimeTable,
+    MajorInfo
   },
   data() {
     return {

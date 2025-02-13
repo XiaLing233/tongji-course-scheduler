@@ -17,7 +17,7 @@
                             class="border-collapse border border-gray-300 align-top text-center p-1"
                             :rowspan="maxSpans[index][dayIndex]"
                         >
-                            <div v-if="courses.length > 0" class="bg-[#705bcf] text-white p-1 h-full rounded-b-xs overflow-x-hidden" :style="{ height: (maxSpans[index][dayIndex] * 45) + 'px' }">
+                            <div v-if="courses.length > 0" class="bg-indigo-700/90 text-white p-1 h-full rounded-b-xs overflow-x-hidden" :style="{ height: (maxSpans[index][dayIndex] * 45) + 'px' }">
                                 <div v-for="(course, index) in courses" :key="course.id" class="text-xs h-full" :class="{ 'border-b border-dashed border-white pb-1 mb-1': index !== courses.length - 1 }">
                                     <span>{{ course.teacherName }} </span>
                                     <span>({{ course.teacherCode }}) </span>
@@ -71,9 +71,9 @@ export default {
             // 计算最大跨度
             for (let row = 0; row < 12; row++) {
                 for (let col = 0; col < 7; col++) {
-                    const courses = newTimeTable[row][col]
+                    const courses = newTimeTable[row][col] // 同一个起始格可能会出现多个课程
                     if (courses.length > 0) {
-                        newMaxSpans[row][col] = Math.max(...courses.map(c => c.occupyTime.length))
+                        newMaxSpans[row][col] = Math.max(...courses.map(c => c.occupyTime.length)) // 取最大跨度，不过注意在课程的排课上还是不要有交叉，如1-3,2-5，不好
                     }
                 }
             }

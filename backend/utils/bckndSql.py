@@ -42,8 +42,13 @@ class bckndSql:
         '''
         Get all calendar data
         '''
-        self.cursor.execute(f'SELECT JSON_OBJECT("calendarId", calendarId, "calendarIdI18n", calendarIdI18n) FROM calendar')
-        return self.cursor.fetchall()
+        self.cursor.execute(f'SELECT JSON_OBJECT("calendarId", calendarId, "calendarName", calendarIdI18n) FROM calendar')
+
+        result = self.cursor.fetchall()
+
+        # json str result to json
+        return [json.loads(calendar[0]) for calendar in result]
+
     def findGradeByCalendarId(self, calendarId):
         '''
         Find grade by calendarId
@@ -74,7 +79,8 @@ class bckndSql:
             " 'name', m.name"
             " )"
             " FROM major AS m"
-            " WHERE m.grade = %s")
+            " WHERE m.grade = %s"
+            " ORDER BY m.code ASC")
 
         self.cursor.execute(query, (grade, ))
         

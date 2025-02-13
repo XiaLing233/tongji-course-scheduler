@@ -1,0 +1,62 @@
+<template>
+    <a-layout-content>
+        <a-card
+            :title="title"
+        >
+            <a-table
+                :columns="columns"
+                :data-source="roughCourses"
+                :row-class-name="(_record, index) => (index % 2 === 1 ? 'table-striped' : null)"
+            >
+            </a-table>
+        </a-card>
+    </a-layout-content>
+</template>
+
+<script>
+    export default {
+        props: {
+            title: {
+                type: String,
+                required: true
+            }
+        },
+        data() {
+            return {
+                columns: [
+                    {
+                        title: '课程序号',
+                        dataIndex: 'code',
+                        align: 'center'
+                    },
+                    {
+                        title: '教师',
+                        dataIndex: 'teacherName',
+                        align: 'center'
+                    },
+                    {
+                        title: '校区',
+                        dataIndex: 'campus',
+                        align: 'center'
+                    },
+                    {
+                        title: '课程安排',
+                        dataIndex: 'arrangementText',
+                        align: 'center'
+                    },
+                    {
+                        title: '状态',
+                        dataIndex: 'status',
+                        align: 'center'
+                    },
+                    {
+                        title: '语言',
+                        dataIndex: 'language',
+                        align: 'center'
+                    }
+                ],
+                roughCourses: []
+            }
+        }
+    }
+</script>
