@@ -253,6 +253,10 @@ class tjSql:
             print("\n\n\n")
             # input()
 
+            self.updateCredits(course) # Update credits
+
+            continue
+
             self.insertCourseLabel(course) # Insert courseLabel
             
             self.insertAssessmentMode(course) # Insert assessmentMode
@@ -285,9 +289,10 @@ class tjSql:
                 f"endWeek "
                 f"courseCode "
                 f"courseName "
+                f"credit "
                 f"faculty "
                 f"calendarId "
-                ") VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+                ") VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
             )
 
             val = (
@@ -296,7 +301,7 @@ class tjSql:
                 course['period'], course['weekHour'], course['campus'],
                 course['number'], course['elcNumber'], course['startWeek'],
                 course['endWeek'], course['courseCode'], course['courseName'],
-                course['faculty'], course['calendarId']
+                course['credits'],course['faculty'], course['calendarId']
             )
 
             self.cursor.execute(sql, val)
@@ -306,5 +311,20 @@ class tjSql:
             self.insertTeachers(course['teacherList'], course['arrangeInfo']) # Insert teachers
 
             self.insertMajorAndCourse(course['majorList'], course['id']) # Insert major and course
+    
+    def updateCredits(self, course):
+        '''
+        Update credits
+        '''
+        sql = f"UPDATE coursedetail SET credit = %s WHERE id = %s"
 
+        val = (course['credits'], course['id'])
+
+        self.cursor.execute(sql, val)
+
+        print(f"Credits updated for course {course['id']} to {course['credits']}")
+
+        # input()
+
+        self.db.commit()
         

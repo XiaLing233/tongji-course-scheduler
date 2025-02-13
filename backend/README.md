@@ -125,6 +125,7 @@ Response：
             "courseCode": 102020,
             "courseName": "信息论及编码理论",
             "facultyI18n": "电子与信息工程学院",
+            "credit": 3.0,
             "grade": 2023,
             "courseNature": ["专业必修课"], // 有的课程可能存在相同课号多个性质的情况
             "courses": [
@@ -289,7 +290,8 @@ Response：
                     ],
                     "courseCode": "140813",
                     "courseName": "海洋药物与健康",
-                    "facultyI18n": "医学院"
+                    "facultyI18n": "医学院",
+                    "credit": 1.5
                 },
                 {
                     "campus": [
@@ -297,7 +299,8 @@ Response：
                     ],
                     "courseCode": "140662",
                     "courseName": "五彩缤纷的发光材料",
-                    "facultyI18n": "医学院"
+                    "facultyI18n": "医学院",
+                    "credit": 1.5
                 },
                 {
                     "campus": [
@@ -305,7 +308,8 @@ Response：
                     ],
                     "courseCode": "140572",
                     "courseName": "人体生理学通识",
-                    "facultyI18n": "医学院"
+                    "facultyI18n": "医学院",
+                    "credit": 1.5
                 },
                 {
                     "campus": [
@@ -313,7 +317,8 @@ Response：
                     ],
                     "courseCode": "140496",
                     "courseName": "食品与健康",
-                    "facultyI18n": "医学院"
+                    "facultyI18n": "医学院",
+                    "credit": 1.5
                 },
                 {
                     "campus": [
@@ -321,7 +326,8 @@ Response：
                     ],
                     "courseCode": "140495",
                     "courseName": "食品安全导论",
-                    "facultyI18n": "医学院"
+                    "facultyI18n": "医学院",
+                    "credit": 1.5
                 },
                 {
                     "campus": [
@@ -329,7 +335,8 @@ Response：
                     ],
                     "courseCode": "140076",
                     "courseName": "公共营养学",
-                    "facultyI18n": "医学院"
+                    "facultyI18n": "医学院",
+                    "credit": 1.5
                 },
                 {
                     "campus": [
@@ -338,7 +345,8 @@ Response：
                     ],
                     "courseCode": "124120",
                     "courseName": "物理现象探索",
-                    "facultyI18n": "物理科学与工程学院"
+                    "facultyI18n": "物理科学与工程学院",
+                    "credit": 1.5
                 }
 
                 // ...

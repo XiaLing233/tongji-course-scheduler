@@ -57,6 +57,7 @@ def fetchCourseList(session):
     print("Course list fetched successfully")
 
     loginout.logout(session)
+    
 
 if __name__ == "__main__":
     # Login

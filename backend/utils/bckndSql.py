@@ -94,6 +94,7 @@ class bckndSql:
                 'courseCode', courseCode,
                 'courseName', courseName,
                 'facultyI18n', facultyI18n,
+                'credit', credit,
                 'grade', grade,
                 'courseNature', CAST(CONCAT('[', GROUP_CONCAT(DISTINCT JSON_QUOTE(n.courseLabelName)), ']') AS JSON),  -- 去重
                 'courses',
@@ -200,6 +201,7 @@ class bckndSql:
                                 'courseCode', courseCode,
                                 'courseName', courseName,
                                 'facultyI18n', facultyI18n,
+                                'credit', credit,
                                 'campus', campus_list
                             )
                         )
@@ -210,6 +212,7 @@ class bckndSql:
                 n.courseLabelName,
                 c.courseCode,
                 c.courseName,
+                c.credit,
                 f.facultyI18n,
                 CAST(CONCAT('[', GROUP_CONCAT(DISTINCT JSON_QUOTE(ca.campusI18n) ORDER BY ca.campusI18n), ']') AS JSON) AS campus_list  -- 去重校区列表，并按校区名排序
             FROM coursedetail as c
@@ -223,6 +226,7 @@ class bckndSql:
                 c.courseLabelId,
                 c.courseCode,  -- 按课程代码分组
                 c.courseName,
+                c.credit,
                 f.facultyI18n
         ) AS grouped_courses
         GROUP BY courseLabelId, courseLabelName
@@ -387,8 +391,8 @@ if __name__ == '__main__':
         # print(db.findCourseDetailByCode("124004", 119))
         # print(db.findCourseByMajor(2023, "10065", 119)) ok
         # print(db.findGradeByCalendarId(119))
-        print(db.findMajorByGrade(2023))
+        # print(db.findMajorByGrade(2023))
         # print(db.findCourseBySearch(testObject)) ok
         # print(db.findCourseDetailByCode("124004", 119)) ok
-        # print(db.findCourseByNatureId([955, 956, 957, 958, 947], 119)) ok
+        print(db.findCourseByNatureId([955, 956, 957, 958, 947], 119))
         # print(db.findOptionalCourseType([955, 956, 957, 958, 947], 119))
