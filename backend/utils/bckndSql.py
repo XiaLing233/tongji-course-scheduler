@@ -97,11 +97,11 @@ class bckndSql:
         query = f"""
         SELECT
             JSON_OBJECT(
-                'courseCode', courseCode,
-                'courseName', courseName,
-                'facultyI18n', facultyI18n,
-                'credit', credit,
-                'grade', grade,
+                'courseCode', c.courseCode,
+                'courseName', c.courseName,
+                'facultyI18n', f.facultyI18n,
+                'credit', c.credit,
+                'grade', codes.grade,
                 'courseNature', CAST(CONCAT('[', GROUP_CONCAT(DISTINCT JSON_QUOTE(n.courseLabelName)), ']') AS JSON),  -- 去重
                 'courses',
                     JSON_ARRAYAGG(
@@ -156,7 +156,7 @@ class bckndSql:
             ON mac_exclusive.courseid = c.id 
             AND mac_exclusive.majorId = codes.targetMajorId  -- 关联目标专业ID
         WHERE c.calendarId = %s
-        GROUP BY c.courseCode, c.courseName, f.facultyI18n, codes.grade
+        GROUP BY c.courseCode, c.courseName, f.facultyI18n, codes.grade, c.credit
         ORDER BY codes.grade desc;
         """
         self.cursor.execute(query, (grade, code, calendarId))

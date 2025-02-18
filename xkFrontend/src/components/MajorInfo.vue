@@ -7,7 +7,7 @@
             <div class="flex flex-row space-x-4 items-center">
                 <p>学期</p>
                 <a-select
-                    :value="selected.calendar"
+                    :value="$store.state.majorSelected.calendar"
                     placeholder="请选择学期"
                     @change="findGradeByCalendarId"
                     class="w-48"
@@ -23,7 +23,7 @@
             <div class="flex flex-row space-x-4 items-center">
                 <p>年级</p>
                 <a-select
-                    :value="selected.grade"
+                    :value="$store.state.majorSelected.grade"
                     placeholder="请选择年级"
                     @change="findMajorByGrade"
                     class="w-32"
@@ -39,7 +39,7 @@
             <div class="flex flex-row space-x-4 items-center">
                 <p>专业</p>
                 <a-select
-                    :value="selected.major"
+                    :value="$store.state.majorSelected.major"
                     placeholder="请选择专业"
                     show-search
                     allow-clear
@@ -67,11 +67,6 @@ import axios from 'axios';
 export default {
     data() {
         return {
-            selected: {
-                calendar: undefined,
-                grade: undefined,
-                major: undefined
-            },
             rawList: {
                 calendars: [],
                 grades: [],
@@ -92,15 +87,19 @@ export default {
             }
         },
         async findGradeByCalendarId(value) {
-            this.selected.calendar = value;
-            this.selected.grade = undefined;
-            this.selected.major = undefined;
+            this.$store.commit('setMajorInfo', 
+                {
+                    calendar: value,
+                    grade: undefined,
+                    major: undefined
+                }
+            )
             try {
                 const res = await axios({
                     url: '/api/findGradeByCalendarId',
                     method: 'post',
                     data: {
-                        calendarId: this.selected.calendar
+                        calendarId: this.$store.state.majorSelected.calendar
                     }
                 });
                 this.rawList.grades = res.data.data.gradeList;
@@ -111,14 +110,19 @@ export default {
             }
         },
         async findMajorByGrade(value) {
-            this.selected.grade = value;
-            this.selected.major = undefined;
+            this.$store.commit('setMajorInfo', 
+                {
+                    calendar: this.$store.state.majorSelected.calendar,
+                    grade: value,
+                    major: undefined
+                }
+            )
             try {
                 const res = await axios({
                     url: '/api/findMajorByGrade',
                     method: 'post',
                     data: {
-                        grade: this.selected.grade
+                        grade: this.$store.state.majorSelected.grade
                     }
                 });
                 this.rawList.majors = res.data.data;
@@ -127,14 +131,29 @@ export default {
             }
         },
         onMajorChange(value) {
-            this.selected.major = value;
+            this.$store.commit('setMajorInfo', 
+                {
+                    calendar: this.$store.state.majorSelected.calendar,
+                    grade: this.$store.state.majorSelected.grade,
+                    major: value
+                }
+            )
         },
         filterMajor(input, option) {
             return option.label.toLowerCase().indexOf(input.toLowerCase()) >= 0;
         }
     },
     mounted() {
-        this.getAllCalendar();
+        this.getAllCalendar().then(() => {
+            if (this.rawList.calendars.length > 0) {
+                this.$store.commit('setMajorInfo', {
+                    calendar: this.rawList.calendars[0].calendarId,
+                    grade: undefined,
+                    major: undefined
+                });
+                this.findGradeByCalendarId(this.rawList.calendars[0].calendarId);
+            }
+        });
     },
 }
 </script>

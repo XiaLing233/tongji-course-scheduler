@@ -6,12 +6,20 @@
       <MajorInfo />
       <a-layout>
         <div class="flex flex-row space-x-4">
-          <CourseRoughList />
+          <CourseRoughList @openOverview="handleOpen"/>
           <CourseDetailList title="test123" />
         </div>
       </a-layout>
       <TimeTable :timeTableData="timeTableData" />
     </a-layout>
+    <a-modal
+    title="选择课程"
+    v-model:open="openOverview"
+    @ok="openOverview = false"
+    style="width: 80%"
+      >
+      <CourseOverview />
+    </a-modal>
   </a-config-provider>
 </template>
 
@@ -21,10 +29,12 @@ import CourseRoughList from './components/CourseRoughList.vue';
 import CourseDetailList from './components/CourseDetailList.vue';
 import TimeTable from './components/TimeTable.vue';
 import MajorInfo from './components/MajorInfo.vue';
+import CourseOverview from './components/CourseOverview.vue';
 
 import zhCN from 'ant-design-vue/es/locale/zh_CN';
 import dayjs from 'dayjs';
 import 'dayjs/locale/zh-cn';
+
 
 
 dayjs.locale('zh-cn');
@@ -36,7 +46,8 @@ export default {
     CourseRoughList,
     CourseDetailList,
     TimeTable,
-    MajorInfo
+    MajorInfo,
+    CourseOverview
   },
   data() {
     return {
@@ -150,9 +161,15 @@ export default {
             "occupyTime": [10,11],
             "occupyDay": 3
           }
-        ]
-
+        ],
+        openOverview: false
     }
   },
+  methods: {
+    handleOpen() {
+      this.openOverview = true;
+      // console.log("openOverview", this.openOverview);
+    }
+  }
 }
 </script>
