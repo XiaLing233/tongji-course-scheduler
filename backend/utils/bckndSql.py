@@ -110,6 +110,7 @@ class bckndSql:
                             'teachers', teachers.teachers,
                             'campus', ca.campusI18n,
                             'locations', locations.locations,
+                            'teachingLanguageI18n', l.teachingLanguageI18n,
                             'isExclusive', 
                                 -- 判断是否存在关联的专业课程记录
                                 IF(mac_exclusive.majorId IS NOT NULL, TRUE, FALSE)
@@ -120,6 +121,7 @@ class bckndSql:
         JOIN faculty as f ON f.faculty = c.faculty
         JOIN coursenature as n ON n.courseLabelId = c.courseLabelId
         JOIN campus as ca ON c.campus = ca.campus
+        JOIN language as l ON l.teachingLanguage = c.teachingLanguage
         -- 获取教师信息
         JOIN (
             SELECT t.teachingClassid, 
@@ -264,12 +266,14 @@ class bckndSql:
             'code', c.code,
             'teachers', teachers.teachers,
             'campusI18n', ca.campusI18n,
-            'locations', locations.locations
+            'locations', locations.locations,
+            'teachingLanguageI18n', l.teachingLanguageI18n
             )
         FROM coursedetail as c
         JOIN faculty as f ON f.faculty = c.faculty
         JOIN coursenature as n ON n.courseLabelId = c.courseLabelId
         JOIN campus as ca ON c.campus = ca.campus
+        JOIN language as l ON l.teachingLanguage = c.teachingLanguage
         -- 获取教师信息
         JOIN (
             SELECT t.teachingClassid, 

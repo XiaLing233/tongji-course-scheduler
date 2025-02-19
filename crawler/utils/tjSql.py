@@ -242,6 +242,29 @@ class tjSql:
 
         self.db.commit()
 
+    def insertLanguage(self, course):
+        '''
+        Insert language into database
+        '''
+        # if exists, return
+        sql = f"SELECT * FROM language WHERE teachingLanguage = %s"
+
+        val = (course['teachingLanguage'], )
+
+        self.cursor.execute(sql, val)
+
+        if self.cursor.fetchone() != None:
+            return
+        
+        # Insert
+        sql = f"INSERT INTO language (teachingLanguage, teachingLanguageI18n) VALUES (%s, %s)"
+
+        val = (course['teachingLanguage'], course['teachingLanguageI18n'])
+
+        self.cursor.execute(sql, val)
+
+        self.db.commit()
+
     def insertCourseList(self, courses):
         '''
         Insert course list into database
@@ -253,10 +276,16 @@ class tjSql:
             print("\n\n\n")
             # input()
 
-            self.updateCredits(course) # Update credits
+            # self.updateCredits(course) # Update credits, 亡羊补牢
+
+            # self.insertLanguage(course) # Insert language
+
+            # self.updateLanguage(course) # Update language
 
             continue
 
+            self.insertLanguage(course) # Insert language
+            
             self.insertCourseLabel(course) # Insert courseLabel
             
             self.insertAssessmentMode(course) # Insert assessmentMode
@@ -290,18 +319,19 @@ class tjSql:
                 f"courseCode "
                 f"courseName "
                 f"credit "
+                f"teachingLanguage "
                 f"faculty "
                 f"calendarId "
-                ") VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+                ") VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
             )
 
             val = (
                 course['id'], course['code'], course['name'],
-                course['courseLabelId'], course['assessmentMode'],
-                course['period'], course['weekHour'], course['campus'],
-                course['number'], course['elcNumber'], course['startWeek'],
-                course['endWeek'], course['courseCode'], course['courseName'],
-                course['credits'],course['faculty'], course['calendarId']
+                course['courseLabelId'], course['assessmentMode'], course['period'], 
+                course['weekHour'], course['campus'], course['number'], 
+                course['elcNumber'], course['startWeek'], course['endWeek'], 
+                course['courseCode'], course['courseName'], course['credits'],
+                course['teachingLanguage'], course['faculty'], course['calendarId']
             )
 
             self.cursor.execute(sql, val)
@@ -311,7 +341,9 @@ class tjSql:
             self.insertTeachers(course['teacherList'], course['arrangeInfo']) # Insert teachers
 
             self.insertMajorAndCourse(course['majorList'], course['id']) # Insert major and course
-    
+
+# 亡羊补牢（更新表格结构）的时候需要的函数，暂时不用
+
     def updateCredits(self, course):
         '''
         Update credits
@@ -328,3 +360,18 @@ class tjSql:
 
         self.db.commit()
         
+    def updateLanguage(self, course):
+        '''
+        Update language
+        '''
+        sql = f"UPDATE coursedetail SET teachingLanguage = %s WHERE id = %s"
+
+        val = (course['teachingLanguage'], course['id'])
+
+        self.cursor.execute(sql, val)
+
+        print(f"Language updated for course {course['id']} to {course['teachingLanguage']}")
+
+        # input()
+
+        self.db.commit()
