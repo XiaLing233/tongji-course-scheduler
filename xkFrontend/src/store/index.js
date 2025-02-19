@@ -9,9 +9,11 @@ const store = createStore({
                 major: undefined
             },
             commonLists: {
-                compulsoryCourses: [],
-                optionalTypes: [],
-                optionalCourses: [],
+                compulsoryCourses: [], // 必修课
+                optionalTypes: [], // 选修课类型
+                optionalCourses: [], // 选修课
+                stagedCourses: [], // 备选课程
+                selectedCourses: [], // 已选课程
             },
             flags: {
                 majorNotChanged: false // 专业是否被改变，如果改变了，需要重新向后端请求数据
@@ -33,6 +35,13 @@ const store = createStore({
         setOptionalCourses(state, payload) {
             state.commonLists.optionalCourses = payload;
             console.log(state.commonLists.optionalCourses);
+        },
+        pushStagedCourse(state, payload) {
+            state.commonLists.stagedCourses.push(payload);
+            console.log(state.commonLists.stagedCourses.length);
+        },
+        popStagedCourse(state, payload) {
+            state.commonLists.stagedCourses = state.commonLists.stagedCourses.filter(course => course.courseId !== payload);
         }
     },
     getters: {

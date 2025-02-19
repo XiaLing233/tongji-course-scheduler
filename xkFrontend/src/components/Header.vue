@@ -21,7 +21,7 @@
                             </div>
                         </a-menu-item>
                         <a-menu-item key="excel">
-                            <p>便于选课的 xls 文件</p>
+                            <p>辅助选课的 xls 文件</p>
                         </a-menu-item>
                         </a-menu>
                     </template>

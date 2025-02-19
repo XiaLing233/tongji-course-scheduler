@@ -1,5 +1,5 @@
 <template>
-    <a-layout-content>
+    <a-layout-content class="m-2">
         <a-card
             title="专业选择"
         >

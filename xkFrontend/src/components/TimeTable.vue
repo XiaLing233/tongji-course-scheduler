@@ -1,5 +1,5 @@
 <template>
-    <a-layout-content>
+    <a-layout-content class="m-2">
         <table class="w-full border-collapse border border-gray-300 table-fixed">
             <thead>
                 <tr class="bg-gray-200">

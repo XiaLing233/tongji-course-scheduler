@@ -2,26 +2,40 @@
     <div
         class="flex flex-col w-full"
     >
-        <div>
-            <a-radio-group v-model:value="selectedType">
+        <div class="flex flex-row space-x-6 items-center mt-4 mb-4">
+            <div>
+                <a-radio-group v-model:value="selectedType" @change="$emit('update:selectedRowKeys', [])">
                 <a-radio-button value="compulsory">计划内课程</a-radio-button>
                 <a-radio-button value="optional">通识选修课</a-radio-button>
                 <a-radio-button value="search">高级检索</a-radio-button>
             </a-radio-group>
+            </div>
+            <div>
+                <a-input
+                    placeholder="请输入课程代码或课程名称"
+                    v-model:value="searchValue"
+                    style="width: 250px"
+                    allow-clear
+                >
+                    <template #prefix>
+                        <SearchOutlined />
+                    </template>
+                </a-input>
+            </div>
         </div>
         <div v-if="selectedType === 'compulsory'">
             <div class="h-150 overflow-auto">
                 <a-table
                 :columns="columns.compulsory"
                 v-for="courses in this.$store.getters.sortCompulsoryCoursesByGrade"
-                :data-source="courses.courses"
+                :data-source="filteredCourses(courses.courses)"
                 :pagination="false"
                 :title="() => courses.grade + '级'"
                 :row-selection="{ 
-                    selectedRowKeys: selectedRowKeys.filter(key => key.startsWith(courses.grade + '_')), 
-                    onChange: (keys) => onSelectChange(keys, courses.grade) 
+                    localSelectedRowKeys: localSelectedRowKeys.filter(key => key.startsWith('必_' + courses.grade + '_')), 
+                    onChange: (keys) => onCompulsorySelectChange(keys)
                 }"
-                :row-key="record => courses.grade + '_' + record.courseCode"
+                :row-key="record => '必_' + courses.grade + '_' + record.courseCode"
             >
             </a-table>
             </div>
@@ -32,23 +46,30 @@
                     <div class="h-150 overflow-auto">
                         <a-table
                         :columns="columns.optional"
-                        :data-source="$store.state.commonLists.optionalCourses.find(item => item.courseLabelId === type.courseLabelId)?.courses"
+                        :data-source="filteredCourses($store.state.commonLists.optionalCourses.find(item => item.courseLabelId === type.courseLabelId)?.courses)"
                         :pagination="false"
+                        :row-selection="{ 
+                            localSelectedRowKeys: localSelectedRowKeys.filter(key => key.startsWith('选_' + type.courseLabelId + '_')), 
+                            onChange: (keys) => onOptionalSelectChange(keys) 
+                        }"
+                        :row-key="record => '选_' + type.courseLabelId + '_' + record.courseCode"
                     >
                     </a-table>
                     </div>
-
                 </a-tab-pane>
             </a-tabs>
         </div>
         <div v-else-if="selectedType === 'search'">
-            <p>高级检索</p>
+            <div>
+                <p>高级检索</p>
+            </div>
         </div>
     </div>
 </template>
 
 <script>
 import axios from 'axios';
+import { SearchOutlined } from '@ant-design/icons-vue';
 
 export default {
     data() {
@@ -116,16 +137,20 @@ export default {
                     }
                 ]
             },
-            selectedRowKeys: [],
+
+            // 搜索
+            searchValue: ''
         }
     },
+    props: ['selectedRowKeys'],
     methods: {
-        onSelectChange(selectedRowKeys, grade) {
-            // Remove old selections for this grade
-            this.selectedRowKeys = this.selectedRowKeys.filter(key => !key.startsWith(grade + '_'));
-            // Add new selections
-            this.selectedRowKeys = [...this.selectedRowKeys, ...selectedRowKeys];
-            console.log('selectedRowKeys changed: ', this.selectedRowKeys);
+        onCompulsorySelectChange(localSelectedRowKeys) {
+            this.localSelectedRowKeys = localSelectedRowKeys;
+            console.log('localSelectedRowKeys changed: ', this.localSelectedRowKeys);
+        },
+        onOptionalSelectChange(localSelectedRowKeys) {
+            this.localSelectedRowKeys = localSelectedRowKeys;
+            console.log('localSelectedRowKeys changed: ', this.localSelectedRowKeys);
         },
         async getOptionalCourses() {
             // 获取选修课程
@@ -156,6 +181,22 @@ export default {
             } catch (error) {
                 console.log("error:", error);
             }
+        },
+        filteredCourses(courses) {
+            // 根据已选课程来过滤，德摩根律啊！思考一下为什么是 && 而不是 ||
+            courses = courses.filter((course) => {
+                return !this.$store.state.commonLists.stagedCourses.some(stagedCourse => stagedCourse.courseCode === course.courseCode) 
+                && !this.$store.state.commonLists.selectedCourses.some(selectedCourse => selectedCourse.courseCode === course.courseCode)
+            });
+
+            // 保留表格中和 this.searchValue 代码或者名称匹配的课程
+            if (this.searchValue === '') {
+                return courses;
+            }
+            else {
+                // 根据检索条件过滤课程
+                return courses.filter(course => course.courseCode.includes(this.searchValue) || course.courseName.includes(this.searchValue));
+            }
         }
     },
     mounted() {
@@ -164,6 +205,19 @@ export default {
                 this.selectedOptionalType = this.$store.state.commonLists.optionalTypes[0].courseLabelId;
             }
         });
+    },
+    components: {
+        SearchOutlined
+    },
+    computed: {
+        localSelectedRowKeys: {
+            get() {
+                return this.selectedRowKeys;
+            },
+            set(value) {
+                this.$emit('update:selectedRowKeys', value);
+            }
+        }
     }
 }
 </script>

@@ -1,25 +1,40 @@
 <template>
     <a-layout-content>
-        <a-card
-            title="选课列表"
-        >
-            <template #extra>
-                <div class="flex flex-row space-x-4 items-center">
-                    <a-button @click="getCompulsoryCourses">
-                        <p>选择课程</p>
-                    </a-button>
-                    <a-button type="primary">
-                        <p>保存课表</p>
-                    </a-button>
-                </div>
-            </template>
-            <a-table
-                :columns="columns"
-                :data-source="this.$store.getters.getRoughCourses"
-                :row-class-name="(_record, index) => (index % 2 === 1 ? 'table-striped' : null)"
+        <div>
+            <a-card
+                title="选课列表"
             >
-            </a-table>
-        </a-card>
+                <template #extra>
+                    <div class="flex flex-row space-x-4 items-center">
+                        <a-button @click="getCompulsoryCourses">
+                            <p>选择课程</p>
+                        </a-button>
+                        <a-button type="primary">
+                            <p>保存课表</p>
+                        </a-button>
+                    </div>
+                </template>
+                <a-table
+                    :columns="columns"
+                    :data-source="$store.state.commonLists.stagedCourses"
+                    :pagination="false"
+                    :row-class-name="getRowClass"
+                    class="h-80 overflow-auto"
+                    bordered
+                >
+                    <template #bodyCell="{ column, record }">
+                        <template v-if="column.key === 'status'">
+                            <a-tag :color="record.status === '已选' ? 'success' : (record.status === '备选' ? 'warning' : 'error')">
+                                {{ record.status }}
+                            </a-tag>
+                        </template>
+                        <template v-else-if="column.key === 'action'">
+                            <span>foo</span>
+                        </template>
+                    </template>
+                </a-table>
+            </a-card>
+        </div>    
     </a-layout-content>
 </template>
 
@@ -33,21 +48,31 @@ export default {
             {
                 title: '课程名称',
                 dataIndex: 'courseName',
+                key: 'courseName',
                 align: 'center'
             },
             {
                 title: '学分',
                 dataIndex: 'credit',
+                key: 'credit',
+                align: 'center'
+            },
+            {
+                title: '必/选',
+                dataIndex: 'courseType',
+                key: 'courseType',
                 align: 'center'
             },
             {
                 title: '教师',
                 dataIndex: 'teacherName',
+                key: 'teacherName',
                 align: 'center'
             },
             {
                 title: '状态',
                 dataIndex: 'status',
+                key: 'status',
                 align: 'center'
             },
             {
@@ -88,7 +113,11 @@ export default {
             catch (error) {
                 console.log("error:", error);
             }
-        }
+        },
+        getRowClass(_record, index) {
+            console.log(index);
+            return index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+        },
     },
     emits: ['openOverview'],
 }
