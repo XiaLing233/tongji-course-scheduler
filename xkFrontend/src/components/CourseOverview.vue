@@ -36,6 +36,7 @@
                     onChange: (keys) => onCompulsorySelectChange(keys)
                 }"
                 :row-key="record => '必_' + courses.grade + '_' + record.courseCode"
+                :row-class-name="(_record, index) => index % 2 === 1 ? 'bg-gray-50' : ''"
             >
             </a-table>
             </div>
@@ -53,6 +54,7 @@
                             onChange: (keys) => onOptionalSelectChange(keys) 
                         }"
                         :row-key="record => '选_' + type.courseLabelId + '_' + record.courseCode"
+                        :row-class-name="(_record, index) => index % 2 === 1 ? 'bg-gray-50' : ''"
                     >
                     </a-table>
                     </div>

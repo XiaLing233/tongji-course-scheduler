@@ -9,8 +9,16 @@
                 :pagination="false"
                 :row-class-name="(_record, index) => (index % 2 === 1 ? 'table-striped' : null)"
                 class="h-80 overflow-auto"
+                :custom-row="onRowEvent"
                 bordered
             >
+                <template #bodyCell="{ column, text }">
+                    <template v-if="column.key === 'campus'">
+                        <div :class="getCampusClass(text)" class="h-full flex items-center justify-center">
+                            <p>{{ text }}</p>
+                        </div>
+                    </template>
+                </template>
             </a-table>
         </a-card>
     </a-layout-content>
@@ -39,7 +47,13 @@
                         title: '校区',
                         dataIndex: 'campus',
                         key: 'campus',
-                        align: 'center'
+                        align: 'center',
+                        customCell: () => ({
+                            style: {
+                            padding: '0',
+                            height: '4px' // 几 px 都无所谓，没效果的..
+                            }
+                        })
                     },
                     {
                         title: '课程安排',
@@ -73,5 +87,27 @@
                 return `${courseInfo.courseName} ${courseInfo.courseCode}`
             }
         },
+        methods: {
+            getCampusClass(campus) {
+                switch (campus) {
+                    case '四平路校区':
+                        return 'bg-yellow-100/80';
+                    case '嘉定校区':
+                        return 'bg-red-100/80';
+                    case '沪西校区':
+                        return 'bg-white';
+                    default:
+                        return 'bg-white';
+                }
+            },
+            onRowEvent(record) {
+                return {
+                    onClick: () => {
+                        console.log(record);
+                        this.$store.commit('updateTimeTable', record);
+                    }
+                }
+            }
+        }
     }
 </script>

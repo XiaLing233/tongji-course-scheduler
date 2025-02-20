@@ -21,7 +21,8 @@
                     :row-class-name="getRowClass"
                     class="h-80 overflow-auto"
                     bordered
-                    :custom-row="onRowClick"
+                    :custom-row="onRowEvent"
+                    :rowHoverable="false"
                 >
                     <template #bodyCell="{ column, record }">
                         <template v-if="column.key === 'status'">
@@ -30,7 +31,12 @@
                             </a-tag>
                         </template>
                         <template v-else-if="column.key === 'action'">
-                            <span>foo</span>
+                            <a-button type="link" @click="removeCourse(record.courseCode)">
+                                <div class=" text-red-500">
+                                    <span v-if="record.status === '已选'" >退课</span>
+                                    <span v-else>清除</span>
+                                </div>
+                            </a-button>
                         </template>
                     </template>
                 </a-table>
@@ -115,11 +121,17 @@ export default {
                 console.log("error:", error);
             }
         },
-        getRowClass(_record, index) {
+        getRowClass(record, index) {
             // console.log(index);
-            return index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+            let className = index % 2 === 0 ? 'bg-white' : 'bg-gray-50';
+
+            if (record.courseCode === this.$store.state.clickedCourseInfo.courseCode) {
+                className = 'bg-green-100';
+            }
+
+            return className;
         },
-        onRowClick(record, _index) {
+        onRowEvent(record, _index) {
             return {
                 onClick: () => {
                     // console.log(record)
@@ -127,10 +139,17 @@ export default {
                         courseCode: record.courseCode,
                         courseName: record.courseNameReserved
                     });
-                }
+                },
             }
         }
     },
     emits: ['openOverview'],
 }
 </script>
+
+<style scoped>
+:deep(.ant-table-tbody > tr.ant-table-row:hover > td),
+:deep(.ant-table-tbody > tr > td.ant-table-cell-row-hover) {
+  background: transparent !important;
+}
+</style>

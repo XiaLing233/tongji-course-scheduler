@@ -79,6 +79,7 @@ def arrangementTextToObj(text):
         "occupyTime": [7, 8],
         "occupyWeek": [2, 4, 5, 6, 10, 11, 12, 14, 17],
         "occupyRoom": "北214"
+        "teacherAndCode": "李华(13060)"
     }
     '''
 
@@ -87,7 +88,8 @@ def arrangementTextToObj(text):
         "occupyDay": None,
         "occupyTime": None,
         "occupyWeek": None,
-        "occupyRoom": None
+        "occupyRoom": None,
+        "teacherAndCode": text.split(" ", 1)[0]
     }
 
     # 以空格分割

@@ -1,4 +1,5 @@
 import { createStore } from "vuex";
+import { canAddCourse, insertOccupied, deleteOccupied, isSameCourse } from "@/utils/courseManipulate";
 
 const store = createStore({
     state() {
@@ -20,10 +21,14 @@ const store = createStore({
                 stagedCourses: [], // 备选课程
                 selectedCourses: [], // 已选课程
             },
+            // 点击的课程信息
             clickedCourseInfo: {
                 courseCode: '',
                 courseName: ''
             },
+            // 课程表数据
+            occupied: Array(12).fill(null).map(() => Array(7).fill().map(() => [])), // 12 * 7 的二维数组，每个元素是一个数组
+            timeTableData: [], // 课程表数据
             // 标志位
             flags: {
                 majorNotChanged: false // 专业是否被改变，如果改变了，需要重新向后端请求数据
@@ -60,6 +65,43 @@ const store = createStore({
         clearStagednSelectedCourses(state) {
             state.commonLists.stagedCourses = [];
             state.commonLists.selectedCourses = [];
+        },
+        updateTimeTable(state, payload) {      
+            // console.log("排课信息:", payload)
+
+            if (canAddCourse(payload.arrangementInfo, state.occupied, payload.code).canAdd) {
+                const sameCodeCourse = state.timeTableData?.find(course => isSameCourse(course.code, payload.code));
+
+                // 规定相同课号的课只能有一个
+                if (sameCodeCourse) {
+                    state.timeTableData = state.timeTableData.filter(course => !isSameCourse(course.code, payload.code));
+                    deleteOccupied(state.occupied, sameCodeCourse.occupyTime, sameCodeCourse.occupyDay);
+                }
+
+                payload.arrangementInfo.forEach(
+                    (arrangement) => {
+                        const courseOnTable = { // 每次需要重新创建一个对象，否则会出现引用问题
+                            showText: arrangement.teacherAndCode + ' ' + state.clickedCourseInfo.courseName + ' ' + arrangement.arrangementText.split(' ').slice(1).join(' '),
+                            courseName: state.clickedCourseInfo.courseName,
+                            code: payload.code,
+                            occupyTime: arrangement.occupyTime,
+                            occupyDay: arrangement.occupyDay,
+                        }
+                        console.log("push 了星期", courseOnTable.occupyDay);
+                        state.timeTableData.push(courseOnTable);
+                    }
+                );
+
+                console.log("当前课表数据：", state.timeTableData);
+
+                insertOccupied(state.occupied, payload.arrangementInfo, payload.code);
+
+            }
+            else {
+                console.log("课程冲突");
+            }
+
+            // console.log(payload);
         }
     },
     getters: {

@@ -19,11 +19,7 @@
                         >
                             <div v-if="courses.length > 0" class="bg-indigo-700/90 text-white p-1 h-full rounded-b-xs overflow-x-hidden" :style="{ height: (maxSpans[index][dayIndex] * 45) + 'px' }">
                                 <div v-for="(course, index) in courses" :key="course.id" class="text-xs h-full" :class="{ 'border-b border-dashed border-white pb-1 mb-1': index !== courses.length - 1 }">
-                                    <span>{{ course.teacherName }} </span>
-                                    <span>({{ course.teacherCode }}) </span>
-                                    <span>{{ course.courseName }} </span>
-                                    <span>({{ course.code }}) </span>
-                                    <span>{{ course.arrangementText }}</span>
+                                    <span>{{ course.showText }}</span>
                                 </div>
                             </div>
                         </td>
@@ -42,12 +38,6 @@ export default {
             timeTable: Array(12).fill(null).map(() => Array(7).fill().map(() => [])),
             maxSpans: Array.from({ length: 12 }, () => Array(7).fill(1)),
             occupied: Array.from({ length: 12 }, () => Array(7).fill(false)),
-        }
-    },
-    props: {
-        timeTableData: {
-            type: Array,
-            required: true
         }
     },
     methods: {
@@ -98,12 +88,17 @@ export default {
             this.occupied = newOccupied
         }
     },
+    computed: {
+        timeTableData() {
+            console.log("tongbu", this.$store.state.timeTableData)
+            return this.$store.state.timeTableData;
+        }
+    },
     watch: {
         timeTableData: {
-            handler() {
-                this.updateTimeTable()
-            },
-            immediate: true
+            handler: 'updateTimeTable',
+            immediate: true,
+            deep: true // 不写这个的话，局部更新不会触发
         }
     }
 }
