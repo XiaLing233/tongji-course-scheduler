@@ -164,7 +164,7 @@ def findCourseByMajor():
                                 "teacherName": "万国春"
                             }
                         ],
-                        "arragementInfo": [
+                        "arrangementInfo": [
                             {
                                 "arrangementText": "星期四10-12节 [1-17] 安楼A205\n",
                                 "occupyDay": 4,
@@ -190,7 +190,7 @@ def findCourseByMajor():
                                 "teacherName": "武超"
                             }
                         ],
-                        "arragementInfo": [
+                        "arrangementInfo": [
                             {
                                 "arrangementText": "星期一5-6节 [1-2] 安楼A304\n",
                                 "occupyDay": 1,
@@ -251,12 +251,32 @@ def findCourseByMajor():
 
     for res in result:
         for course in res['courses']:
-            course['arragementInfo'] = []
+            course['arrangementInfo'] = []
 
             for location in splitEndline(course['locations']):
-                course['arragementInfo'].append(arrangementTextToObj(location))
+                course['arrangementInfo'].append(arrangementTextToObj(location))
 
             del course['locations']
+
+    # 对于 code 相同的课程，合并 arrangementInfo
+
+    for res in result:
+        res['courses'] = sorted(res['courses'], key=lambda x: x['code']) # 先排序
+
+        # 合并相同课号的课程
+        merged_courses = []
+        current_course = None
+
+        for course in res['courses']:
+            if not current_course or current_course['code'] != course['code']:
+                merged_courses.append(course)
+                current_course = course
+            else:
+                # 如果arrangementInfo不同，则合并
+                if current_course['arrangementInfo'] != course['arrangementInfo']:
+                    current_course['arrangementInfo'].extend(course['arrangementInfo'])
+
+        res['courses'] = merged_courses
 
     return jsonify({
         "code": 200,
@@ -476,7 +496,7 @@ def findCourseDetailByCode():
                 }
             ],
             "campusI18n": "四平路校区",
-            "arragementInfo": {
+            "arrangementInfo": {
                 {
                     "arrangementText": "星期三7-8节 [2-4双 5-6 10-12 14 17] 北214\n",
                     "occupyDay": 3,
@@ -514,12 +534,33 @@ def findCourseDetailByCode():
     # 形如：关佶红(05222) 星期一3-4节 [1-17] 南129\n关佶红(05222) 星期三3-4节 [1-17单] 北301\n
 
     for course in result:
-        course['arragementInfo'] = []
+        course['arrangementInfo'] = []
 
         for location in splitEndline(course['locations']):
-            course['arragementInfo'].append(arrangementTextToObj(location))
+            course['arrangementInfo'].append(arrangementTextToObj(location))
 
         del course['locations']
+
+    # 对于 code 相同的课程，合并 arrangementInfo
+    
+    result = sorted(result, key=lambda x: x['code']) # 先排序
+
+    # 合并相同课号的课程
+    merged_result = []
+    current_course = None
+
+    for course in result:
+        if not current_course or current_course['code'] != course['code']:
+            merged_result.append(course)
+            current_course = course
+        else:
+            # 如果arrangementInfo不同，则合并
+            if current_course['arrangementInfo'] != course['arrangementInfo']:
+                current_course['arrangementInfo'].extend(course['arrangementInfo'])
+
+    result = merged_result
+
+
 
     return jsonify({
         "code": 200,

@@ -92,14 +92,14 @@ class bckndSql:
     
     def findCourseByMajor(self, grade, code, calendarId):
         '''
-        Find course by major
+        Find course by major, maybe exists duplicate courses
         '''
         query = f"""
         SELECT
             JSON_OBJECT(
                 'courseCode', c.courseCode,
                 'courseName', c.courseName,
-                'facultyI18n', f.facultyI18n,
+                'faculty', f.facultyI18n,
                 'credit', c.credit,
                 'grade', codes.grade,
                 'courseNature', CAST(CONCAT('[', GROUP_CONCAT(DISTINCT JSON_QUOTE(n.courseLabelName)), ']') AS JSON),  -- 去重
@@ -110,7 +110,7 @@ class bckndSql:
                             'teachers', teachers.teachers,
                             'campus', ca.campusI18n,
                             'locations', locations.locations,
-                            'teachingLanguageI18n', l.teachingLanguageI18n,
+                            'teachingLanguage', l.teachingLanguageI18n,
                             'isExclusive', 
                                 -- 判断是否存在关联的专业课程记录
                                 IF(mac_exclusive.majorId IS NOT NULL, TRUE, FALSE)
@@ -159,7 +159,6 @@ class bckndSql:
             AND mac_exclusive.majorId = codes.targetMajorId  -- 关联目标专业ID
         WHERE c.calendarId = %s
         GROUP BY c.courseCode, c.courseName, f.facultyI18n, codes.grade, c.credit
-        ORDER BY codes.grade desc;
         """
         self.cursor.execute(query, (grade, code, calendarId))
 
@@ -208,7 +207,7 @@ class bckndSql:
                             JSON_OBJECT(
                                 'courseCode', courseCode,
                                 'courseName', courseName,
-                                'facultyI18n', facultyI18n,
+                                'faculty', facultyI18n,
                                 'credit', credit,
                                 'campus', campus_list
                             )
@@ -265,9 +264,9 @@ class bckndSql:
             JSON_OBJECT(
             'code', c.code,
             'teachers', teachers.teachers,
-            'campusI18n', ca.campusI18n,
+            'campus', ca.campusI18n,
             'locations', locations.locations,
-            'teachingLanguageI18n', l.teachingLanguageI18n
+            'teachingLanguage', l.teachingLanguageI18n
             )
         FROM coursedetail as c
         JOIN faculty as f ON f.faculty = c.faculty
@@ -294,7 +293,6 @@ class bckndSql:
         ) AS locations ON c.id = locations.teachingClassid
         WHERE c.courseCode = %s
         AND c.calendarId = %s
-        ORDER BY c.code asc;
         """
 
         self.cursor.execute(query, (code, calendarId))
