@@ -93,7 +93,7 @@ export default {
                     },
                     {
                         title: '开课学院',
-                        dataIndex: 'facultyI18n',
+                        dataIndex: 'faculty',
                         align: 'center'
                     },
                     {
@@ -121,7 +121,7 @@ export default {
                     },
                     {
                         title: '开课学院',
-                        dataIndex: 'facultyI18n',
+                        dataIndex: 'faculty',
                         align: 'center'
                     },
                     {
@@ -146,11 +146,11 @@ export default {
     methods: {
         onCompulsorySelectChange(localSelectedRowKeys) {
             this.localSelectedRowKeys = localSelectedRowKeys;
-            console.log('localSelectedRowKeys changed: ', this.localSelectedRowKeys);
+            // console.log('localSelectedRowKeys changed: ', this.localSelectedRowKeys);
         },
         onOptionalSelectChange(localSelectedRowKeys) {
             this.localSelectedRowKeys = localSelectedRowKeys;
-            console.log('localSelectedRowKeys changed: ', this.localSelectedRowKeys);
+            // console.log('localSelectedRowKeys changed: ', this.localSelectedRowKeys);
         },
         async getOptionalCourses() {
             // 获取选修课程

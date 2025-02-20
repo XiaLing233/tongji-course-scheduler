@@ -3,18 +3,28 @@ import { createStore } from "vuex";
 const store = createStore({
     state() {
         return {
+            // 检索的基本信息
             majorSelected: {
                 calendar: undefined,
                 grade: undefined,
                 major: undefined
             },
+            // 通用列表
             commonLists: {
+                // 显示在 courseOverview 页面的课程列表
                 compulsoryCourses: [], // 必修课
                 optionalTypes: [], // 选修课类型
                 optionalCourses: [], // 选修课
+
+                // 选择课程时的课程列表
                 stagedCourses: [], // 备选课程
                 selectedCourses: [], // 已选课程
             },
+            clickedCourseInfo: {
+                courseCode: '',
+                courseName: ''
+            },
+            // 标志位
             flags: {
                 majorNotChanged: false // 专业是否被改变，如果改变了，需要重新向后端请求数据
             }
@@ -34,14 +44,22 @@ const store = createStore({
         },
         setOptionalCourses(state, payload) {
             state.commonLists.optionalCourses = payload;
-            console.log(state.commonLists.optionalCourses);
+            // console.log(state.commonLists.optionalCourses);
         },
         pushStagedCourse(state, payload) {
             state.commonLists.stagedCourses.push(payload);
-            console.log(state.commonLists.stagedCourses.length);
+            // console.log(state.commonLists.stagedCourses.length);
         },
         popStagedCourse(state, payload) {
             state.commonLists.stagedCourses = state.commonLists.stagedCourses.filter(course => course.courseId !== payload);
+        },
+        setClickedCourseInfo(state, payload) {
+            // console.log(payload);
+            state.clickedCourseInfo = payload;
+        },
+        clearStagednSelectedCourses(state) {
+            state.commonLists.stagedCourses = [];
+            state.commonLists.selectedCourses = [];
         }
     },
     getters: {
@@ -76,13 +94,10 @@ const store = createStore({
 
             sortedCoursesArray.sort((a, b) => b.grade - a.grade);
 
-            console.log(sortedCoursesArray);
+            // console.log(sortedCoursesArray);
 
             return sortedCoursesArray;
         },
-        getRoughCourses(state) {
-            return [];
-        }
     }
 });
 

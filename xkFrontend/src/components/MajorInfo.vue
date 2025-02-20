@@ -131,6 +131,8 @@ export default {
             }
         },
         onMajorChange(value) {
+            this.$emit('changeMajor')
+            this.$store.commit('clearStagednSelectedCourses');
             this.$store.commit('setMajorInfo', 
                 {
                     calendar: this.$store.state.majorSelected.calendar,
@@ -155,5 +157,6 @@ export default {
             }
         });
     },
+    emit: ['changeMajor']
 }
 </script>

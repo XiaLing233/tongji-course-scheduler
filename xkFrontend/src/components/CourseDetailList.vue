@@ -1,13 +1,15 @@
 <template>
-    <a-layout-content>
+    <a-layout-content class="w-[60%]">
         <a-card
             :title="title"
         >
             <a-table
                 :columns="columns"
-                :data-source="roughCourses"
+                :data-source="localDetailList"
+                :pagination="false"
                 :row-class-name="(_record, index) => (index % 2 === 1 ? 'table-striped' : null)"
                 class="h-80 overflow-auto"
+                bordered
             >
             </a-table>
         </a-card>
@@ -16,12 +18,6 @@
 
 <script>
     export default {
-        props: {
-            title: {
-                type: String,
-                required: true
-            }
-        },
         data() {
             return {
                 columns: [
@@ -29,13 +25,15 @@
                         title: '课程序号',
                         dataIndex: 'code',
                         key: 'code',
-                        align: 'center'
+                        align: 'center',
+                        sorter: (a, b) => a.code - b.code
                     },
                     {
                         title: '教师',
-                        dataIndex: 'teacherName',
-                        key: 'teacherName',
-                        align: 'center'
+                        dataIndex: 'teachers',
+                        key: 'teachers',
+                        align: 'center',
+                        customRender: ({ text }) => text?.map(teacher => teacher.teacherName).join(', ')
                     },
                     {
                         title: '校区',
@@ -45,9 +43,10 @@
                     },
                     {
                         title: '课程安排',
-                        dataIndex: 'arrangementText',
-                        key: 'arrangementText',
-                        align: 'center'
+                        dataIndex: 'arrangementInfo',
+                        key: 'arrangementInfo',
+                        align: 'center',
+                        customRender: ({ text }) => text?.map(arrangement => arrangement.arrangementText).join(', ')
                     },
                     {
                         title: '状态',
@@ -57,12 +56,22 @@
                     },
                     {
                         title: '语言',
-                        dataIndex: 'teachingLanguageI18n',
+                        dataIndex: 'teachingLanguage',
                         key: 'language',
                         align: 'center'
                     }
                 ],
             }
-        }
+        },
+        computed: {
+            localDetailList() {
+                console.log(this.$store.state.commonLists.stagedCourses.find(course => course.courseCode === this.$store.state.clickedCourseInfo.courseCode)?.courseDetail)
+                return this.$store.state.commonLists.stagedCourses.find(course => course.courseCode === this.$store.state.clickedCourseInfo.courseCode)?.courseDetail || []
+            },
+            title() {
+                const courseInfo = this.$store.state.clickedCourseInfo;
+                return `${courseInfo.courseName} ${courseInfo.courseCode}`
+            }
+        },
     }
 </script>

@@ -3,11 +3,11 @@
     <a-layout class="space-y-4">
       <!-- 所有 layout 放在了组件里, 不要嵌套! -->
       <Header />
-      <MajorInfo />
+      <MajorInfo @changeMajor="resetSelectedRows" />
       <a-layout>
         <div class="flex flex-row space-x-4 h-max m-2">
           <CourseRoughList @openOverview="handleOpen"/>
-          <CourseDetailList title="test123" />
+          <CourseDetailList />
         </div>
       </a-layout>
       <TimeTable :timeTableData="timeTableData" />
@@ -173,6 +173,10 @@ export default {
       this.openOverview = true;
       // console.log("openOverview", this.openOverview);
     },
+    resetSelectedRows() {
+      console.log("resetSelectedRows");
+      this.selectedRowKeys = [];
+    },
     async stageCourses() {
       this.openOverview = false;
       
@@ -191,11 +195,15 @@ export default {
           const _courseObject = {
             courseCode: originalCourse.courseCode,
             courseName: originalCourse.courseName + '(' + originalCourse.courseCode + ')',
+            courseNameReserved: originalCourse.courseName,
             credit: originalCourse.credit,
             courseType: "必",
             teacher: [],
             status: "未选",
-            courseDetail: originalCourse.courses
+            courseDetail: originalCourse.courses.map(course => ({
+              ...course,
+              status: "未选"
+            }))
           }
 
 
@@ -203,7 +211,7 @@ export default {
         }
         else if (type === '选') {
           // 如果是选修课，需要向后端请求
-          console.log('选修课', key);
+          // console.log('选修课', key);
 
           const _courseCode = key.split('_')[2];
 
@@ -227,14 +235,18 @@ export default {
             const _courseObject = {
               courseCode: _roughCourse.courseCode,
               courseName: _roughCourse.courseName + '(' + _roughCourse.courseCode + ')',
+              courseNameReserved: _roughCourse.courseName,
               credit: _roughCourse.credit,
               courseType: "选",
               teacher: [],
               status: "未选",
-              courseDetail: _detailCourse
+              courseDetail: _detailCourse.map(course => ({
+                ...course,
+                status: "未选"
+              }))
             }
 
-            console.log("_courseObject", _courseObject);
+            // console.log("_courseObject", _courseObject);
 
             this.$store.commit("pushStagedCourse", _courseObject);
           }

@@ -1,5 +1,5 @@
 <template>
-    <a-layout-content>
+    <a-layout-content class="h-[40%]">
         <div>
             <a-card
                 title="选课列表"
@@ -21,6 +21,7 @@
                     :row-class-name="getRowClass"
                     class="h-80 overflow-auto"
                     bordered
+                    :custom-row="onRowClick"
                 >
                     <template #bodyCell="{ column, record }">
                         <template v-if="column.key === 'status'">
@@ -115,9 +116,20 @@ export default {
             }
         },
         getRowClass(_record, index) {
-            console.log(index);
+            // console.log(index);
             return index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
         },
+        onRowClick(record, _index) {
+            return {
+                onClick: () => {
+                    // console.log(record)
+                    this.$store.commit('setClickedCourseInfo', {
+                        courseCode: record.courseCode,
+                        courseName: record.courseNameReserved
+                    });
+                }
+            }
+        }
     },
     emits: ['openOverview'],
 }
