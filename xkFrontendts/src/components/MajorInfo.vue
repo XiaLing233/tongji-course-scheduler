@@ -7,7 +7,7 @@
             <div class="flex flex-row space-x-4 items-center">
                 <p>学期</p>
                 <a-select
-                    :value="$store.state.majorSelected.calendar"
+                    :value="$store.state.majorSelected.calendarId"
                     placeholder="请选择学期"
                     @change="findGradeByCalendarId"
                     class="w-48"
@@ -89,7 +89,7 @@ export default {
         async findGradeByCalendarId(value) {
             this.$store.commit('setMajorInfo', 
                 {
-                    calendar: value,
+                    calendarId: value,
                     grade: undefined,
                     major: undefined
                 }
@@ -99,7 +99,7 @@ export default {
                     url: '/api/findGradeByCalendarId',
                     method: 'post',
                     data: {
-                        calendarId: this.$store.state.majorSelected.calendar
+                        calendarId: this.$store.state.majorSelected.calendarId
                     }
                 });
                 this.rawList.grades = res.data.data.gradeList;
@@ -112,7 +112,7 @@ export default {
         async findMajorByGrade(value) {
             this.$store.commit('setMajorInfo', 
                 {
-                    calendar: this.$store.state.majorSelected.calendar,
+                    calendarId: this.$store.state.majorSelected.calendarId,
                     grade: value,
                     major: undefined
                 }
@@ -135,7 +135,7 @@ export default {
             this.$store.commit('clearStagednSelectedCourses');
             this.$store.commit('setMajorInfo', 
                 {
-                    calendar: this.$store.state.majorSelected.calendar,
+                    calendarId: this.$store.state.majorSelected.calendarId,
                     grade: this.$store.state.majorSelected.grade,
                     major: value
                 }
@@ -149,7 +149,7 @@ export default {
         this.getAllCalendar().then(() => {
             if (this.rawList.calendars.length > 0) {
                 this.$store.commit('setMajorInfo', {
-                    calendar: this.rawList.calendars[0].calendarId,
+                    calendarId: this.rawList.calendars[0].calendarId,
                     grade: undefined,
                     major: undefined
                 });

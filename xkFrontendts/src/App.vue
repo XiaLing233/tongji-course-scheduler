@@ -64,14 +64,14 @@ export default {
       // console.log("openOverview", this.openOverview);
     },
     resetSelectedRows() {
-      console.log("resetSelectedRows");
+      // console.log("resetSelectedRows");
       this.selectedRowKeys = [];
     },
     async stageCourses() {
       this.openOverview = false;
       
       // 根据 selectedRowKeys 筛选出对应的课程信息
-      for (let key of this.selectedRowKeys) {
+      for (const key of this.selectedRowKeys) {
         // 根据第一个字符分类
         const type = key[0];
 
@@ -111,7 +111,7 @@ export default {
               method: 'post',
               data: {
                 courseCode: _courseCode,
-                calendarId: this.$store.state.majorSelected.calendar
+                calendarId: this.$store.state.majorSelected.calendarId
               }
             });
 
