@@ -17,7 +17,7 @@
     okText="提交"
     v-model:open="openOverview"
     @ok="stageCourses"
-    @cancel="openOverview = false"
+    @cancel="handleCancel"
     style="width: 80%"
       >
       <CourseOverview v-model:selectedRowKeys="selectedRowKeys" />
@@ -62,6 +62,11 @@ export default {
     handleOpen() {
       this.openOverview = true;
       // console.log("openOverview", this.openOverview);
+    },
+    handleCancel() {
+      this.openOverview = false;
+      this.selectedRowKeys = []; // 清空一下，不然动画会保持原来的状态
+      console.log("清空！", this.selectedRowKeys);
     },
     resetSelectedRows() {
       // console.log("resetSelectedRows");
@@ -137,6 +142,44 @@ export default {
             }
 
             // console.log("_courseObject", _courseObject);
+
+            this.$store.commit("pushStagedCourse", _courseObject);
+          }
+          catch (error) {
+            console.log("error:", error);
+          }
+        }
+        else if (type === '查') {
+          const _courseCode = key.split('_')[1];
+
+          try {
+            const res = await axios({
+              url: '/api/findCourseDetailByCode',
+              method: 'post',
+              data: {
+                courseCode: _courseCode,
+                calendarId: this.$store.state.majorSelected.calendarId
+              }
+            });
+
+            const _roughCourse = this.$store.state.commonLists.searchCourses
+              .find(course => course.courseCode === _courseCode);
+            const _detailCourse = res.data.data;
+
+            // 需要整合一下数据
+            const _courseObject = {
+              courseCode: _roughCourse.courseCode,
+              courseName: _roughCourse.courseName + '(' + _roughCourse.courseCode + ')',
+              courseNameReserved: _roughCourse.courseName,
+              credit: _roughCourse.credit,
+              courseType: "查",
+              teacher: [],
+              status: 0,
+              courseDetail: _detailCourse.map(course => ({
+                ...course,
+                status: 0
+              }))
+            }
 
             this.$store.commit("pushStagedCourse", _courseObject);
           }

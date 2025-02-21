@@ -46,6 +46,79 @@ def getAllCalendar():
         "data": result
     }), 200
 
+@app.route('/api/getAllCampus', methods=['GET'])
+def getAllCampus():
+    '''
+    Get all campus.
+
+    Response:
+    ```json
+    {
+        "code": 200,
+        "msg": "查询成功",
+        "data": [
+            {
+                "campusId": 3,
+                "campusName": "嘉定校区"
+            },
+            {
+                "campusId": 1,
+                "campusName": "四平路校区"
+            }
+        ]
+    }
+    ```
+    '''
+
+    with bckndSql.bckndSql() as sql:
+        result = sql.getAllCampus()
+
+    return jsonify({
+        "code": 200,
+        "msg": "查询成功",
+        "data": result
+    }), 200
+
+@app.route('/api/getAllFaculty', methods=['GET'])
+def getAllFaculty():
+    '''
+    Get all faculty.
+
+    Response:
+    ```json
+    {
+        "code": 200,
+        "msg": "查询成功",
+        "data": [
+            {
+                "facultyId": 000034,
+                "facultyName": "职业技术教育学院"
+            },
+            {
+                "facultyId": 000037,
+                "facultyName": "图书馆"
+            },
+            {
+                "facultyId": 000039,
+                "facultyName": "国际文化交流学院"
+            },
+
+            // ...
+
+        ]
+    }
+    ```
+    '''
+
+    with bckndSql.bckndSql() as sql:
+        result = sql.getAllFaculty()
+
+    return jsonify({
+        "code": 200,
+        "msg": "查询成功",
+        "data": result
+    }), 200
+
 @app.route('/api/findGradeByCalendarId', methods=['POST'])
 def findGradeByCalendarId():
     '''

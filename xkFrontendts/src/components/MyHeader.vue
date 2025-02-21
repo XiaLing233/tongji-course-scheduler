@@ -76,7 +76,6 @@
 import { ExportOutlined, GithubOutlined, CalendarOutlined, LinkOutlined, ReadOutlined } from '@ant-design/icons-vue';
 
 export default {
-    name: 'MyHeader',
     components: {
         ExportOutlined,
         GithubOutlined,

@@ -19,6 +19,7 @@ export interface State {
         optionalCourses: courseInfo[],
         stagedCourses: stagedCourse[],
         selectedCourses: string[],
+        searchCourses: courseInfo[]
     },
     clickedCourseInfo: {
         courseCode: string,
@@ -46,6 +47,7 @@ const store = createStore<State>({
                 compulsoryCourses: [], // 必修课
                 optionalTypes: [], // 选修课类型
                 optionalCourses: [], // 选修课
+                searchCourses: [], // 通过搜索得到的课程
 
                 // 选择课程时的课程列表
                 stagedCourses: [], // 备选课程
@@ -82,6 +84,10 @@ const store = createStore<State>({
             state.commonLists.optionalCourses = payload;
             // console.log(state.commonLists.optionalCourses);
         },
+        setSearchedCourses(state, payload: courseInfo[]) {
+            console.log(payload);
+            state.commonLists.searchCourses = payload;
+        },
         pushStagedCourse(state, payload: stagedCourse) {
             state.commonLists.stagedCourses.push(payload);
             // console.log(state.commonLists.stagedCourses.length);
@@ -97,6 +103,14 @@ const store = createStore<State>({
             if (codeOfCourse) {
                 deleteOccupied(state.occupied, codeOfCourse); // deleteOccupied 接收的是包含班号的课号，所以对于 courseCode，需要找到班号
             }
+
+            // 点击课程清空
+            state.clickedCourseInfo = {
+                courseCode: '',
+                courseName: ''
+            };
+
+            console.log(state.clickedCourseInfo);
         },
         setClickedCourseInfo(state, payload: clickedCourseInfo) {
             // console.log(payload);

@@ -492,3 +492,63 @@ Response：
     }
 }
 ```
+
+## API 9 获得所有校区
+
+方法：`GET`
+
+地址：`/api/getAllCampus`
+
+Response:
+
+```json
+{
+    "code": 200,
+    "data": [
+        {
+            "campusId": "1",
+            "campusName": "四平路校区"
+        },
+        {
+            "campusId": "3",
+            "campusName": "嘉定校区"
+        },
+        {
+            "campusId": "4",
+            "campusName": "沪西校区"
+        }
+    ],
+    "msg": "查询成功"
+}
+```
+
+## API 10 获得所有学院
+
+方法：`GET`
+
+地址：`/api/getAllFaculty`
+
+Response:
+
+```json
+{
+    "code": 200,
+    "data": [
+        {
+            "facultyId": "000034",
+            "facultyName": "职业技术教育学院"
+        },
+        {
+            "facultyId": "000037",
+            "facultyName": "图书馆"
+        },
+        {
+            "facultyId": "000039",
+            "facultyName": "国际文化交流学院"
+        },
+
+        // ...
+    ],
+    "msg": "查询成功"
+}
+```

@@ -49,6 +49,28 @@ class bckndSql:
         # json str result to json
         return [json.loads(calendar[0]) for calendar in result]
 
+    def getAllCampus(self):
+        '''
+        Get all campus data
+        '''
+        self.cursor.execute(f'SELECT JSON_OBJECT("campusId", campus, "campusName", campusI18n) FROM campus')
+
+        result = self.cursor.fetchall()
+
+        # json str result to json
+        return [json.loads(campus[0]) for campus in result]
+    
+    def getAllFaculty(self):
+        '''
+        Get all faculty data
+        '''
+        self.cursor.execute(f'SELECT JSON_OBJECT("facultyId", faculty, "facultyName", facultyI18n) FROM faculty')
+
+        result = self.cursor.fetchall()
+
+        # json str result to json
+        return [json.loads(faculty[0]) for faculty in result]
+
     def findGradeByCalendarId(self, calendarId):
         '''
         Find grade by calendarId
@@ -356,8 +378,9 @@ class bckndSql:
                 'courseCode', c.courseCode,
                 'courseName', c.courseName,
                 'faculty', f.facultyI18n,
+                'credit', c.credit,
                 'courseNature', CAST(CONCAT('[', GROUP_CONCAT(DISTINCT JSON_QUOTE(n.courseLabelName)), ']') AS JSON),  -- 去重
-                'campus_list', CAST(CONCAT('[', GROUP_CONCAT(DISTINCT JSON_QUOTE(ca.campusI18n) ORDER BY ca.campusI18n), ']') AS JSON) -- 去重校区列表，并按校区名排序
+                'campus', CAST(CONCAT('[', GROUP_CONCAT(DISTINCT JSON_QUOTE(ca.campusI18n) ORDER BY ca.campusI18n), ']') AS JSON) -- 去重校区列表，并按校区名排序
             )
         FROM coursedetail as c
         JOIN faculty AS f ON f.faculty = c.faculty
@@ -366,7 +389,7 @@ class bckndSql:
         JOIN teacher as t ON t.teachingClassid = c.id
         WHERE c.calendarId = %s
         {condition}
-        GROUP BY c.courseCode, c.courseName, f.facultyI18n, n.courseLabelName
+        GROUP BY c.courseCode, c.courseName, f.facultyI18n, n.courseLabelName, c.credit
         ORDER BY courseCode desc
         LIMIT %s;
         """

@@ -93,11 +93,12 @@ import { mapStatusToChinese } from '@/utils/statusManipulate';
         computed: {
             localDetailList() {
                 // console.log(this.$store.state.commonLists.stagedCourses.find(course => course.courseCode === this.$store.state.clickedCourseInfo.courseCode)?.courseDetail)
-                return this.$store.state.commonLists.stagedCourses.find(course => course.courseCode === this.$store.state.clickedCourseInfo.courseCode)?.courseDetail || []
+                return this.$store.state.commonLists.stagedCourses.find(course => course.courseCode === this.$store.state.clickedCourseInfo.courseCode)?.courseDetail || [];
             },
             title() {
                 const courseInfo = this.$store.state.clickedCourseInfo;
-                return `${courseInfo.courseName} ${courseInfo.courseCode}`
+                console.log("courseInfo", courseInfo);
+                return `${courseInfo.courseName} ${courseInfo.courseCode}`;
             }
         },
         methods: {

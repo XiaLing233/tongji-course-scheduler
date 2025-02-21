@@ -33,7 +33,7 @@
                 :pagination="false"
                 :title="() => courses.grade + '级'"
                 :row-selection="{ 
-                    localSelectedRowKeys: localSelectedRowKeys.filter(key => key.startsWith('必_' + courses.grade + '_')), 
+                    selectedRowKeys: localSelectedRowKeys.filter(key => key.startsWith('必_' + courses.grade + '_')), 
                     onChange: (keys) => onCompulsorySelectChange(keys)
                 }"
                 :row-key="record => '必_' + courses.grade + '_' + record.courseCode"
@@ -51,7 +51,7 @@
                         :data-source="filteredCourses($store.state.commonLists.optionalCourses.find(item => item.courseLabelId === type.courseLabelId)?.courses)"
                         :pagination="false"
                         :row-selection="{ 
-                            localSelectedRowKeys: localSelectedRowKeys.filter(key => key.startsWith('选_' + type.courseLabelId + '_')), 
+                            selectedRowKeys: localSelectedRowKeys.filter(key => key.startsWith('选_' + type.courseLabelId + '_')), 
                             onChange: (keys) => onOptionalSelectChange(keys) 
                         }"
                         :row-key="record => '选_' + type.courseLabelId + '_' + record.courseCode"
@@ -64,7 +64,7 @@
         </div>
         <div v-else-if="selectedType === 'search'">
             <div>
-                <p>高级检索</p>
+                <AdvancedSearch :searchValue="searchValue"  v-model:selectedRowKeys="localSelectedRowKeys" />
             </div>
         </div>
     </div>
@@ -73,6 +73,7 @@
 <script>
 import axios from 'axios';
 import { SearchOutlined } from '@ant-design/icons-vue';
+import AdvancedSearch from '@/components/AdvancedSearch.vue';
 
 export default {
     data() {
@@ -188,8 +189,8 @@ export default {
         filteredCourses(courses) {
             // 根据已选课程来过滤，德摩根律啊！思考一下为什么是 && 而不是 ||
             courses = courses.filter((course) => {
-                return !this.$store.state.commonLists.stagedCourses.some(stagedCourse => stagedCourse.courseCode === course.courseCode) 
-                && !this.$store.state.commonLists.selectedCourses.some(selectedCourse => selectedCourse.courseCode === course.courseCode)
+                return !this.$store.state.commonLists.stagedCourses.some(stagedCourse => stagedCourse.courseCode === course.courseCode);
+                // && !this.$store.state.commonLists.selectedCourses.some(selectedCourse => selectedCourse.courseCode === course.courseCode) // 这句不需要，因为被上面的包含了
             });
 
             // 保留表格中和 this.searchValue 代码或者名称匹配的课程
@@ -210,14 +211,17 @@ export default {
         });
     },
     components: {
-        SearchOutlined
+        SearchOutlined,
+        AdvancedSearch
     },
     computed: {
         localSelectedRowKeys: {
             get() {
+                console.log("本地的！", this.selectedRowKeys);
                 return this.selectedRowKeys;
             },
             set(value) {
+                console.log("我也更新：", value);
                 this.$emit('update:selectedRowKeys', value);
             }
         }

@@ -31,7 +31,8 @@
                             </span>
                         </template>
                         <template v-else-if="column.key === 'action'">
-                            <a-button type="link" @click="$store.commit('popStagedCourse', record.courseCode)">
+                            <!-- .stop 是为了事件不冒泡 -->
+                            <a-button type="link" @click.stop="$store.commit('popStagedCourse', record.courseCode)">
                                 <div class=" text-red-500">
                                     <span v-if="record.status === 2" >退课</span>
                                     <span v-else>清除</span>
