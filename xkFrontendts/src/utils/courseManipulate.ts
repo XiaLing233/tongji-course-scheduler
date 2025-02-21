@@ -1,19 +1,6 @@
 // 储存了一些判断是否满足条件的函数
 
-// 一些接口
-interface occupyCell {
-    code: string;
-    occupyWeek: number[];
-}
-
-interface arrangementInfolet {
-    arrangementText: string;
-    occupyDay: number;
-    occupyTime: number[];
-    occupyWeek: number[];
-    occupyRoom: string;
-    teacherAndCode: string;
-}
+import type { arrangementInfolet, occupyCell } from "./myInterface";
 
 // helper function，判断两个数组是否有交集
 function hasIntersection(arr1: number[], arr2: number[]): boolean {
@@ -42,8 +29,8 @@ export function canAddCourse(arrangementInfo: arrangementInfolet[], occupied: oc
 
     // arrangementInfo 是 数组
     // occupied 是 12 * 7 的二维数组，每个元素是一个数组，存放了当前时间课程的课号和占用的周
-    for (let arr of arrangementInfo) { // 遍历了一门课的全部时间段
-        for (let occupyTimelet of arr.occupyTime) { // 遍历了一个时间段的全部时间
+    for (const arr of arrangementInfo) { // 遍历了一门课的全部时间段
+        for (const occupyTimelet of arr.occupyTime) { // 遍历了一个时间段的全部时间
             // 如果这个时间段已经被占用了
             if (occupied[occupyTimelet - 1][arr.occupyDay - 1]) {
                 // 检查是否与已占用时段的课程有时间冲突
@@ -66,9 +53,9 @@ export function canAddCourse(arrangementInfo: arrangementInfolet[], occupied: oc
 
 // 增
 export function insertOccupied(occupied: occupyCell[][][], arrangementInfo: arrangementInfolet[], code: string) {
-    for (let arr of arrangementInfo) {
-        for (let occupyTimelet of arr.occupyTime) {
-            console.log("zhanyong", occupied);
+    for (const arr of arrangementInfo) {
+        for (const occupyTimelet of arr.occupyTime) {
+            // console.log("zhanyong", occupied);
             occupied[occupyTimelet - 1][arr.occupyDay - 1].push({
                 code: code,
                 occupyWeek: arr.occupyWeek

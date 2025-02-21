@@ -79,7 +79,7 @@
         },
         computed: {
             localDetailList() {
-                console.log(this.$store.state.commonLists.stagedCourses.find(course => course.courseCode === this.$store.state.clickedCourseInfo.courseCode)?.courseDetail)
+                // console.log(this.$store.state.commonLists.stagedCourses.find(course => course.courseCode === this.$store.state.clickedCourseInfo.courseCode)?.courseDetail)
                 return this.$store.state.commonLists.stagedCourses.find(course => course.courseCode === this.$store.state.clickedCourseInfo.courseCode)?.courseDetail || []
             },
             title() {
@@ -100,11 +100,11 @@
                         return 'bg-white';
                 }
             },
-            onRowEvent(record) {
+            onRowEvent(courseDetaillet) {
                 return {
                     onClick: () => {
-                        console.log(record);
-                        this.$store.commit('updateTimeTable', record);
+                        console.log("记录", courseDetaillet);
+                        this.$store.commit('updateTimeTable', courseDetaillet);
                     }
                 }
             }

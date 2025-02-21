@@ -26,14 +26,14 @@
                 >
                     <template #bodyCell="{ column, record }">
                         <template v-if="column.key === 'status'">
-                            <a-tag :color="record.status === '已选' ? 'success' : (record.status === '备选' ? 'warning' : 'error')">
-                                {{ record.status }}
+                            <a-tag :color="record.status === 2 ? 'success' : (record.status === 1 ? 'warning' : 'error')">
+                                {{ record.status === 2 ? '已选' : (record.status === 1 ? '备选' : '未选') }}
                             </a-tag>
                         </template>
                         <template v-else-if="column.key === 'action'">
                             <a-button type="link" @click="removeCourse(record.courseCode)">
                                 <div class=" text-red-500">
-                                    <span v-if="record.status === '已选'" >退课</span>
+                                    <span v-if="record.status === 2" >退课</span>
                                     <span v-else>清除</span>
                                 </div>
                             </a-button>
@@ -111,7 +111,7 @@ export default {
                 data: {
                     grade: this.$store.state.majorSelected.grade,
                     code: this.$store.state.majorSelected.major,
-                    calendarId: this.$store.state.majorSelected.calendar
+                    calendarId: this.$store.state.majorSelected.calendarId
                 }
             })
             this.$store.commit('setCompulsoryCourses', res.data.data);
@@ -131,10 +131,10 @@ export default {
 
             return className;
         },
-        onRowEvent(record, _index) {
+        onRowEvent(record) {
             return {
                 onClick: () => {
-                    // console.log(record)
+                    console.log(record)
                     this.$store.commit('setClickedCourseInfo', {
                         courseCode: record.courseCode,
                         courseName: record.courseNameReserved

@@ -28,6 +28,7 @@
                 <a-table
                 :columns="columns.compulsory"
                 v-for="courses in this.$store.getters.sortCompulsoryCoursesByGrade"
+                :key="courses.grade"
                 :data-source="filteredCourses(courses.courses)"
                 :pagination="false"
                 :title="() => courses.grade + '级'"
@@ -161,7 +162,7 @@ export default {
                     url: '/api/findOptionalCourseType',
                     method: 'post',
                     data: {
-                        calendarId: this.$store.state.majorSelected.calendar
+                        calendarId: this.$store.state.majorSelected.calendarId
                     }
                 });
                 this.optionalTypes = this.$store.commit('setOptionalTypes', res.data.data);
@@ -175,7 +176,7 @@ export default {
                     url: '/api/findCourseByNatureId',
                     method: 'post',
                     data: {
-                        calendarId: this.$store.state.majorSelected.calendar,
+                        calendarId: this.$store.state.majorSelected.calendarId,
                         ids: this.$store.state.commonLists.optionalTypes.map(type => type.courseLabelId)
                     }
                 });

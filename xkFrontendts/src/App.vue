@@ -2,7 +2,7 @@
   <a-config-provider :locale="locale">
     <a-layout class="space-y-4">
       <!-- 所有 layout 放在了组件里, 不要嵌套! -->
-      <Header />
+      <MyHeader />
       <MajorInfo @changeMajor="resetSelectedRows" />
       <a-layout>
         <div class="flex flex-row space-x-4 h-max m-2">
@@ -26,7 +26,7 @@
 </template>
 
 <script>
-import Header from './components/Header.vue';
+import MyHeader from './components/MyHeader.vue';
 import CourseRoughList from './components/CourseRoughList.vue';
 import CourseDetailList from './components/CourseDetailList.vue';
 import TimeTable from './components/TimeTable.vue';
@@ -44,7 +44,7 @@ dayjs.locale('zh-cn');
 export default {
   name: 'App',
   components: {
-    Header,
+    MyHeader,
     CourseRoughList,
     CourseDetailList,
     TimeTable,
@@ -64,14 +64,14 @@ export default {
       // console.log("openOverview", this.openOverview);
     },
     resetSelectedRows() {
-      console.log("resetSelectedRows");
+      // console.log("resetSelectedRows");
       this.selectedRowKeys = [];
     },
     async stageCourses() {
       this.openOverview = false;
       
       // 根据 selectedRowKeys 筛选出对应的课程信息
-      for (let key of this.selectedRowKeys) {
+      for (const key of this.selectedRowKeys) {
         // 根据第一个字符分类
         const type = key[0];
 
@@ -111,7 +111,7 @@ export default {
               method: 'post',
               data: {
                 courseCode: _courseCode,
-                calendarId: this.$store.state.majorSelected.calendar
+                calendarId: this.$store.state.majorSelected.calendarId
               }
             });
 

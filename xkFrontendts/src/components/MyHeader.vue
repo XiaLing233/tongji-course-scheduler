@@ -73,12 +73,11 @@
 </template>
 
 <script>
-import { DownOutlined, ExportOutlined, GithubOutlined, CalendarOutlined, LinkOutlined, ReadOutlined } from '@ant-design/icons-vue';
+import { ExportOutlined, GithubOutlined, CalendarOutlined, LinkOutlined, ReadOutlined } from '@ant-design/icons-vue';
 
 export default {
-    name: 'Header',
+    name: 'MyHeader',
     components: {
-        DownOutlined,
         ExportOutlined,
         GithubOutlined,
         ReadOutlined,

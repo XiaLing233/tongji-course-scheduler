@@ -1,12 +1,13 @@
 import { createStore } from "vuex";
 import { canAddCourse, insertOccupied, deleteOccupied, isSameCourse } from "@/utils/courseManipulate";
+import type { courseDetaillet, baseInfoTriplet, courseInfo } from "@/utils/myInterface";
 
 const store = createStore({
     state() {
         return {
             // 检索的基本信息
             majorSelected: {
-                calendar: undefined,
+                calendarId: undefined,
                 grade: undefined,
                 major: undefined
             },
@@ -27,7 +28,7 @@ const store = createStore({
                 courseName: ''
             },
             // 课程表数据
-            occupied: Array(12).fill(null).map(() => Array(7).fill().map(() => [])), // 12 * 7 的二维数组，每个元素是一个数组
+            occupied: Array(12).fill(null).map(() => Array(7).fill(undefined).map(() => [])), // 12 * 7 的二维数组，每个元素是一个数组
             timeTableData: [], // 课程表数据
             // 标志位
             flags: {
@@ -36,15 +37,16 @@ const store = createStore({
         }
     },
     mutations: {
-        setMajorInfo(state, payload) {
+        setMajorInfo(state, payload: baseInfoTriplet) {
             state.majorSelected = payload;
             state.flags.majorNotChanged = false;
         },
-        setCompulsoryCourses(state, payload) {
+        setCompulsoryCourses(state, payload: courseInfo[]) {
             state.commonLists.compulsoryCourses = payload;
             state.flags.majorNotChanged = true;
         },
         setOptionalTypes(state, payload) {
+            console.log(payload);
             state.commonLists.optionalTypes = payload;
         },
         setOptionalCourses(state, payload) {
@@ -66,7 +68,7 @@ const store = createStore({
             state.commonLists.stagedCourses = [];
             state.commonLists.selectedCourses = [];
         },
-        updateTimeTable(state, payload) {      
+        updateTimeTable(state, payload: courseDetaillet) {      
             // console.log("排课信息:", payload)
 
             if (canAddCourse(payload.arrangementInfo, state.occupied, payload.code).canAdd) {
@@ -75,7 +77,7 @@ const store = createStore({
                 // 规定相同课号的课只能有一个
                 if (sameCodeCourse) {
                     state.timeTableData = state.timeTableData.filter(course => !isSameCourse(course.code, payload.code));
-                    deleteOccupied(state.occupied, sameCodeCourse.occupyTime, sameCodeCourse.occupyDay);
+                    deleteOccupied(state.occupied, sameCodeCourse.occupyTime);
                 }
 
                 payload.arrangementInfo.forEach(
@@ -87,12 +89,12 @@ const store = createStore({
                             occupyTime: arrangement.occupyTime,
                             occupyDay: arrangement.occupyDay,
                         }
-                        console.log("push 了星期", courseOnTable.occupyDay);
+                        // console.log("push 了星期", courseOnTable.occupyDay);
                         state.timeTableData.push(courseOnTable);
                     }
                 );
 
-                console.log("当前课表数据：", state.timeTableData);
+                // console.log("当前课表数据：", state.timeTableData);
 
                 insertOccupied(state.occupied, payload.arrangementInfo, payload.code);
 
@@ -106,7 +108,7 @@ const store = createStore({
     },
     getters: {
         isMajorSelected(state) {
-            return state.majorSelected.calendar && state.majorSelected.grade && state.majorSelected.major;
+            return state.majorSelected.calendarId && state.majorSelected.grade && state.majorSelected.major;
         },
         sortCompulsoryCoursesByGrade(state) {
             // 返回一个数组

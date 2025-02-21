@@ -90,7 +90,7 @@ export default {
     },
     computed: {
         timeTableData() {
-            console.log("tongbu", this.$store.state.timeTableData)
+            // console.log("tongbu", this.$store.state.timeTableData)
             return this.$store.state.timeTableData;
         }
     },
