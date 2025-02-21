@@ -14,7 +14,7 @@
                 <a-dropdown>
                     <template #overlay>
                         <a-menu class="text-center">
-                        <a-menu-item key="wakeUp">
+                        <a-menu-item key="wakeUp" @click="wakeUpCSV">
                             <div class="flex flex-row space-x-2 items-center">
                                 <p>WakeUp 课程表支持的 csv 格式</p>
                                 <p><a href="https://www.wakeup.fun/" target="_blank">[官网]</a></p>
@@ -74,6 +74,7 @@
 
 <script>
 import { ExportOutlined, GithubOutlined, CalendarOutlined, LinkOutlined, ReadOutlined } from '@ant-design/icons-vue';
+import { codesToJson, jsonToCSV, downloadCSV } from '@/utils/csvRelated';
 
 export default {
     components: {
@@ -82,6 +83,13 @@ export default {
         ReadOutlined,
         LinkOutlined,
         CalendarOutlined
+    },
+    methods: {
+        wakeUpCSV() {
+            const csv = codesToJson(this.$store.state.commonLists.selectedCourses, this.$store.state.commonLists.stagedCourses);
+            const csvString = jsonToCSV(csv);
+            downloadCSV(csvString, 'tongji-course-scheduler.csv');
+        }
     }
 }
 </script>

@@ -84,3 +84,14 @@ export interface stagedCourse {
     status: number;
     courseDetail: courseDetaillet[];
 }
+
+// csv 中一门课的信息
+export interface csvCourse {
+    courseName: string; // 课程名称
+    occupyDay: number | string, // 星期
+    start: number | string, // 开始节数
+    end: number | string, // 结束节数
+    teacherName: string, // 老师
+    occupyRoom: string, // 地点
+    occucpyWeek: string; // 周数 用、分隔
+}
