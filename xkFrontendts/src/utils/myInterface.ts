@@ -4,6 +4,15 @@ export interface occupyCell {
     occupyWeek: number[];
 }
 
+// timeTable 中的元素
+export interface courseOnTable {
+    showText: string;
+    courseName: string;
+    code: string;
+    occupyTime: number[];
+    occupyDay: number;
+}
+
 // 课程安排
 export interface arrangementInfolet {
     arrangementText: string;
@@ -26,7 +35,7 @@ export interface courseDetaillet {
     campus: string;
     code: string;
     isExclusive?: boolean;
-    status: number;
+    status?: number;
     teachers: teacherlet[];
     teachingLanguage: string;
 }
@@ -41,17 +50,37 @@ export interface courseInfo {
     status: number,
     teacher: string[];
     courseDetail: courseDetaillet[];
+    grade?: number;
 }
 
 // 专业信息
 export interface baseInfoTriplet {
-    calendarId: number;
-    grade: number;
-    major: string;
+    calendarId: number | undefined;
+    grade: number | undefined;
+    major: string | undefined;
 }
 
 // 选修课类型
 export interface optionalCourseType {
     courseLabelId: number;
     courseLabelName: string;
+}
+
+// 鼠标点击的课程
+
+export interface clickedCourseInfo {
+    courseCode: string;
+    courseName: string;
+}
+
+// 待选/已选课程
+export interface stagedCourse {
+    courseCode: string;
+    courseName: string;
+    courseNameReserved: string;
+    credit: number;
+    courseType: string;
+    teacher: teacherlet[];
+    status: number;
+    courseDetail: courseDetaillet[];
 }

@@ -1,6 +1,6 @@
 // 存放了选课状态的函数（已选、备选、未选 | 清除、退课..）
 
-import { courseInfo } from "./myInterface";
+import type { courseInfo } from "./myInterface";
 
 export function defineStatus(courseInfo: courseInfo) : void {
     // 如果有备选的，不管是新选的还是改选的课，外层显示都是备选
@@ -24,8 +24,29 @@ export function defineAction(courseInfo: courseInfo) : string {
     }
 }
 
-export function deleteSelectedCourse(selectedCourses : string[], code: string) : string[] {
-    return selectedCourses.filter(item => item !== code);
+export function mapStatusToChinese(status: number) : string {
+    console.log("status", status);
+    switch (status) {
+        case 0:
+            return "未选";
+        case 1:
+            return "备选";
+        case 2:
+            return "已选";
+        default:
+            return "未知";
+    }
 }
 
-export function deleteStagedCourse()
+export function getTagColor(status: number) : string {
+    switch (status) {
+        case 2:
+            return 'success';
+        case 1:
+            return 'warning';
+        case 0:
+            return 'error';
+        default:
+            return 'default';
+    }
+}

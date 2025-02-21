@@ -9,7 +9,7 @@
                         <a-button @click="getCompulsoryCourses">
                             <p>选择课程</p>
                         </a-button>
-                        <a-button type="primary">
+                        <a-button type="primary" @click="$store.commit('saveSelectedCourses')">
                             <p>保存课表</p>
                         </a-button>
                     </div>
@@ -26,12 +26,12 @@
                 >
                     <template #bodyCell="{ column, record }">
                         <template v-if="column.key === 'status'">
-                            <a-tag :color="record.status === 2 ? 'success' : (record.status === 1 ? 'warning' : 'error')">
-                                {{ record.status === 2 ? '已选' : (record.status === 1 ? '备选' : '未选') }}
-                            </a-tag>
+                            <span :class="getStatusTextColor(record.status)">
+                                {{ mapStatusToChinese(record.status) }}
+                            </span>
                         </template>
                         <template v-else-if="column.key === 'action'">
-                            <a-button type="link" @click="removeCourse(record.courseCode)">
+                            <a-button type="link" @click="$store.commit('popStagedCourse', record.courseCode)">
                                 <div class=" text-red-500">
                                     <span v-if="record.status === 2" >退课</span>
                                     <span v-else>清除</span>
@@ -47,6 +47,7 @@
 
 <script>
 import axios from 'axios';
+import { mapStatusToChinese } from '@/utils/statusManipulate';
 
 export default {
     data() {
@@ -72,15 +73,16 @@ export default {
             },
             {
                 title: '教师',
-                dataIndex: 'teacherName',
-                key: 'teacherName',
-                align: 'center'
+                dataIndex: 'teacher',
+                key: 'teacher',
+                align: 'center',
+                customRender: ({ text }) => text?.map(teacher => teacher.teacherName).join(', ')
             },
             {
                 title: '状态',
                 dataIndex: 'status',
                 key: 'status',
-                align: 'center'
+                align: 'center',
             },
             {
                 title: '操作',
@@ -140,6 +142,19 @@ export default {
                         courseName: record.courseNameReserved
                     });
                 },
+            }
+        },
+        mapStatusToChinese,
+        getStatusTextColor(status) {
+            switch(status) {
+                case 0:
+                    return '';
+                case 1:
+                    return 'text-yellow-300';
+                case 2:
+                    return 'text-green-400';
+                default:
+                    return '';
             }
         }
     },

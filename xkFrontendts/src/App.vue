@@ -89,10 +89,10 @@ export default {
             credit: originalCourse.credit,
             courseType: "必",
             teacher: [],
-            status: "未选",
+            status: 0,
             courseDetail: originalCourse.courses.map(course => ({
               ...course,
-              status: "未选"
+              status: 0
             }))
           }
 
@@ -129,10 +129,10 @@ export default {
               credit: _roughCourse.credit,
               courseType: "选",
               teacher: [],
-              status: "未选",
+              status: 0,
               courseDetail: _detailCourse.map(course => ({
                 ...course,
-                status: "未选"
+                status: 0
               }))
             }
 

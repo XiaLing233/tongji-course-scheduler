@@ -7,15 +7,26 @@
                 :columns="columns"
                 :data-source="localDetailList"
                 :pagination="false"
-                :row-class-name="(_record, index) => (index % 2 === 1 ? 'table-striped' : null)"
+                :row-class-name="getRowClass"
                 class="h-80 overflow-auto"
                 :custom-row="onRowEvent"
                 bordered
             >
-                <template #bodyCell="{ column, text }">
+                <template #bodyCell="{ column, record }">
                     <template v-if="column.key === 'campus'">
-                        <div :class="getCampusClass(text)" class="h-full flex items-center justify-center">
-                            <p>{{ text }}</p>
+                        <div :class="getCampusClass(record.campus)" class="h-full flex items-center justify-center">
+                            <p>{{ record.campus }}</p>
+                        </div>
+                    </template>
+                    <template v-else-if="column.key === 'status'">
+                        <span :class="getStatusTextColor(record.status)">
+                            {{ mapStatusToChinese(record.status) }}
+                        </span>
+                    </template>
+                    <template v-else-if="column.key === 'code'">
+                        <div class="flex flex-row items-center justify-center">
+                            <a-tag color="green" v-if="record.isExclusive">专业课表</a-tag>
+                            <p>{{ record.code }}</p>
                         </div>
                     </template>
                 </template>
@@ -25,6 +36,8 @@
 </template>
 
 <script>
+import { mapStatusToChinese } from '@/utils/statusManipulate';
+
     export default {
         data() {
             return {
@@ -66,7 +79,7 @@
                         title: '状态',
                         dataIndex: 'status',
                         key: 'status',
-                        align: 'center'
+                        align: 'center',
                     },
                     {
                         title: '语言',
@@ -107,7 +120,48 @@
                         this.$store.commit('updateTimeTable', courseDetaillet);
                     }
                 }
+            },
+            mapStatusToChinese,
+            getStatusTextColor(status) {
+                // console.log("132", status);
+                switch (status) {
+                    case 0:
+                        return '';
+                    case 1:
+                        return 'text-yellow-300';
+                    case 2:
+                        return 'text-red-500';
+                    default:
+                        return '';
+                }
+            },
+            getRowClass(record, index) {
+                let className = index % 2 === 0 ? 'bg-white' : 'bg-gray-50';
+                
+                switch (record.status) {
+                    case 0: // 未选
+                        break;
+                    case 1: // 备选
+                        className =  'bg-violet-500/60';
+                        break;
+                    case 2:
+                        className += ' ' + 'text-red-500';
+                        break;
+                    default:
+                        break;
+                }
+
+                // console.log("className", className);
+
+                return className;
             }
         }
     }
 </script>
+
+<style scoped>
+:deep(.ant-table-tbody > tr.ant-table-row:hover > td),
+:deep(.ant-table-tbody > tr > td.ant-table-cell-row-hover) {
+  background: transparent !important;
+}
+</style>
