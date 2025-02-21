@@ -131,7 +131,7 @@ export default {
 
             return className;
         },
-        onRowEvent(record, _index) {
+        onRowEvent(record) {
             return {
                 onClick: () => {
                     console.log(record)

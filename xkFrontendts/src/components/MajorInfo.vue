@@ -15,6 +15,7 @@
                     <a-select-option
                         v-for="calendar in rawList.calendars"
                         :value="calendar.calendarId"
+                        :key="calendar.calendarId"
                     >
                         {{ calendar.calendarName }}
                     </a-select-option>
@@ -31,6 +32,7 @@
                     <a-select-option
                         v-for="grade in rawList.grades"
                         :value="grade"
+                        :key="grade"
                     >
                         {{ grade }}
                     </a-select-option>
@@ -51,6 +53,7 @@
                             v-for="major in rawList.majors"
                             :value="major.code"
                             :label="major.name"
+                            :key="major.code"
                         >
                             {{ major.name }}
                         </a-select-option>

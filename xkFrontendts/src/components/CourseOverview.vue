@@ -28,6 +28,7 @@
                 <a-table
                 :columns="columns.compulsory"
                 v-for="courses in this.$store.getters.sortCompulsoryCoursesByGrade"
+                :key="courses.grade"
                 :data-source="filteredCourses(courses.courses)"
                 :pagination="false"
                 :title="() => courses.grade + '级'"
