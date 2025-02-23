@@ -25,7 +25,7 @@ export function defineAction(courseInfo: courseInfo) : string {
 }
 
 export function mapStatusToChinese(status: number) : string {
-    console.log("status", status);
+    // console.log("status", status);
     switch (status) {
         case 0:
             return "未选";

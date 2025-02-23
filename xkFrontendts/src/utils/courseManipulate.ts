@@ -19,7 +19,7 @@ export function canAddCourse(arrangementInfo: arrangementInfolet[], occupied: oc
     const existingCode = occupied.flat().flat().find(item => isSameCourse(item.code, code))?.code;
 
     if (existingCode) {
-        console.log("触发了相同课号的判断");
+        // console.log("触发了相同课号的判断");
         // 如果课号相同，能不能加的标准是，把旧的给删掉之后，有没有冲突
         // 所以创建一份拷贝来判断
         const newOccupied = JSON.parse(JSON.stringify(occupied));
@@ -40,7 +40,7 @@ export function canAddCourse(arrangementInfo: arrangementInfolet[], occupied: oc
                 if (collideItem) {
                     return {
                         canAdd: false,
-                        collideCourse: collideItem.code
+                        collideCourse: collideItem.code + " " + collideItem.courseName
                     }
                 }
             }
@@ -52,12 +52,13 @@ export function canAddCourse(arrangementInfo: arrangementInfolet[], occupied: oc
 }
 
 // 增
-export function insertOccupied(occupied: occupyCell[][][], arrangementInfo: arrangementInfolet[], code: string) {
+export function insertOccupied(occupied: occupyCell[][][], arrangementInfo: arrangementInfolet[], code: string, courseName: string) {
     for (const arr of arrangementInfo) {
         for (const occupyTimelet of arr.occupyTime) {
             // console.log("zhanyong", occupied);
             occupied[occupyTimelet - 1][arr.occupyDay - 1].push({
                 code: code,
+                courseName: courseName,
                 occupyWeek: arr.occupyWeek
             });
         }
@@ -74,9 +75,9 @@ export function deleteOccupied(occupied: occupyCell[][][], code: string) {
 }
 
 // 改
-export function updateOccupied(occupied: occupyCell[][][], arrangementInfo: arrangementInfolet[], code: string) {
+export function updateOccupied(occupied: occupyCell[][][], arrangementInfo: arrangementInfolet[], code: string, courseName: string) {
     deleteOccupied(occupied, code);
-    insertOccupied(occupied, arrangementInfo, code);
+    insertOccupied(occupied, arrangementInfo, code, courseName);
 }
 
 // 判断两个课是否相同

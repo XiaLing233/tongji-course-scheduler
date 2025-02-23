@@ -17,7 +17,7 @@ export function codesToJsonForXLS(codes: string[], rawList: stagedCourse[]): xls
                     courseName: course.courseNameReserved,
                     teacherName: course.teacher.map((teacher) => teacher.teacherName).join(',')
                 };
-                console.log(xlsCourse);
+                // console.log(xlsCourse);
                 ret.push(xlsCourse);
             }
         }

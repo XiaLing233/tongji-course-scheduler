@@ -3,14 +3,6 @@
         <div class="bg-[url(../assets/logo.png)] bg-cover bg-center h-10 w-95"></div>
         <div class="float-right flex flex-row space-x-4">
             <div>
-                <a-button>
-                    <div class="flex flex-row space-x-2 items-center">
-                        <p>从个人课表导入</p>
-                        <div><CalendarOutlined /></div>
-                    </div>
-                </a-button>
-            </div>
-            <div>
                 <a-dropdown>
                     <template #overlay>
                         <a-menu class="text-center">
@@ -34,7 +26,7 @@
                 </a-dropdown>
             </div>
             <div>
-                <a-button>
+                <a-button @click="readTheDocs">
                     <div class="flex flex-row space-x-2 items-center">
                         <p>帮助文档</p>
                         <div><ReadOutlined /></div>
@@ -76,6 +68,7 @@
 import { ExportOutlined, GithubOutlined, CalendarOutlined, LinkOutlined, ReadOutlined } from '@ant-design/icons-vue';
 import { codesToJsonForCSV, jsonToCSV, downloadCSV } from '@/utils/csvRelated';
 import { codesToJsonForXLS, jsonToXLS, downloadXLS } from '@/utils/xlsRelated';
+import { errorNotify } from '@/utils/errorNotify';
 
 export default {
     components: {
@@ -95,6 +88,9 @@ export default {
             const xls = codesToJsonForXLS(this.$store.state.commonLists.selectedCourses, this.$store.state.commonLists.stagedCourses);
             const xlsBlob = jsonToXLS(xls);
             downloadXLS(xlsBlob);
+        },
+        readTheDocs() {
+            errorNotify("敬请期待");
         }
     }
 }

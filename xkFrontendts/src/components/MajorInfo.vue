@@ -66,6 +66,7 @@
 
 <script>
 import axios from 'axios';
+import { errorNotify } from '@/utils/errorNotify';
 
 export default {
     data() {
@@ -79,17 +80,26 @@ export default {
     },
     methods: {
         async getAllCalendar() {
+            this.$store.commit("setSpin", true);
+
             try {
                 const res = await axios({
                     url: '/api/getAllCalendar',
                     method: 'get'
                 });
                 this.rawList.calendars = res.data.data;
-            } catch (error) {
-                console.log("error:", error);
+            }
+            catch (error) {
+                // console.log("error:", error);
+                errorNotify(err.response.data.msg);
+            }
+            finally {
+                this.$store.commit("setSpin", false);
             }
         },
         async findGradeByCalendarId(value) {
+            this.$store.commit('setSpin', true);
+
             this.$store.commit('setMajorInfo', 
                 {
                     calendarId: value,
@@ -108,11 +118,18 @@ export default {
                 this.rawList.grades = res.data.data.gradeList;
                 // 在年级更改时清空专业
                 this.rawList.majors = [];
-            } catch (error) {
-                console.log("error:", error);
+            }
+            catch (error) {
+                // console.log("error:", error);
+                errorNotify(err.response.data.msg);
+            }
+            finally {
+                this.$store.commit('setSpin', false);
             }
         },
         async findMajorByGrade(value) {
+            this.$store.commit('setSpin', true);
+
             this.$store.commit('setMajorInfo', 
                 {
                     calendarId: this.$store.state.majorSelected.calendarId,
@@ -129,8 +146,13 @@ export default {
                     }
                 });
                 this.rawList.majors = res.data.data;
-            } catch (error) {
-                console.log("error:", error);
+            }
+            catch (error) {
+                // console.log("error:", error);
+                errorNotify(err.response.data.msg);
+            }
+            finally {
+                this.$store.commit('setSpin', false);
             }
         },
         onMajorChange(value) {

@@ -69,7 +69,7 @@ export default {
     computed: {
         localSelectedRowKeys: {
             get() {
-                console.log('localSelectedRowKeys', this.selectedRowKeys);
+                // console.log('localSelectedRowKeys', this.selectedRowKeys);
                 return this.selectedRowKeys;
             },
             set(value) {

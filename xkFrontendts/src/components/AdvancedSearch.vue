@@ -53,6 +53,7 @@
 
 <script>
 import axios from 'axios';
+import { errorNotify } from '@/utils/errorNotify';
 
 export default {
     data() {
@@ -108,26 +109,40 @@ export default {
     },
     methods: {
         async getAllCampus () {
+            this.$store.commit('setSpin', true);
+
             try {
                 const res = await axios.get('/api/getAllCampus');
                 this.rawList.campus = res.data.data;
             }
             catch (err) {
                 console.error(err);
+                errorNotify(err.response.data.msg);
+            }
+            finally {
+                this.$store.commit('setSpin', false);
             }
         },
 
         async getAllFaculty () {
+            this.$store.commit('setSpin', true);
+
             try {
                 const res = await axios.get('/api/getAllFaculty');
                 this.rawList.faculty = res.data.data;
             }
             catch (err) {
                 console.error(err);
+                errorNotify(err.response.data.msg);
+            }
+            finally {
+                this.$store.commit('setSpin', false);
             }
         },
         
         async findCourseBySearch() {
+            this.$store.commit('setSpin', true);
+
             try {
                 const searchData = { ...this.searchBody };
                 for (let key in searchData) {
@@ -140,15 +155,19 @@ export default {
                     method: 'post',
                     data: searchData
                 });
-                console.log(res.data.data);
+                // console.log(res.data.data);
                 this.$store.commit('setSearchedCourses', res.data.data.courses);
             }
             catch (err) {
                 console.error(err);
+                errorNotify(err.response.data.msg);
+            }
+            finally {
+                this.$store.commit('setSpin', false);
             }
         },
         filteredCourses(courses) {
-            console.log(courses);
+            // console.log(courses);
             // 根据已选课程来过滤，德摩根律啊！思考一下为什么是 && 而不是 ||
             courses = courses.filter((course) => {
                 return !this.$store.state.commonLists.stagedCourses.some(stagedCourse => stagedCourse.courseCode === course.courseCode);
@@ -178,7 +197,7 @@ export default {
                 return this.selectedRowKeys;
             },
             set(val) {
-                console.log("更新：", val);
+                // console.log("更新：", val);
                 this.$emit('update:selectedRowKeys', val);
             }
         }

@@ -74,6 +74,7 @@
 import axios from 'axios';
 import { SearchOutlined } from '@ant-design/icons-vue';
 import AdvancedSearch from '@/components/AdvancedSearch.vue';
+import { errorNotify } from '@/utils/errorNotify';
 
 export default {
     data() {
@@ -157,6 +158,8 @@ export default {
             // console.log('localSelectedRowKeys changed: ', this.localSelectedRowKeys);
         },
         async getOptionalCourses() {
+            this.$store.commit('setSpin', true);
+
             // 获取选修课程
             try {
                 const res = await axios({
@@ -167,8 +170,10 @@ export default {
                     }
                 });
                 this.optionalTypes = this.$store.commit('setOptionalTypes', res.data.data);
-            } catch (error) {
-                console.log("error:", error);
+            }
+            catch (error) {
+                // console.log("error:", error);
+                errorNotify(err.response.data.msg);
             }
 
             // 获取选修课程具体信息
@@ -182,8 +187,13 @@ export default {
                     }
                 });
                 this.optionalCourses = this.$store.commit('setOptionalCourses', res.data.data);
-            } catch (error) {
-                console.log("error:", error);
+            }
+            catch (error) {
+                // console.log("error:", err.response.data.msg);
+                errorNotify(error);
+            }
+            finally {
+                this.$store.commit('setSpin', false);
             }
         },
         filteredCourses(courses) {
@@ -217,11 +227,11 @@ export default {
     computed: {
         localSelectedRowKeys: {
             get() {
-                console.log("本地的！", this.selectedRowKeys);
+                // console.log("本地的！", this.selectedRowKeys);
                 return this.selectedRowKeys;
             },
             set(value) {
-                console.log("我也更新：", value);
+                // console.log("我也更新：", value);
                 this.$emit('update:selectedRowKeys', value);
             }
         }

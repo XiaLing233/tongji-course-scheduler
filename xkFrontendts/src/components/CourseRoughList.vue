@@ -49,6 +49,7 @@
 <script>
 import axios from 'axios';
 import { mapStatusToChinese } from '@/utils/statusManipulate';
+import { errorNotify } from '@/utils/errorNotify';
 
 export default {
     data() {
@@ -97,15 +98,19 @@ export default {
         async getCompulsoryCourses() {
             // 如果没选择专业
             if (!this.$store.getters.isMajorSelected) {
-                console.log("未选择专业");
+                // console.log("未选择专业");
+                errorNotify("未选择专业");
                 return;
             }
             // 如果专业没变，不重新获取
             if (this.$store.state.flags.majorNotChanged) {
-                console.log("专业未变");
+                // console.log("专业未变");
                 this.$emit('openOverview');
                 return;
             }
+
+            this.$store.commit('setSpin', true);
+
             // 获取必修课程
             try {
                 const res = await axios({
@@ -121,7 +126,11 @@ export default {
             this.$emit('openOverview');
             }
             catch (error) {
-                console.log("error:", error);
+                // console.log("error:", error);
+                errorNotify(err.response.data.msg);
+            }
+            finally {
+                this.$store.commit('setSpin', false);
             }
         },
         getRowClass(record, index) {
@@ -137,7 +146,7 @@ export default {
         onRowEvent(record) {
             return {
                 onClick: () => {
-                    console.log(record)
+                    // console.log(record)
                     this.$store.commit('setClickedCourseInfo', {
                         courseCode: record.courseCode,
                         courseName: record.courseNameReserved

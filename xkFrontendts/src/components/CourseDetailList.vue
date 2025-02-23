@@ -97,7 +97,7 @@ import { mapStatusToChinese } from '@/utils/statusManipulate';
             },
             title() {
                 const courseInfo = this.$store.state.clickedCourseInfo;
-                console.log("courseInfo", courseInfo);
+                // console.log("courseInfo", courseInfo);
                 return `${courseInfo.courseName} ${courseInfo.courseCode}`;
             }
         },
@@ -117,7 +117,7 @@ import { mapStatusToChinese } from '@/utils/statusManipulate';
             onRowEvent(courseDetaillet) {
                 return {
                     onClick: () => {
-                        console.log("记录", courseDetaillet);
+                        // console.log("记录", courseDetaillet);
                         this.$store.commit('updateTimeTable', courseDetaillet);
                     }
                 }

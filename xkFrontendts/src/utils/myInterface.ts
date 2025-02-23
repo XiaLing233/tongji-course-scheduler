@@ -1,6 +1,7 @@
 // occupy 三维数组一个单元的数据结构
 export interface occupyCell {
     code: string;
+    courseName: string;
     occupyWeek: number[];
 }
 

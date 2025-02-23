@@ -10,6 +10,7 @@ import type {
     stagedCourse,
     optionalCourseType
  } from "@/utils/myInterface";
+import { errorNotify } from "@/utils/errorNotify";
 
 export interface State {
     majorSelected: baseInfoTriplet,
@@ -29,7 +30,8 @@ export interface State {
     timeTableData: courseOnTable[],
     flags: {
         majorNotChanged: boolean
-    }
+    },
+    isSpin: boolean
 }
 
 const store = createStore<State>({
@@ -64,7 +66,8 @@ const store = createStore<State>({
             // 标志位
             flags: {
                 majorNotChanged: false // 专业是否被改变，如果改变了，需要重新向后端请求数据
-            }
+            },
+            isSpin: false
         }
     },
     mutations: {
@@ -77,7 +80,7 @@ const store = createStore<State>({
             state.flags.majorNotChanged = true;
         },
         setOptionalTypes(state, payload: optionalCourseType[]) {
-            console.log(payload);
+            // console.log(payload);
             state.commonLists.optionalTypes = payload;
         },
         setOptionalCourses(state, payload: courseInfo[]) {
@@ -85,7 +88,7 @@ const store = createStore<State>({
             // console.log(state.commonLists.optionalCourses);
         },
         setSearchedCourses(state, payload: courseInfo[]) {
-            console.log(payload);
+            // console.log(payload);
             state.commonLists.searchCourses = payload;
         },
         pushStagedCourse(state, payload: stagedCourse) {
@@ -94,7 +97,7 @@ const store = createStore<State>({
         },
         popStagedCourse(state, payload: string) {
             // 清除和退课共用一个方法
-            console.log("退课", payload);
+            // console.log("退课", payload);
             state.commonLists.stagedCourses = state.commonLists.stagedCourses.filter(course => course.courseCode !== payload);
             state.commonLists.selectedCourses = state.commonLists.selectedCourses.filter(course => course.substring(0, course.length - 2) !== payload);
             state.timeTableData = state.timeTableData.filter(course => course.code.substring(0, course.code.length - 2) !== payload);
@@ -110,7 +113,7 @@ const store = createStore<State>({
                 courseName: ''
             };
 
-            console.log(state.clickedCourseInfo);
+            // console.log(state.clickedCourseInfo);
         },
         setClickedCourseInfo(state, payload: clickedCourseInfo) {
             // console.log(payload);
@@ -127,9 +130,11 @@ const store = createStore<State>({
             };
         },
         updateTimeTable(state, payload: courseDetaillet) {      
-            console.log("排课信息:", payload)
+            // console.log("排课信息:", payload)
 
-            if (canAddCourse(payload.arrangementInfo, state.occupied, payload.code).canAdd) {
+            const retOfCanAddCourse = canAddCourse(payload.arrangementInfo, state.occupied, payload.code);
+
+            if (retOfCanAddCourse.canAdd) {
                 const sameCodeCourse = state.timeTableData?.find(course => isSameCourse(course.code, payload.code));
 
                 // 规定相同课号的课只能有一个
@@ -137,16 +142,16 @@ const store = createStore<State>({
                     state.timeTableData = state.timeTableData.filter(course => !isSameCourse(course.code, payload.code));
                     deleteOccupied(state.occupied, sameCodeCourse.code);
 
-                    console.log("stagedCourses:", state.commonLists.stagedCourses);
+                    // console.log("stagedCourses:", state.commonLists.stagedCourses);
 
                     // 修改状态文字
                     const stagedCourse = state.commonLists.stagedCourses
                                         .find(course => course.courseCode === payload.code.substring(0, payload.code.length - 2));
                     if (stagedCourse) {
-                        console.log("目标", stagedCourse);
+                        // console.log("目标", stagedCourse);
                         const targetCourse = stagedCourse.courseDetail.find(course => isSameCourse(course.code, payload.code) && course.status === 1);
                         if (targetCourse) {
-                            console.log("找到了！");
+                            // console.log("找到了！");
                             targetCourse.status = 0;
                         }
                     }
@@ -172,7 +177,7 @@ const store = createStore<State>({
                 // console.log("当前课表数据：", state.timeTableData);
 
                 // 更新占用情况
-                insertOccupied(state.occupied, payload.arrangementInfo, payload.code);
+                insertOccupied(state.occupied, payload.arrangementInfo, payload.code, state.clickedCourseInfo.courseName);
 
                 // 修改状态文字
                 payload.status = 1;
@@ -185,13 +190,14 @@ const store = createStore<State>({
                 // 修改教师信息
             }
             else {
-                console.log("课程冲突");
+                errorNotify("课程与「" + retOfCanAddCourse.collideCourse + "」冲突");
+                // console.log("课程冲突");
             }
         },
         saveSelectedCourses(state) {
             // 要修改两件事：1. stagedCourses 的 status 2. 添加新的 selectedCourses
             state.commonLists.stagedCourses.forEach(course => {
-                console.log(course);
+                // console.log(course);
                 if (course.status === 1) {
                     // 修改状态为 2
                     course.status = 2;
@@ -209,7 +215,10 @@ const store = createStore<State>({
                     });
                 }
             });
-        }
+        },
+        setSpin(state, payload: boolean) {
+            state.isSpin = payload;
+        },
     },
     getters: {
         isMajorSelected(state) {

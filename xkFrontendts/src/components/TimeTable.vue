@@ -32,6 +32,8 @@
 </template>
 
 <script>
+import { errorNotify } from '@/utils/errorNotify';
+
 export default {
     name: 'timeTable',
     data() {
@@ -89,6 +91,18 @@ export default {
             this.occupied = newOccupied
         },
         handleCellClick(cell) {
+            // 如果输入了个人信息，再允许点击
+            if (!this.$store.getters.isMajorSelected) {
+                // console.log("未选择专业");
+                errorNotify("未选择专业");
+                return;
+            }
+
+            // 如果当前单元格没被占用，再触发事件
+            if (this.occupied[cell.rowIndex][cell.dayIndex]) {
+                return
+            }
+
             // 传入后，要 +1
             this.$emit('cellClick', { day: cell.dayIndex + 1, class: cell.rowIndex + 1 });
         }

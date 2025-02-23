@@ -33,7 +33,7 @@ export function codesToJsonForCSV(codes: string[], rawList: stagedCourse[]): csv
                         occucpyWeek: arr.arrangementText.split(']')[0].split('[')[1]
                                     .split(' ').join('、')
                     };
-                    console.log(csvCourse);
+                    // console.log(csvCourse);
                     ret.push(csvCourse);
                 }
             }

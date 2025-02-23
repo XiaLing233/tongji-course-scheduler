@@ -2,15 +2,17 @@
   <a-config-provider :locale="locale">
     <a-layout class="space-y-4">
       <!-- 所有 layout 放在了组件里, 不要嵌套! -->
-      <MyHeader />
-      <MajorInfo @changeMajor="resetSelectedRows" />
-      <a-layout>
-        <div class="flex flex-row space-x-4 h-max m-2">
-          <CourseRoughList @openOverview="handleOpen"/>
-          <CourseDetailList />
-        </div>
-      </a-layout>
-      <TimeTable @cellClick="findCourseByTime" />
+      <a-spin :spinning="$store.state.isSpin" :indicator="myIndicator" tip="Loading..." size="large">  
+        <MyHeader />
+        <MajorInfo @changeMajor="resetSelectedRows" />
+        <a-layout>
+          <div class="flex flex-row space-x-4 h-max m-2">
+            <CourseRoughList @openOverview="handleOpen"/>
+            <CourseDetailList />
+          </div>
+        </a-layout>
+        <TimeTable @cellClick="findCourseByTime" />
+      </a-spin>
     </a-layout>
     <a-modal
     title="选择课程"
@@ -49,7 +51,9 @@ import zhCN from 'ant-design-vue/es/locale/zh_CN';
 import dayjs from 'dayjs';
 import 'dayjs/locale/zh-cn';
 import axios from 'axios';
-
+import { LoadingOutlined } from '@ant-design/icons-vue';
+import { h } from 'vue';
+import { errorNotify } from './utils/errorNotify';
 
 dayjs.locale('zh-cn');
 
@@ -62,7 +66,8 @@ export default {
     TimeTable,
     MajorInfo,
     CourseOverview,
-    OptionalCourseTimeOverview
+    OptionalCourseTimeOverview,
+    LoadingOutlined
   },
   data() {
     return {
@@ -70,6 +75,16 @@ export default {
       selectedRowKeys: [],
       openOverview: false,
       openOptional: false
+    }
+  },
+  computed: {
+    myIndicator() {
+      return h(LoadingOutlined, {
+        style: {
+          fontSize: '24px'
+        },
+        spin: true
+      });
     }
   },
   methods: {
@@ -80,7 +95,7 @@ export default {
     handleCancel() {
       this.openOverview = false;
       this.selectedRowKeys = []; // 清空一下，不然动画会保持原来的状态
-      console.log("清空！", this.selectedRowKeys);
+      // console.log("清空！", this.selectedRowKeys);
     },
     handleCancelOptional() {
       this.openOptional = false;
@@ -93,6 +108,7 @@ export default {
     async stageCourses() {
       this.openOverview = false;
       this.openOptional = false;
+      this.$store.commit("setSpin", true);
       
       // 根据 selectedRowKeys 筛选出对应的课程信息
       for (const key of this.selectedRowKeys) {
@@ -165,7 +181,8 @@ export default {
             this.$store.commit("pushStagedCourse", _courseObject);
           }
           catch (error) {
-            console.log("error:", error);
+            // console.log("error:", error);
+            errorNotify(err.response.data.msg);
           }
         }
         else if (type === '查') {
@@ -203,15 +220,19 @@ export default {
             this.$store.commit("pushStagedCourse", _courseObject);
           }
           catch (error) {
-            console.log("error:", error);
+            // console.log("error:", error);
+            errorNotify(err.response.data.msg);
           }
         }
       }
 
       // 清空 selectedRowKeys
       this.selectedRowKeys = [];
+      this.$store.commit("setSpin", false);
     },
     async findCourseByTime(cell) {
+      this.$store.commit("setSpin", true);
+
       try {
         const res = await axios({
           url: '/api/findCourseByTime',
@@ -229,7 +250,11 @@ export default {
         this.openOptional = true;
       }
       catch (error) {
-        console.log("error:", error);
+        // console.log("error:", error);
+        errorNotify(err.response.data.msg);
+      }
+      finally {
+        this.$store.commit("setSpin", false);
       }
     }
   }
