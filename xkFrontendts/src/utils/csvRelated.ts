@@ -12,7 +12,7 @@ const csvHeader = {
 }
 
 // 接收一个课号数组，返回一个 csvCourse 数组
-export function codesToJson(codes: string[], rawList: stagedCourse[]): csvCourse[] {
+export function codesToJsonForCSV(codes: string[], rawList: stagedCourse[]): csvCourse[] {
     let ret: csvCourse[] = [];
 
     ret.push(csvHeader);

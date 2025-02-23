@@ -95,3 +95,10 @@ export interface csvCourse {
     occupyRoom: string, // 地点
     occucpyWeek: string; // 周数 用、分隔
 }
+
+// xls 中一门课的信息
+export interface xlsCourse {
+    code: string; // 课程代码
+    courseName: string; // 课程名称
+    teacherName: string; // 老师
+}

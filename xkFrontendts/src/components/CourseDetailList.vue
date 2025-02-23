@@ -64,7 +64,7 @@ import { mapStatusToChinese } from '@/utils/statusManipulate';
                         customCell: () => ({
                             style: {
                             padding: '0',
-                            height: '4px' // 几 px 都无所谓，没效果的..
+                            height: '4px' // 几 px 都无所谓，没效果的..但是得有，不然占不满整个单元格
                             }
                         })
                     },

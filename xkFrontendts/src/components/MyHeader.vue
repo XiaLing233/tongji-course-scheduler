@@ -20,7 +20,7 @@
                                 <p><a href="https://www.wakeup.fun/" target="_blank">[官网]</a></p>
                             </div>
                         </a-menu-item>
-                        <a-menu-item key="excel">
+                        <a-menu-item key="excel" @click="helpExcel">
                             <p>辅助选课的 xls 文件</p>
                         </a-menu-item>
                         </a-menu>
@@ -74,7 +74,8 @@
 
 <script>
 import { ExportOutlined, GithubOutlined, CalendarOutlined, LinkOutlined, ReadOutlined } from '@ant-design/icons-vue';
-import { codesToJson, jsonToCSV, downloadCSV } from '@/utils/csvRelated';
+import { codesToJsonForCSV, jsonToCSV, downloadCSV } from '@/utils/csvRelated';
+import { codesToJsonForXLS, jsonToXLS, downloadXLS } from '@/utils/xlsRelated';
 
 export default {
     components: {
@@ -86,9 +87,14 @@ export default {
     },
     methods: {
         wakeUpCSV() {
-            const csv = codesToJson(this.$store.state.commonLists.selectedCourses, this.$store.state.commonLists.stagedCourses);
+            const csv = codesToJsonForCSV(this.$store.state.commonLists.selectedCourses, this.$store.state.commonLists.stagedCourses);
             const csvString = jsonToCSV(csv);
-            downloadCSV(csvString, 'tongji-course-scheduler.csv');
+            downloadCSV(csvString);
+        },
+        helpExcel() {
+            const xls = codesToJsonForXLS(this.$store.state.commonLists.selectedCourses, this.$store.state.commonLists.stagedCourses);
+            const xlsBlob = jsonToXLS(xls);
+            downloadXLS(xlsBlob);
         }
     }
 }
