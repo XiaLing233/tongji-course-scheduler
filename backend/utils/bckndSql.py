@@ -324,7 +324,7 @@ class bckndSql:
         # json
         result = [json.loads(res[0]) for res in result]
 
-        print(result)
+        # print(result)
 
         return result
     
@@ -405,16 +405,52 @@ class bckndSql:
         result = [json.loads(res[0]) for res in result]
 
         return result
+    
+    def tmp_findCourseByTime(self, day, labelList, calendarId):
+        '''
+        Find course by time
+        '''
+        query = f"""
+        SELECT
+            JSON_OBJECT(
+                'courseCode', c.courseCode,
+                'courseName', c.courseName,
+                'faculty', f.facultyI18n,
+                'credit', c.credit,
+                'courseNature', CAST(CONCAT('[', GROUP_CONCAT(DISTINCT JSON_QUOTE(n.courseLabelName)), ']') AS JSON),  -- 去重
+                'campus', CAST(CONCAT('[', GROUP_CONCAT(DISTINCT JSON_QUOTE(ca.campusI18n) ORDER BY ca.campusI18n), ']') AS JSON) -- 去重校区列表，并按校区名排序
+            )
+        FROM coursedetail as c
+        JOIN faculty AS f ON f.faculty = c.faculty
+        JOIN campus as ca ON ca.campus = c.campus
+        JOIN coursenature as n ON c.courseLabelId = n.courseLabelId
+        JOIN teacher as t ON t.teachingClassid = c.id
+        WHERE c.calendarId = %s
+        AND t.arrangeInfoText LIKE %s
+        AND n.courseLabelId IN ({','.join(['%s' for _ in labelList])})
+        GROUP BY c.courseCode, c.courseName, f.facultyI18n, n.courseLabelName, c.credit
+        ORDER BY courseCode desc
+        """
 
-testObject = {
-    "calendarId": 119,
-    "courseName": "上海",
-    "courseCode": "",
-    "teacherCode": "",
-    "teacherName": "",
-    "campus": "",
-    "faculty": "",
-}
+        self.cursor.execute(query, (calendarId, f"%{day}%", *labelList))
+
+        result = self.cursor.fetchall()
+
+        # json
+        result = [json.loads(res[0]) for res in result]
+
+        return result
+               
+
+# testObject = {
+#     "calendarId": 119,
+#     "courseName": "上海",
+#     "courseCode": "",
+#     "teacherCode": "",
+#     "teacherName": "",
+#     "campus": "",
+#     "faculty": "",
+# }
 
 # debug
 if __name__ == '__main__':
@@ -425,5 +461,6 @@ if __name__ == '__main__':
         # print(db.findMajorByGrade(2023))
         # print(db.findCourseBySearch(testObject)) ok
         # print(db.findCourseDetailByCode("124004", 119)) ok
-        print(db.findCourseByNatureId([955, 956, 957, 958, 947], 119))
+        # print(db.findCourseByNatureId([955, 956, 957, 958, 947], 119))
         # print(db.findOptionalCourseType([955, 956, 957, 958, 947], 119))
+        print(len(db.tmp_findCourseByTime("星期五", [955, 956, 957, 958, 947], 119)))

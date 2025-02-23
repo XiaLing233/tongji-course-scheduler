@@ -17,6 +17,23 @@ def dayTextToNum(text):
     }
     return day_mapping.get(text, None)
 
+def numToDayText(num):
+    '''
+    输入：1
+    输出："星期一"
+    从 1 到 7 对应星期一到星期日
+    '''
+    day_mapping = {
+        1: "星期一",
+        2: "星期二",
+        3: "星期三",
+        4: "星期四",
+        5: "星期五",
+        6: "星期六",
+        7: "星期日"
+    }
+    return day_mapping.get(num, None)
+
 def timeTextToArray(text):
     '''
     输入："2-4节"
@@ -84,28 +101,29 @@ def arrangementTextToObj(text):
     '''
 
     result = {
-        "arrangementText": text.split(" ", 1)[1],
+        "arrangementText": "星期" + text.split(" 星期", 1)[1],
         "occupyDay": None,
         "occupyTime": None,
         "occupyWeek": None,
         "occupyRoom": None,
-        "teacherAndCode": text.split(" ", 1)[0]
+        "teacherAndCode": text.split(" 星期", 1)[0].strip()
     }
 
-    # 以空格分割
-    splitPieces = text.split(" ")
 
     # 星期几
-    result["occupyDay"] = dayTextToNum(splitPieces[1][:3])
+    result["occupyDay"] = dayTextToNum("星期" + text.split(" 星期")[1][0])
 
     # 节次
-    result["occupyTime"] = timeTextToArray(splitPieces[1][3:])
+    result["occupyTime"] = timeTextToArray(text.split(" 星期")[1][1:].split(" [")[0])
 
     # 周次
     result["occupyWeek"] = weekTextToArray(text.split("[")[1].split("]")[0])
-
+    
     # 教室
-    result["occupyRoom"] = splitPieces[-1]
+    try:
+        result["occupyRoom"] = text.split("] ")[1].strip()
+    except:
+        result["occupyRoom"] = None
 
     return result
 
