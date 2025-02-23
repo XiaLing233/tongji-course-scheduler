@@ -28,7 +28,7 @@ export function codesToJsonForCSV(codes: string[], rawList: stagedCourse[]): csv
                         occupyDay: arr.occupyDay,
                         start: arr.occupyTime[0],
                         end: arr.occupyTime.length == 1 ? arr.occupyTime[0] : arr.occupyTime[arr.occupyTime.length - 1],
-                        teacherName: arr.teacherAndCode.split(',').map((str) => str.split('(')[0]).join(','),
+                        teacherName: arr.teacherAndCode.split(',').map((str) => str.split('(')[0]).join(','), // 复旦的老师只有工号，是 1 系统的问题
                         occupyRoom: arr.occupyRoom,
                         occucpyWeek: arr.arrangementText.split(']')[0].split('[')[1]
                                     .split(' ').join('、')

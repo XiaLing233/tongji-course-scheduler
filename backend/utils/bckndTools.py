@@ -100,13 +100,15 @@ def arrangementTextToObj(text):
     }
     '''
 
+    print(text)
+
     result = {
         "arrangementText": "星期" + text.split(" 星期", 1)[1],
         "occupyDay": None,
         "occupyTime": None,
         "occupyWeek": None,
         "occupyRoom": None,
-        "teacherAndCode": text.split(" 星期", 1)[0].strip()
+        "teacherAndCode": text.split(" 星期", 1)[0].strip() # 对复旦的老师，似乎只有工号没有名字，要注意
     }
 
 

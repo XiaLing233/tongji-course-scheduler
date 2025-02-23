@@ -10,7 +10,7 @@
           <CourseDetailList />
         </div>
       </a-layout>
-      <TimeTable />
+      <TimeTable @cellClick="findCourseByTime" />
     </a-layout>
     <a-modal
     title="选择课程"
@@ -22,6 +22,17 @@
       >
       <CourseOverview v-model:selectedRowKeys="selectedRowKeys" />
     </a-modal>
+
+    <a-modal
+      title="选修课"
+      okText="提交"
+      v-model:open="openOptional"
+      @ok="stageCourses"
+      @cancel="handleCancel"
+      style="width: 80%"
+    >
+      <OptionalCourseTimeOverview v-model:selectedRowKeys="selectedRowKeys" v-model:optionalCourseData="optionalCourseData" />
+    </a-modal>
   </a-config-provider>
 </template>
 
@@ -32,6 +43,7 @@ import CourseDetailList from './components/CourseDetailList.vue';
 import TimeTable from './components/TimeTable.vue';
 import MajorInfo from './components/MajorInfo.vue';
 import CourseOverview from './components/CourseOverview.vue';
+import OptionalCourseTimeOverview from './components/OptionalCourseTimeOverview.vue';
 
 import zhCN from 'ant-design-vue/es/locale/zh_CN';
 import dayjs from 'dayjs';
@@ -49,13 +61,15 @@ export default {
     CourseDetailList,
     TimeTable,
     MajorInfo,
-    CourseOverview
+    CourseOverview,
+    OptionalCourseTimeOverview
   },
   data() {
     return {
       locale: zhCN,
       selectedRowKeys: [],
-      openOverview: false
+      openOverview: false,
+      openOptional: false
     }
   },
   methods: {
@@ -68,12 +82,17 @@ export default {
       this.selectedRowKeys = []; // 清空一下，不然动画会保持原来的状态
       console.log("清空！", this.selectedRowKeys);
     },
+    handleCancelOptional() {
+      this.openOptional = false;
+      this.selectedRowKeys = [];
+    },
     resetSelectedRows() {
       // console.log("resetSelectedRows");
       this.selectedRowKeys = [];
     },
     async stageCourses() {
       this.openOverview = false;
+      this.openOptional = false;
       
       // 根据 selectedRowKeys 筛选出对应的课程信息
       for (const key of this.selectedRowKeys) {
@@ -191,6 +210,27 @@ export default {
 
       // 清空 selectedRowKeys
       this.selectedRowKeys = [];
+    },
+    async findCourseByTime(cell) {
+      try {
+        const res = await axios({
+          url: '/api/findCourseByTime',
+          method: 'post',
+          data: {
+            calendarId: this.$store.state.majorSelected.calendarId,
+            day: cell.day,
+            time: cell.class
+          }
+        });
+
+        // console.log("res", res.data.data);
+
+        this.optionalCourseData = res.data.data;
+        this.openOptional = true;
+      }
+      catch (error) {
+        console.log("error:", error);
+      }
     }
   }
 }
