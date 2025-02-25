@@ -38,9 +38,9 @@ export default {
     name: 'timeTable',
     data() {
         return {
-            timeTable: Array(12).fill(null).map(() => Array(7).fill().map(() => [])),
+            timeTable: Array(12).fill(null).map(() => Array(7).fill(undefined).map(() => [])),
             maxSpans: Array.from({ length: 12 }, () => Array(7).fill(1)),
-            occupied: Array.from({ length: 12 }, () => Array(7).fill(false)),
+            occupied: Array.from({ length: 12 }, () => Array(7).fill(false)), // 这个 occupied 表示的并不是一个单元格内有没有课程，而是这个单元格有没有被 startTime 不是这节课的课程占用
         }
     },
     methods: {
@@ -50,7 +50,7 @@ export default {
         },
         updateTimeTable() {
             // 初始化数据结构
-            const newTimeTable = Array(12).fill(null).map(() => Array(7).fill().map(() => []))
+            const newTimeTable = Array(12).fill(null).map(() => Array(7).fill(undefined).map(() => []))
             const newMaxSpans = Array.from({ length: 12 }, () => Array(7).fill(1))
             const newOccupied = Array.from({ length: 12 }, () => Array(7).fill(false))
 
@@ -75,8 +75,9 @@ export default {
             for (let row = 0; row < 12; row++) {
                 for (let col = 0; col < 7; col++) {
                     const span = newMaxSpans[row][col]
+                    console.log("newMaxSpans:", newMaxSpans)
                     if (span > 1) {
-                        for (let i = 1; i < span; i++) {
+                        for (let i = 1; i < span; i++) { // 也要把自己标进去呀，不知要标下方的，所以 i 从 0 开始
                             if (row + i < 12) {
                                 newOccupied[row + i][col] = true
                             }
@@ -99,7 +100,7 @@ export default {
             }
 
             // 如果当前单元格没被占用，再触发事件
-            if (this.occupied[cell.rowIndex][cell.dayIndex]) {
+            if (this.$store.state.occupied[cell.rowIndex][cell.dayIndex].length > 0) {
                 return
             }
 

@@ -13,21 +13,21 @@ import type {
 import { errorNotify } from "@/utils/errorNotify";
 
 export interface State {
-    majorSelected: baseInfoTriplet,
+    majorSelected: baseInfoTriplet, /* 持久化 */
     commonLists: {
         compulsoryCourses: courseInfo[],
         optionalTypes: optionalCourseType[],
         optionalCourses: courseInfo[],
-        stagedCourses: stagedCourse[],
-        selectedCourses: string[],
+        stagedCourses: stagedCourse[], /* 持久化 */
+        selectedCourses: string[], /* 持久化 */
         searchCourses: courseInfo[]
     },
     clickedCourseInfo: {
         courseCode: string,
         courseName: string
     },
-    occupied: Array<Array<occupyCell[]>>,
-    timeTableData: courseOnTable[],
+    occupied: Array<Array<occupyCell[]>>, /* 持久化 */
+    timeTableData: courseOnTable[], /* 持久化 */
     flags: {
         majorNotChanged: boolean
     },
@@ -219,9 +219,48 @@ const store = createStore<State>({
         setSpin(state, payload: boolean) {
             state.isSpin = payload;
         },
+        solidify(state) {
+            localStorage.setItem("majorSelected", JSON.stringify(state.majorSelected));
+            localStorage.setItem("stagedCourses", JSON.stringify(state.commonLists.stagedCourses));
+            localStorage.setItem("selectedCourses", JSON.stringify(state.commonLists.selectedCourses));
+            localStorage.setItem("occupied", JSON.stringify(state.occupied));
+            localStorage.setItem("timeTableData", JSON.stringify(state.timeTableData));
+        },
+        loadSolidify(state) {
+            const majorSelected = localStorage.getItem("majorSelected");
+            if (majorSelected) {
+                console.log(majorSelected);
+                state.majorSelected = JSON.parse(majorSelected);
+                console.log(state.majorSelected);
+            }
+            const stagedCourses = localStorage.getItem("stagedCourses");
+            if (stagedCourses) {
+                state.commonLists.stagedCourses = JSON.parse(stagedCourses);
+            }
+            const selectedCourses = localStorage.getItem("selectedCourses");
+            if (selectedCourses) {
+                state.commonLists.selectedCourses = JSON.parse(selectedCourses);
+            }
+            const occupied = localStorage.getItem("occupied");
+            if (occupied) {
+                state.occupied = JSON.parse(occupied);
+            }
+            const timeTableData = localStorage.getItem("timeTableData");
+            if (timeTableData) {
+                state.timeTableData = JSON.parse(timeTableData);
+            }
+        },
+        clearSolidify() {
+            localStorage.removeItem("majorSelected");
+            localStorage.removeItem("stagedCourses");
+            localStorage.removeItem("selectedCourses");
+            localStorage.removeItem("occupied");
+            localStorage.removeItem("timeTableData");
+        }
     },
     getters: {
         isMajorSelected(state) {
+            // console.log(',', state.majorSelected);
             return state.majorSelected.calendarId && state.majorSelected.grade && state.majorSelected.major;
         },
         sortCompulsoryCoursesByGrade(state) {

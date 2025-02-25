@@ -170,18 +170,40 @@ export default {
             return option.label.toLowerCase().indexOf(input.toLowerCase()) >= 0;
         }
     },
-    mounted() {
-        this.getAllCalendar().then(() => {
-            if (this.rawList.calendars.length > 0) {
-                this.$store.commit('setMajorInfo', {
-                    calendarId: this.rawList.calendars[0].calendarId,
-                    grade: undefined,
-                    major: undefined
+    async mounted() {
+        await this.getAllCalendar()
+        
+        if (this.rawList.calendars.length > 0) {
+            this.$store.commit('setMajorInfo', {
+                calendarId: this.rawList.calendars[0].calendarId,
+                grade: undefined,
+                major: undefined
+            });
+            await this.findGradeByCalendarId(this.rawList.calendars[0].calendarId);
+        }
+
+        this.$store.commit("loadSolidify");
+
+        if (this.$store.state.majorSelected.grade) {
+            this.$store.commit('setSpin', true);
+            try {
+                const res = await axios({
+                    url: '/api/findMajorByGrade',
+                    method: 'post',
+                    data: {
+                        grade: this.$store.state.majorSelected.grade
+                    }
                 });
-                this.findGradeByCalendarId(this.rawList.calendars[0].calendarId);
+                this.rawList.majors = res.data.data;
             }
-        });
-    },
+            catch (error) {
+                errorNotify(err.response.data.msg);
+            }
+            finally {
+                this.$store.commit('setSpin', false);
+            }
+        }
+},
     emit: ['changeMajor']
 }
 </script>

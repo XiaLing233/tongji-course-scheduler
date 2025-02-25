@@ -9,7 +9,7 @@
                         <a-button @click="getCompulsoryCourses">
                             <p>选择课程</p>
                         </a-button>
-                        <a-button type="primary" @click="$store.commit('saveSelectedCourses')">
+                        <a-button type="primary" @click="handleSave">
                             <p>保存课表</p>
                         </a-button>
                     </div>
@@ -166,6 +166,10 @@ export default {
                 default:
                     return '';
             }
+        },
+        handleSave() {
+            this.$store.commit('saveSelectedCourses');
+            this.$store.commit('solidify');
         }
     },
     emits: ['openOverview'],

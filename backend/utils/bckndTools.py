@@ -100,7 +100,7 @@ def arrangementTextToObj(text):
     }
     '''
 
-    print(text)
+    # print(text)
 
     result = {
         "arrangementText": "星期" + text.split(" 星期", 1)[1],
