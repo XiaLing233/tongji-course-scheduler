@@ -1,31 +1,31 @@
 <template>
     <div>
         <div class="flex flex-row flex-wrap gap-4 mb-4">
-            <div class="w-80">
+            <div class="w-90">
                 <p>课程名称</p>
                 <a-input v-model:value="searchBody.courseName" placeholder="请输入"/>
             </div>
-            <div class="w-80">
+            <div class="w-90">
                 <p>课程代码</p>
                 <a-input v-model:value="searchBody.courseCode" placeholder="请输入"/>
             </div>
-            <div class="w-80">
+            <div class="w-90">
                 <p>教师工号</p>
                 <a-input v-model:value="searchBody.teacherCode" placeholder="请输入"/>
             </div>
-            <div class="w-80">
+            <div class="w-90">
                 <p>教师姓名</p>
                 <a-input v-model:value="searchBody.teacherName" placeholder="请输入"/>
             </div>
-            <div class="w-80">
+            <div class="w-90">
                 <p>校区</p>
-                <a-select v-model:value="searchBody.campus" placeholder="请选择" class="w-full">
+                <a-select v-model:value="searchBody.campus" placeholder="请选择" class="w-full" show-search allow-clear>
                     <a-select-option v-for="campus in rawList.campus" :key="campus" :value="campus.campusName">{{ campus.campusName }}</a-select-option>
                 </a-select>
             </div>
-            <div class="w-80">
+            <div class="w-90">
                 <p>开课学院</p>
-                <a-select v-model:value="searchBody.faculty" placeholder="请选择" class="w-full">
+                <a-select v-model:value="searchBody.faculty" placeholder="请选择" class="w-full" show-search allow-clear>
                     <a-select-option v-for="faculty in rawList.faculty" :key="faculty" :value="faculty.facultyName">{{ faculty.facultyName }}</a-select-option>
                 </a-select>
             </div>
@@ -33,7 +33,7 @@
         <div class="mb-4">
             <a-button type="primary" @click="findCourseBySearch">搜索</a-button>
         </div>
-        <div>
+        <div class="h-110 overflow-auto">
             <a-table
                         :columns="searchColumn"
                         :data-source="filteredCourses($store.state.commonLists.searchCourses)"
@@ -155,6 +155,14 @@ export default {
                 });
                 // console.log(res.data.data);
                 this.$store.commit('setSearchedCourses', res.data.data.courses);
+
+                // 如果搜索内容超过了阈值
+                if (res.data.data.courses.length >= res.data.data.sizeLimit) {
+                    errorNotify('搜索结果过多，只展示了前' + res.data.data.sizeLimit + '条');
+                }
+                else {
+                    console.log("OK");
+                }
             }
             catch (error) {
                 errorNotify(error.response.data.msg);

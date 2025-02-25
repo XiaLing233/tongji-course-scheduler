@@ -139,6 +139,21 @@ def splitEndline(text):
 
     return text.split("\n")[:-1]
 
+def optCourseQueryListGenerator(day, section):
+    '''
+    输入：1
+    输出："1-2"
+    '''
+    if section in [1, 2, 3, 4]:
+        return ["%" + numToDayText(day) + str(2 * section - 1) + "-" + str(2 * section) + "%"]
+    elif section == 5:
+        return [f"%{numToDayText(day)}9-9%"]
+    elif section == 6:
+        return [f"%{numToDayText(day)}10-11%", f"{numToDayText(day)}%10-12%"]
+    else:
+        return None
+
+
 # debug
 
 if __name__ == "__main__":

@@ -9,7 +9,7 @@ def fetchCourseList(session):
 
     # 在这里指定每页的大小和要爬的学期
     PAGESIZE = 100
-    CALENDAR = 112
+    CALENDAR = 119
 
     # prepare payload
     payload = {

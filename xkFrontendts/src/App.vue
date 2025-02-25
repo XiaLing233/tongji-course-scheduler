@@ -56,6 +56,7 @@ import axios from 'axios';
 import { LoadingOutlined } from '@ant-design/icons-vue';
 import { h } from 'vue';
 import { errorNotify } from './utils/errorNotify';
+import { getRowSection } from './utils/timetable';
 
 dayjs.locale('zh-cn');
 
@@ -235,6 +236,7 @@ export default {
     },
     async findCourseByTime(cell) {
       this.$store.commit("setSpin", true);
+      console.log("cell", cell);
 
       try {
         const res = await axios({
@@ -243,7 +245,7 @@ export default {
           data: {
             calendarId: this.$store.state.majorSelected.calendarId,
             day: cell.day,
-            time: cell.class
+            section: getRowSection(cell.class)
           }
         });
 

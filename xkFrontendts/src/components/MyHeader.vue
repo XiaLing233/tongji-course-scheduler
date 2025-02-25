@@ -1,6 +1,6 @@
 <template>
     <a-layout-header class="flex flex-row justify-between items-center" style="background-color: #f6f8fa">
-        <div class="bg-[url(../assets/logo.png)] bg-cover bg-center h-10 w-95"></div>
+        <div class="bg-[url(../assets/myLogo.png)] bg-cover bg-center h-10 w-50"></div>
         <div class="float-right flex flex-row space-x-4">
             <div>
                 <a-dropdown>

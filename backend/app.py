@@ -1,5 +1,5 @@
 from utils import bckndSql
-from utils.bckndTools import arrangementTextToObj, splitEndline, numToDayText
+from utils.bckndTools import arrangementTextToObj, splitEndline, optCourseQueryListGenerator
 from flask import Flask, request, jsonify
 import configparser
 from datetime import datetime
@@ -711,19 +711,19 @@ def findCourseBySearch():
         }), 400
     
     # 至少有 2 个字段不为空
-    filledCnt = 0
-    for key in payload:
-        if payload[key]:
-            filledCnt += 1
+    # filledCnt = 0
+    # for key in payload:
+    #     if payload[key]:
+    #         filledCnt += 1
 
-    if filledCnt < 2 + 1:
-        return jsonify({
-            "code": 400,
-            "msg": "请至少指定两个查询条件",
-        }), 400
+    # if filledCnt < 2 + 1:
+    #     return jsonify({
+    #         "code": 400,
+    #         "msg": "请至少指定两个查询条件",
+    #     }), 400
         
 
-    sizeLimit = 50
+    sizeLimit = 100
 
     with bckndSql.bckndSql() as sql:
         result = sql.findCourseBySearch(payload, sizeLimit)
@@ -782,82 +782,18 @@ def findCourseByTime():
 
     payload = request.json
 
-    dayInChinese = numToDayText(payload['day'])
+    queryStr = optCourseQueryListGenerator(payload['day'], payload['section'])
 
-    if dayInChinese == None:
+    if queryStr == None:
         return jsonify({
             "code": 400,
-            "msg": "星期数不合法",
+            "msg": "输入参数有误",
             "data": []
         }), 400
 
     with bckndSql.bckndSql() as sql:
-        result = sql.tmp_findCourseByTime(dayInChinese, INNER_LABEL_LIST, payload['calendarId']) # 返回的是这一天的所有课程，需要再过滤一
+        result = sql.findCourseByTime(queryStr, INNER_LABEL_LIST, payload['calendarId']) # 返回的是这一天的所有课程，需要再过滤一
         print(len(result))
-
-    # 对每门课号，筛选一下要不要保留它
-    to_remove = []
-    tmpcnt = 0
-    for res in result:
-        print("第", tmpcnt, "门课程")
-        tmpcnt += 1
-        with bckndSql.bckndSql() as sql:
-            assistResult = sql.findCourseDetailByCode(res['courseCode'], payload['calendarId'])
-
-        # 处理 assistResult 中的 locations 字段
-        # 由于 locations 字段是一个字符串，需要转换为数组
-        # 形如：关佶红(05222) 星期一3-4节 [1-17] 南129\n关佶红(05222) 星期三3-4节 [1-17单] 北301\n
-
-        for course in assistResult:
-            course['arrangementInfo'] = []
-
-            for location in splitEndline(course['locations']):
-                course['arrangementInfo'].append(arrangementTextToObj(location))
-
-            del course['locations']
-
-        # 对于 code 相同的课程，合并 arrangementInfo
-        
-        assistResult = sorted(assistResult, key=lambda x: x['code']) # 先排序
-
-        # 合并相同课号的课程
-        merged_result = []
-        current_course = None
-
-        for course in assistResult:
-            if not current_course or current_course['code'] != course['code']:
-                merged_result.append(course)
-                current_course = course
-            else:
-                # 如果arrangementInfo不同，则合并
-                if current_course['arrangementInfo'] != course['arrangementInfo']:
-                    current_course['arrangementInfo'].extend(course['arrangementInfo'])
-
-        assistResult = merged_result
-
-        # 我们在乎 assistResult 里面每个 res 的 occupyTime 字段，看它是否包含了 payload['time']
-        # 如果包含了，就保留这个 res
-        # 否则，就删除这个 res
-        should_remove = True
-
-        for aRes in assistResult:
-            # print(payload['time'], "\t\t\t", aRes['arrangementInfo'])
-            if should_remove:
-                for arrangement in aRes['arrangementInfo']:
-                    if payload['day'] != arrangement['occupyDay']:
-                        continue
-                    if payload['time'] in arrangement['occupyTime']:
-                        should_remove = False
-                        break
-            else:
-                break
-        
-        if should_remove:
-            to_remove.append(res)
-
-
-    for res in to_remove:
-        result.remove(res)
 
     return jsonify({
         "code": 200,

@@ -138,7 +138,7 @@ export default {
             let className = index % 2 === 0 ? 'bg-white' : 'bg-gray-50';
 
             if (record.courseCode === this.$store.state.clickedCourseInfo.courseCode) {
-                className = 'bg-green-100';
+                className = 'bg-blue-400/60';
             }
 
             return className;

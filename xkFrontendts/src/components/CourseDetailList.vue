@@ -143,7 +143,7 @@ import { mapStatusToChinese } from '@/utils/statusManipulate';
                     case 0: // 未选
                         break;
                     case 1: // 备选
-                        className =  'bg-violet-500/60';
+                        className =  'bg-blue-500/60';
                         break;
                     case 2:
                         className += ' ' + 'text-red-500';

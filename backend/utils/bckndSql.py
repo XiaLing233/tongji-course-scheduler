@@ -374,7 +374,7 @@ class bckndSql:
             query_params.append(searchBody["faculty"])
         
         sql = f"""
-        SELECT
+        SELECT DISTINCT
             JSON_OBJECT(
                 'courseCode', c.courseCode,
                 'courseName', c.courseName,
@@ -390,8 +390,7 @@ class bckndSql:
         JOIN teacher as t ON t.teachingClassid = c.id
         WHERE c.calendarId = %s
         {condition}
-        GROUP BY c.courseCode, c.courseName, f.facultyI18n, n.courseLabelName, c.credit
-        ORDER BY courseCode desc
+        GROUP BY c.courseCode, c.courseName, f.facultyI18n, c.credit
         LIMIT %s;
         """
         
@@ -407,7 +406,7 @@ class bckndSql:
 
         return result
     
-    def tmp_findCourseByTime(self, day, labelList, calendarId):
+    def findCourseByTime(self, strSet, labelList, calendarId):
         '''
         Find course by time
         '''
@@ -427,13 +426,15 @@ class bckndSql:
         JOIN coursenature as n ON c.courseLabelId = n.courseLabelId
         JOIN teacher as t ON t.teachingClassid = c.id
         WHERE c.calendarId = %s
-        AND t.arrangeInfoText LIKE %s
+        AND ({' OR '.join(['t.arrangeInfoText LIKE %s' for _ in strSet])})
         AND n.courseLabelId IN ({','.join(['%s' for _ in labelList])})
         GROUP BY c.courseCode, c.courseName, f.facultyI18n, n.courseLabelName, c.credit
         ORDER BY courseCode desc
         """
 
-        self.cursor.execute(query, (calendarId, f"%{day}%", *labelList))
+        print(strSet)
+
+        self.cursor.execute(query, (calendarId, *strSet, *labelList))
 
         result = self.cursor.fetchall()
 
