@@ -173,7 +173,7 @@ export default {
             }
             catch (error) {
                 // console.log("error:", error);
-                errorNotify(err.response.data.msg);
+                errorNotify(error.response.data.msg);
             }
 
             // 获取选修课程具体信息

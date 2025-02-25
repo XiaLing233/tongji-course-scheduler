@@ -115,9 +115,8 @@ export default {
                 const res = await axios.get('/api/getAllCampus');
                 this.rawList.campus = res.data.data;
             }
-            catch (err) {
-                console.error(err);
-                errorNotify(err.response.data.msg);
+            catch (error) {
+                errorNotify(error.response.data.msg);
             }
             finally {
                 this.$store.commit('setSpin', false);
@@ -131,9 +130,8 @@ export default {
                 const res = await axios.get('/api/getAllFaculty');
                 this.rawList.faculty = res.data.data;
             }
-            catch (err) {
-                console.error(err);
-                errorNotify(err.response.data.msg);
+            catch (error) {
+                errorNotify(error.response.data.msg);
             }
             finally {
                 this.$store.commit('setSpin', false);
@@ -158,9 +156,8 @@ export default {
                 // console.log(res.data.data);
                 this.$store.commit('setSearchedCourses', res.data.data.courses);
             }
-            catch (err) {
-                console.error(err);
-                errorNotify(err.response.data.msg);
+            catch (error) {
+                errorNotify(error.response.data.msg);
             }
             finally {
                 this.$store.commit('setSpin', false);

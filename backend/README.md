@@ -552,3 +552,19 @@ Response:
     "msg": "查询成功"
 }
 ```
+
+## API 11 获得最近更新的时间
+
+方法：`GET`
+
+地址：`/api/getLatestUpdateTime`
+
+Response：
+
+```json
+{
+    "code": 200,
+    "msg": "查询成功",
+    "data": "2025-02-25"
+}
+```

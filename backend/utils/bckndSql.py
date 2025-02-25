@@ -42,7 +42,7 @@ class bckndSql:
         '''
         Get all calendar data
         '''
-        self.cursor.execute(f'SELECT JSON_OBJECT("calendarId", calendarId, "calendarName", calendarIdI18n) FROM calendar')
+        self.cursor.execute(f'SELECT JSON_OBJECT("calendarId", calendarId, "calendarName", calendarIdI18n) FROM calendar ORDER BY calendarId DESC')
 
         result = self.cursor.fetchall()
 
@@ -174,6 +174,7 @@ class bckndSql:
             WHERE 
                 m.grade <= %s
                 AND m.code = %s
+                AND c.calendarId = %s
         ) AS codes ON c.courseCode = codes.myCode
         -- 检查是否属于专属专业（新增LEFT JOIN）
         LEFT JOIN majorandcourse AS mac_exclusive 
@@ -182,7 +183,7 @@ class bckndSql:
         WHERE c.calendarId = %s
         GROUP BY c.courseCode, c.courseName, f.facultyI18n, codes.grade, c.credit
         """
-        self.cursor.execute(query, (grade, code, calendarId))
+        self.cursor.execute(query, (grade, code, calendarId, calendarId))
 
         result = self.cursor.fetchall()
         
@@ -202,7 +203,7 @@ class bckndSql:
             f" n.courseLabelName"
             f" FROM coursenature AS n"
             f" JOIN coursedetail AS c ON n.courseLabelId = c.courseLabelId"
-            f" WHERE n.courseLabelId IN ({','.join(['%s' for _ in labelList])})"
+            f" WHERE n.courseLabelName IN ({','.join(['%s' for _ in labelList])})"
             f" AND c.calendarId = %s"
             f" ORDER BY n.courseLabelId DESC")
 
@@ -440,7 +441,16 @@ class bckndSql:
         result = [json.loads(res[0]) for res in result]
 
         return result
-               
+
+    def getLatestUpdateTime(self):
+        '''
+        Get the latest update time
+        '''
+        self.cursor.execute(f'SELECT fetchTime FROM fetchlog ORDER BY fetchTime DESC LIMIT 1')
+
+        result = self.cursor.fetchall()
+
+        return result[0][0]
 
 # testObject = {
 #     "calendarId": 119,

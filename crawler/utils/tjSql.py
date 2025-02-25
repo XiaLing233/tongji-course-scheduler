@@ -65,6 +65,10 @@ class tjSql:
         '''
         Insert courseLabel into database
         '''
+        # if none, return
+        if course['courseLabelId'] == None:
+            return
+        
         # if exists, return
         sql = f"SELECT * FROM coursenature WHERE courseLabelId = %s"
 
@@ -88,6 +92,10 @@ class tjSql:
         '''
         Insert assessmentMode into database
         '''
+        # if none, return
+        if course['assessmentMode'] == None:
+            return
+        
         # if exists, return
         sql = f"SELECT * FROM assessment WHERE assessmentMode = %s"
 
@@ -111,6 +119,10 @@ class tjSql:
         '''
         Insert campus into database
         '''
+        # if none, return
+        if course['campus'] == None:
+            return
+        
         # if exists, return
         sql = f"SELECT * FROM campus WHERE campus = %s"
 
@@ -207,7 +219,7 @@ class tjSql:
                     teacherSchedule += info + '\n'
             
             # Insert teacher
-            sql = f"INSERT INTOteacher (id, teachingClassId, teacherCode, teacherName, arrangeInfoText) VALUES (%s, %s, %s, %s, %s)"
+            sql = f"INSERT INTO teacher (id, teachingClassId, teacherCode, teacherName, arrangeInfoText) VALUES (%s, %s, %s, %s, %s)"
 
             val = (teacher['id'], teacher['teachingClassId'], teacher['teacherCode'], teacher['teacherName'], teacherSchedule)
 
@@ -276,14 +288,6 @@ class tjSql:
             print("\n\n\n")
             # input()
 
-            # self.updateCredits(course) # Update credits, 亡羊补牢
-
-            # self.insertLanguage(course) # Insert language
-
-            # self.updateLanguage(course) # Update language
-
-            continue
-
             self.insertLanguage(course) # Insert language
             
             self.insertCourseLabel(course) # Insert courseLabel
@@ -304,25 +308,25 @@ class tjSql:
             # Insert course
             sql = (
                 f"INSERT INTO coursedetail ("
-                f"id "
-                f"code "
-                f"name "
-                f"courseLabelId "
-                f"assessmentMode "
-                f"period "
-                f"weekHour "
-                f"campus "
-                f"number "
-                f"elcNumber "
-                f"startWeek "
-                f"endWeek "
-                f"courseCode "
-                f"courseName "
-                f"credit "
-                f"teachingLanguage "
-                f"faculty "
-                f"calendarId "
-                ") VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+                f"id, "
+                f"code, "
+                f"name, "
+                f"courseLabelId, "
+                f"assessmentMode, "
+                f"period, "
+                f"weekHour, "
+                f"campus, "
+                f"number, "
+                f"elcNumber, "
+                f"startWeek, "
+                f"endWeek, "
+                f"courseCode, "
+                f"courseName, "
+                f"credit, "
+                f"teachingLanguage, "
+                f"faculty, "
+                f"calendarId"
+                f") VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
             )
 
             val = (
@@ -334,13 +338,23 @@ class tjSql:
                 course['teachingLanguage'], course['faculty'], course['calendarId']
             )
 
-            self.cursor.execute(sql, val)
+            try:
+                self.cursor.execute(sql, val)
 
-            self.db.commit()
+                self.db.commit()
+            except Exception as e:
+                print(e)
+                print(val)
+                print("\n\n\n插入数据发生异常\n\n\n")
+                # input()
 
-            self.insertTeachers(course['teacherList'], course['arrangeInfo']) # Insert teachers
-
-            self.insertMajorAndCourse(course['majorList'], course['id']) # Insert major and course
+            try:
+                self.insertTeachers(course['teacherList'], course['arrangeInfo']) # Insert teachers
+                self.insertMajorAndCourse(course['majorList'], course['id']) # Insert major and course
+            except Exception as e:
+                print(e)
+                print("\n\n\n插入教师数据发生异常\n\n\n")
+                # input()
 
 # 亡羊补牢（更新表格结构）的时候需要的函数，暂时不用
 

@@ -91,7 +91,7 @@ export default {
             }
             catch (error) {
                 // console.log("error:", error);
-                errorNotify(err.response.data.msg);
+                errorNotify(error.response.data.msg);
             }
             finally {
                 this.$store.commit("setSpin", false);
@@ -99,7 +99,7 @@ export default {
         },
         async findGradeByCalendarId(value) {
             this.$store.commit('setSpin', true);
-
+            this.$store.commit('clearStagednSelectedCourses');
             this.$store.commit('setMajorInfo', 
                 {
                     calendarId: value,
@@ -121,7 +121,7 @@ export default {
             }
             catch (error) {
                 // console.log("error:", error);
-                errorNotify(err.response.data.msg);
+                errorNotify(error.response.data.msg);
             }
             finally {
                 this.$store.commit('setSpin', false);
@@ -129,7 +129,7 @@ export default {
         },
         async findMajorByGrade(value) {
             this.$store.commit('setSpin', true);
-
+            this.$store.commit('clearStagednSelectedCourses');
             this.$store.commit('setMajorInfo', 
                 {
                     calendarId: this.$store.state.majorSelected.calendarId,
@@ -149,7 +149,7 @@ export default {
             }
             catch (error) {
                 // console.log("error:", error);
-                errorNotify(err.response.data.msg);
+                errorNotify(error.response.data.msg);
             }
             finally {
                 this.$store.commit('setSpin', false);
@@ -184,6 +184,29 @@ export default {
 
         this.$store.commit("loadSolidify");
 
+        if (this.$store.state.majorSelected.calendarId) {
+            this.$store.commit('setSpin', true);
+            try {
+                const res = await axios({
+                    url: '/api/findGradeByCalendarId',
+                    method: 'post',
+                    data: {
+                        calendarId: this.$store.state.majorSelected.calendarId
+                    }
+                });
+                this.rawList.grades = res.data.data.gradeList;
+                // 在年级更改时清空专业
+                this.rawList.majors = [];
+            }
+            catch (error) {
+                // console.log("error:", error);
+                errorNotify(error.response.data.msg);
+            }
+            finally {
+                this.$store.commit('setSpin', false);
+            }
+        }
+
         if (this.$store.state.majorSelected.grade) {
             this.$store.commit('setSpin', true);
             try {
@@ -197,7 +220,7 @@ export default {
                 this.rawList.majors = res.data.data;
             }
             catch (error) {
-                errorNotify(err.response.data.msg);
+                errorNotify(error.response.data.msg);
             }
             finally {
                 this.$store.commit('setSpin', false);

@@ -12,6 +12,7 @@
           </div>
         </a-layout>
         <TimeTable @cellClick="findCourseByTime" />
+        <MyFooter />
       </a-spin>
     </a-layout>
     <a-modal
@@ -40,6 +41,7 @@
 
 <script>
 import MyHeader from './components/MyHeader.vue';
+import MyFooter from './components/MyFooter.vue';
 import CourseRoughList from './components/CourseRoughList.vue';
 import CourseDetailList from './components/CourseDetailList.vue';
 import TimeTable from './components/TimeTable.vue';
@@ -61,6 +63,7 @@ export default {
   name: 'App',
   components: {
     MyHeader,
+    MyFooter,
     CourseRoughList,
     CourseDetailList,
     TimeTable,

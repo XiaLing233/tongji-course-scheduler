@@ -1,24 +1,30 @@
 from utils import loginout
 from utils import tjSql
+import time
 
 def fetchCourseList(session):
     '''
     Fetch course list from url, receive the authenticated session as parameter
     '''
+
+    # 在这里指定每页的大小和要爬的学期
+    PAGESIZE = 100
+    CALENDAR = 112
+
     # prepare payload
     payload = {
         "condition":
         {
             "trainingLevel":"",
             "campus":"",
-            "calendar":119,
+            "calendar":CALENDAR,
             "college":"",
             "course":"",
             "ids":[],
             "isChineseTeaching": None,
         },
         "pageNum_":1,
-        "pageSize_":20
+        "pageSize_":PAGESIZE
     }
 
     # Mock a browser
@@ -36,7 +42,7 @@ def fetchCourseList(session):
     # Debug
     isWait = True
 
-    for i in range(1, total // 20 + 1 + 1): # floor division
+    for i in range(1, total // PAGESIZE + 1 + 1): # floor division
         # Prepare payload
         payload['pageNum_'] = i
 
@@ -47,12 +53,19 @@ def fetchCourseList(session):
         with tjSql.tjSql() as sql:
             sql.insertCourseList(response.json()['data']['list'])
 
+        print("\n\n\n=====================================")
+        print("第", i, "页，共", total // PAGESIZE + 1, "页")
+        print("=====================================\n\n\n")
+
         # Debug
         if isWait:
             print("Press Enter to continue, input NOBREAK to disable waiting")
 
             if input() == "NOBREAK":
                 isWait = False
+
+        else:
+            time.sleep(3)
 
     print("Course list fetched successfully")
 

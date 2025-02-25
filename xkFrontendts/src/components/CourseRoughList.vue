@@ -127,7 +127,7 @@ export default {
             }
             catch (error) {
                 // console.log("error:", error);
-                errorNotify(err.response.data.msg);
+                errorNotify(error.response.data.msg);
             }
             finally {
                 this.$store.commit('setSpin', false);

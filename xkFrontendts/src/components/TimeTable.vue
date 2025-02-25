@@ -75,7 +75,6 @@ export default {
             for (let row = 0; row < 12; row++) {
                 for (let col = 0; col < 7; col++) {
                     const span = newMaxSpans[row][col]
-                    console.log("newMaxSpans:", newMaxSpans)
                     if (span > 1) {
                         for (let i = 1; i < span; i++) { // 也要把自己标进去呀，不知要标下方的，所以 i 从 0 开始
                             if (row + i < 12) {

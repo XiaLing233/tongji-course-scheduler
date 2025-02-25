@@ -2,6 +2,7 @@ from utils import bckndSql
 from utils.bckndTools import arrangementTextToObj, splitEndline, numToDayText
 from flask import Flask, request, jsonify
 import configparser
+from datetime import datetime
 
 app = Flask(__name__)
 
@@ -12,7 +13,8 @@ IS_DEBUG = CONFIG['Switch']['debug'] # 1 / 0
 
 # 全局变量
 
-LABEL_LIST = [ 958, 957, 956, 955, 947 ] # 选修课标签，写死
+LABEL_LIST = [ "通识选修课", "人文经典与审美素养", "科学探索与生命关怀", "社会发展与国际视野", "工程能力与创新思维" ] # 选修课标签，写死
+INNER_LABEL_LIST = [811, 829, 830, 831, 832, 855, 940, 947, 955, 956, 957, 958]
 
 @app.route('/api/getAllCalendar', methods=['GET'])
 def getAllCalendar():
@@ -523,7 +525,7 @@ def findCourseByNatureId():
 
     # 字段合法性检验
     for id in payload['ids']:
-        if id not in LABEL_LIST:
+        if id not in INNER_LABEL_LIST:
             return jsonify({
                 "code": 400,
                 "msg": "目前只支持查询选修课标签",
@@ -775,7 +777,7 @@ def findCourseByTime():
         message: "查询成功"
     }
     ```
-    接口太慢了，一天 100 门课的数据量，需要 15s 左右，需要优化
+    接口太慢了，一天 100 门课的数据量，需要 40s 左右，需要优化
     '''
 
     payload = request.json
@@ -790,11 +792,15 @@ def findCourseByTime():
         }), 400
 
     with bckndSql.bckndSql() as sql:
-        result = sql.tmp_findCourseByTime(dayInChinese, LABEL_LIST, payload['calendarId']) # 返回的是这一天的所有课程，需要再过滤一
+        result = sql.tmp_findCourseByTime(dayInChinese, INNER_LABEL_LIST, payload['calendarId']) # 返回的是这一天的所有课程，需要再过滤一
+        print(len(result))
 
     # 对每门课号，筛选一下要不要保留它
     to_remove = []
+    tmpcnt = 0
     for res in result:
+        print("第", tmpcnt, "门课程")
+        tmpcnt += 1
         with bckndSql.bckndSql() as sql:
             assistResult = sql.findCourseDetailByCode(res['courseCode'], payload['calendarId'])
 
@@ -857,4 +863,29 @@ def findCourseByTime():
         "code": 200,
         "msg": "查询成功",
         "data": result
+    }), 200
+
+@app.route('/api/getLatestUpdateTime', methods=['GET'])
+def getLatestUpdateTime():
+    '''
+    Get latest update time.
+
+    Response:
+
+    ```json
+    {
+        "code": 200,
+        "msg": "查询成功",
+        "data": "2025-02-25"
+    }
+    ```
+    '''
+
+    with bckndSql.bckndSql() as sql:
+        result = sql.getLatestUpdateTime()
+
+    return jsonify({
+        "code": 200,
+        "msg": "查询成功",
+        "data": datetime.strftime(result, "%Y-%m-%d")
     }), 200
