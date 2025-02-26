@@ -39,7 +39,7 @@
   </a-config-provider>
 </template>
 
-<script>
+<script lang="ts">
 import MyHeader from './components/MyHeader.vue';
 import MyFooter from './components/MyFooter.vue';
 import CourseRoughList from './components/CourseRoughList.vue';
@@ -57,28 +57,30 @@ import { LoadingOutlined } from '@ant-design/icons-vue';
 import { h } from 'vue';
 import { errorNotify } from './utils/errorNotify';
 import { getRowSection } from './utils/timetable';
+import { defineAsyncComponent } from 'vue';
 
 dayjs.locale('zh-cn');
 
 export default {
   name: 'App',
   components: {
-    MyHeader,
-    MyFooter,
-    CourseRoughList,
-    CourseDetailList,
-    TimeTable,
-    MajorInfo,
-    CourseOverview,
-    OptionalCourseTimeOverview,
+    MyHeader: defineAsyncComponent(() => import('./components/MyHeader.vue')),
+    MyFooter: defineAsyncComponent(() => import('./components/MyFooter.vue')),
+    CourseRoughList: defineAsyncComponent(() => import('./components/CourseRoughList.vue')),
+    CourseDetailList: defineAsyncComponent(() => import('./components/CourseDetailList.vue')),
+    TimeTable: defineAsyncComponent(() => import('./components/TimeTable.vue')),
+    MajorInfo: defineAsyncComponent(() => import('./components/MajorInfo.vue')),
+    CourseOverview: defineAsyncComponent(() => import('./components/CourseOverview.vue')),
+    OptionalCourseTimeOverview: defineAsyncComponent(() => import('./components/OptionalCourseTimeOverview.vue')),
     LoadingOutlined
   },
   data() {
     return {
       locale: zhCN,
-      selectedRowKeys: [],
+      selectedRowKeys: [] as string[],
       openOverview: false,
-      openOptional: false
+      openOptional: false,
+      optionalCourseData: []
     }
   },
   computed: {
@@ -134,7 +136,7 @@ export default {
             courseType: "必",
             teacher: [],
             status: 0,
-            courseDetail: originalCourse.courses.map(course => ({
+            courseDetail: originalCourse.courses.map((course: any) => ({
               ...course,
               status: 0
             }))
@@ -162,8 +164,8 @@ export default {
             // 需要整合一下数据
             // 思路：先找到包含这个课程的选修课类别，然后再在这个类别中定位到这个课程
             const _roughCourse = this.$store.state.commonLists.optionalCourses
-              .find(courseGroup => courseGroup.courses.some(course => course.courseCode === _courseCode))
-              ?.courses.find(course => course.courseCode === _courseCode);
+              .find(courseGroup => courseGroup.courses.some((course: { courseCode: string; }) => course.courseCode === _courseCode))
+              ?.courses.find((course: { courseCode: string; }) => course.courseCode === _courseCode);
             const _detailCourse = res.data.data;
 
             const _courseObject = {
@@ -174,7 +176,7 @@ export default {
               courseType: "选",
               teacher: [],
               status: 0,
-              courseDetail: _detailCourse.map(course => ({
+              courseDetail: _detailCourse.map((course: any) => ({
                 ...course,
                 status: 0
               }))
@@ -184,9 +186,9 @@ export default {
 
             this.$store.commit("pushStagedCourse", _courseObject);
           }
-          catch (error) {
+          catch (error: any) {
             // console.log("error:", error);
-            errorNotify(err.response.data.msg);
+            errorNotify(error.response.data.msg);
           }
         }
         else if (type === '查') {
@@ -215,7 +217,7 @@ export default {
               courseType: "查",
               teacher: [],
               status: 0,
-              courseDetail: _detailCourse.map(course => ({
+              courseDetail: _detailCourse.map((course: any) => ({
                 ...course,
                 status: 0
               }))
@@ -223,9 +225,9 @@ export default {
 
             this.$store.commit("pushStagedCourse", _courseObject);
           }
-          catch (error) {
+          catch (error: any) {
             // console.log("error:", error);
-            errorNotify(err.response.data.msg);
+            errorNotify(error.response.data.msg);
           }
         }
       }
@@ -234,7 +236,7 @@ export default {
       this.selectedRowKeys = [];
       this.$store.commit("setSpin", false);
     },
-    async findCourseByTime(cell) {
+    async findCourseByTime(cell: { day: any; class: number; }) {
       this.$store.commit("setSpin", true);
       console.log("cell", cell);
 
@@ -254,9 +256,9 @@ export default {
         this.optionalCourseData = res.data.data;
         this.openOptional = true;
       }
-      catch (error) {
+      catch (error: any) {
         // console.log("error:", error);
-        errorNotify(err.response.data.msg);
+        errorNotify(error.response.data.msg);
       }
       finally {
         this.$store.commit("setSpin", false);

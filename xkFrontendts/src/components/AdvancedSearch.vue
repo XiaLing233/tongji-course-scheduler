@@ -39,11 +39,11 @@
                         :data-source="filteredCourses($store.state.commonLists.searchCourses)"
                         :pagination="false"
                         :row-selection="{ 
-                            selectedRowKeys: localSelectedRowKeys.filter(key => key.startsWith('查' + '_')), 
-                            onChange: (keys) => onSearchSelectChange(keys) 
+                            selectedRowKeys: localSelectedRowKeys.filter((key: string) => key.startsWith('查' + '_')), 
+                            onChange: (keys: string[]) => onSearchSelectChange(keys) 
                         }"
-                        :row-key="record => '查' + '_' + record.courseCode"
-                        :row-class-name="(_record, index) => index % 2 === 1 ? 'bg-gray-50' : ''"
+                        :row-key="(record: any) => '查' + '_' + record.courseCode"
+                        :row-class-name="(_record: string, index: number) => index % 2 === 1 ? 'bg-gray-50' : ''"
                     >
                     </a-table>
         </div>
@@ -51,9 +51,10 @@
 </template>
 
 
-<script>
+<script lang="ts">
 import axios from 'axios';
 import { errorNotify } from '@/utils/errorNotify';
+import type { courseInfo, stagedCourse, rawCampus, rawFaculty } from '@/utils/myInterface';
 
 export default {
     data() {
@@ -68,8 +69,8 @@ export default {
                 faculty: undefined
             },
             rawList: {
-                campus: [],
-                faculty: []
+                campus: [] as rawCampus[],
+                faculty: [] as rawFaculty[]
             },
             searchColumn: [
                     {
@@ -96,13 +97,13 @@ export default {
                         title: '课程性质',
                         dataIndex: 'courseNature',
                         align: 'center',
-                        customRender: ({ text }) => text ? text.join('、') : ''
+                        customRender: ({ text }: { text: string[] }) => text ? text.join('、') : ''
                     },
                     {
                         title: '校区',
                         dataIndex: 'campus',
                         align: 'center',
-                        customRender: ({ text }) => text ? text.join('、') : ''
+                        customRender: ({ text }: { text: string[] }) => text ? text.join('、') : ''
                     }
                 ],
         }
@@ -115,7 +116,7 @@ export default {
                 const res = await axios.get('/api/getAllCampus');
                 this.rawList.campus = res.data.data;
             }
-            catch (error) {
+            catch (error: any) {
                 errorNotify(error.response.data.msg);
             }
             finally {
@@ -130,7 +131,7 @@ export default {
                 const res = await axios.get('/api/getAllFaculty');
                 this.rawList.faculty = res.data.data;
             }
-            catch (error) {
+            catch (error: any) {
                 errorNotify(error.response.data.msg);
             }
             finally {
@@ -142,7 +143,7 @@ export default {
             this.$store.commit('setSpin', true);
 
             try {
-                const searchData = { ...this.searchBody };
+                const searchData = { ...this.searchBody } as any;
                 for (let key in searchData) {
                     if (searchData[key] === undefined) {
                         searchData[key] = '';
@@ -164,18 +165,18 @@ export default {
                     console.log("OK");
                 }
             }
-            catch (error) {
+            catch (error: any) {
                 errorNotify(error.response.data.msg);
             }
             finally {
                 this.$store.commit('setSpin', false);
             }
         },
-        filteredCourses(courses) {
+        filteredCourses(courses: courseInfo[]) {
             // console.log(courses);
             // 根据已选课程来过滤，德摩根律啊！思考一下为什么是 && 而不是 ||
             courses = courses.filter((course) => {
-                return !this.$store.state.commonLists.stagedCourses.some(stagedCourse => stagedCourse.courseCode === course.courseCode);
+                return !this.$store.state.commonLists.stagedCourses.some((stagedCourse: stagedCourse) => stagedCourse.courseCode === course.courseCode);
             });
 
             // 保留表格中和 this.searchValue 代码或者名称匹配的课程
@@ -187,7 +188,7 @@ export default {
                 return courses.filter(course => course.courseCode.includes(this.searchValue) || course.courseName.includes(this.searchValue));
             }
         },
-        onSearchSelectChange(localSelectedRowKeys) {
+        onSearchSelectChange(localSelectedRowKeys: string[]) {
             this.localSelectedRowKeys = localSelectedRowKeys;
         },
     },
@@ -201,7 +202,7 @@ export default {
             get() {
                 return this.selectedRowKeys;
             },
-            set(val) {
+            set(val: string[]) {
                 // console.log("更新：", val);
                 this.$emit('update:selectedRowKeys', val);
             }

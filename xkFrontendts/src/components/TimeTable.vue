@@ -19,7 +19,7 @@
                             @click="handleCellClick({ dayIndex, rowIndex: index })"
                         >
                             <div v-if="courses.length > 0" class="bg-indigo-700/90 text-white p-1 h-full rounded-b-xs overflow-x-hidden" :style="{ height: (maxSpans[index][dayIndex] * 45) + 'px' }">
-                                <div v-for="(course, index) in courses" :key="course.id" class="text-xs h-full" :class="{ 'border-b border-dashed border-white pb-1 mb-1': index !== courses.length - 1 }">
+                                <div v-for="(course, index) in courses" :key="course.code" class="text-xs h-full" :class="{ 'border-b border-dashed border-white pb-1 mb-1': index !== courses.length - 1 }">
                                     <span>{{ course.showText }}</span>
                                 </div>
                             </div>
@@ -31,31 +31,32 @@
     </a-layout-content>
 </template>
 
-<script>
+<script lang="ts">
 import { errorNotify } from '@/utils/errorNotify';
+import type { courseOnTable } from '@/utils/myInterface';
 
 export default {
     name: 'timeTable',
     data() {
         return {
-            timeTable: Array(12).fill(null).map(() => Array(7).fill(undefined).map(() => [])),
+            timeTable: Array(12).fill(null).map(() => Array(7).fill(undefined).map(() => [])) as courseOnTable[][][],
             maxSpans: Array.from({ length: 12 }, () => Array(7).fill(1)),
             occupied: Array.from({ length: 12 }, () => Array(7).fill(false)), // 这个 occupied 表示的并不是一个单元格内有没有课程，而是这个单元格有没有被 startTime 不是这节课的课程占用
         }
     },
     methods: {
-        getRowClass(index) {
+        getRowClass(index: number) {
             if (index === 11) return 'bg-red-50'
             return Math.floor(index / 2) % 2 === 0 ? 'bg-white' : 'bg-gray-50'
         },
         updateTimeTable() {
             // 初始化数据结构
-            const newTimeTable = Array(12).fill(null).map(() => Array(7).fill(undefined).map(() => []))
+            const newTimeTable = Array(12).fill(null).map(() => Array(7).fill(undefined).map(() => [])) as courseOnTable[][][]
             const newMaxSpans = Array.from({ length: 12 }, () => Array(7).fill(1))
             const newOccupied = Array.from({ length: 12 }, () => Array(7).fill(false))
 
             // 填充课程数据
-            this.timeTableData.forEach(course => {
+            this.timeTableData.forEach((course: courseOnTable) => {
                 const startRow = course.occupyTime[0] - 1
                 const dayIndex = course.occupyDay - 1
                 newTimeTable[startRow][dayIndex].push(course)
@@ -90,7 +91,7 @@ export default {
             this.maxSpans = newMaxSpans
             this.occupied = newOccupied
         },
-        handleCellClick(cell) {
+        handleCellClick(cell: { dayIndex: number, rowIndex: number }) {
             // 如果输入了个人信息，再允许点击
             if (!this.$store.getters.isMajorSelected) {
                 // console.log("未选择专业");

@@ -27,17 +27,17 @@
             <div class="h-150 overflow-auto">
                 <a-table
                 :columns="columns.compulsory"
-                v-for="courses in this.$store.getters.sortCompulsoryCoursesByGrade"
+                v-for="courses in $store.getters.sortCompulsoryCoursesByGrade"
                 :key="courses.grade"
                 :data-source="filteredCourses(courses.courses)"
                 :pagination="false"
                 :title="() => courses.grade + '级'"
                 :row-selection="{ 
-                    selectedRowKeys: localSelectedRowKeys.filter(key => key.startsWith('必_' + courses.grade + '_')), 
-                    onChange: (keys) => onCompulsorySelectChange(keys)
+                    selectedRowKeys: localSelectedRowKeys.filter((key: string) => key.startsWith('必_' + courses.grade + '_')), 
+                    onChange: (keys: string[]) => onCompulsorySelectChange(keys)
                 }"
-                :row-key="record => '必_' + courses.grade + '_' + record.courseCode"
-                :row-class-name="(_record, index) => index % 2 === 1 ? 'bg-gray-50' : ''"
+                :row-key="(record: any) => '必_' + courses.grade + '_' + record.courseCode"
+                :row-class-name="(_record: any, index: number) => index % 2 === 1 ? 'bg-gray-50' : ''"
             >
             </a-table>
             </div>
@@ -51,11 +51,11 @@
                         :data-source="filteredCourses($store.state.commonLists.optionalCourses.find(item => item.courseLabelId === type.courseLabelId)?.courses)"
                         :pagination="false"
                         :row-selection="{ 
-                            selectedRowKeys: localSelectedRowKeys.filter(key => key.startsWith('选_' + type.courseLabelId + '_')), 
-                            onChange: (keys) => onOptionalSelectChange(keys) 
+                            selectedRowKeys: localSelectedRowKeys.filter((key: string) => key.startsWith('选_' + type.courseLabelId + '_')), 
+                            onChange: (keys: string[]) => onOptionalSelectChange(keys) 
                         }"
-                        :row-key="record => '选_' + type.courseLabelId + '_' + record.courseCode"
-                        :row-class-name="(_record, index) => index % 2 === 1 ? 'bg-gray-50' : ''"
+                        :row-key="(record: any) => '选_' + type.courseLabelId + '_' + record.courseCode"
+                        :row-class-name="(_record: any, index: number) => index % 2 === 1 ? 'bg-gray-50' : ''"
                     >
                     </a-table>
                     </div>
@@ -70,11 +70,13 @@
     </div>
 </template>
 
-<script>
+<script lang="ts">
 import axios from 'axios';
 import { SearchOutlined } from '@ant-design/icons-vue';
 import AdvancedSearch from '@/components/AdvancedSearch.vue';
 import { errorNotify } from '@/utils/errorNotify';
+import type { stagedCourse } from '@/utils/myInterface';
+import { defineAsyncComponent } from 'vue';
 
 export default {
     data() {
@@ -110,7 +112,7 @@ export default {
                         title: '课程性质',
                         dataIndex: 'courseNature',
                         align: 'center',
-                        customRender: ({ text }) => text ? text.join('、') : ''
+                        customRender: ({ text }: { text: string[] }) => text ? text.join('、') : ''
                     }
                 ],
                 optional: [
@@ -138,7 +140,7 @@ export default {
                         title: '校区',
                         dataIndex: 'campus',
                         align: 'center',
-                        customRender: ({ text }) => text ? text.join('、') : ''
+                        customRender: ({ text }: { text: string[] }) => text ? text.join('、') : ''
                     }
                 ]
             },
@@ -149,11 +151,11 @@ export default {
     },
     props: ['selectedRowKeys'],
     methods: {
-        onCompulsorySelectChange(localSelectedRowKeys) {
+        onCompulsorySelectChange(localSelectedRowKeys: string[]) {
             this.localSelectedRowKeys = localSelectedRowKeys;
             // console.log('localSelectedRowKeys changed: ', this.localSelectedRowKeys);
         },
-        onOptionalSelectChange(localSelectedRowKeys) {
+        onOptionalSelectChange(localSelectedRowKeys: string[]) {
             this.localSelectedRowKeys = localSelectedRowKeys;
             // console.log('localSelectedRowKeys changed: ', this.localSelectedRowKeys);
         },
@@ -169,9 +171,9 @@ export default {
                         calendarId: this.$store.state.majorSelected.calendarId
                     }
                 });
-                this.optionalTypes = this.$store.commit('setOptionalTypes', res.data.data);
+                this.$store.commit('setOptionalTypes', res.data.data);
             }
-            catch (error) {
+            catch (error: any) {
                 // console.log("error:", error);
                 errorNotify(error.response.data.msg);
             }
@@ -186,9 +188,9 @@ export default {
                         ids: this.$store.state.commonLists.optionalTypes.map(type => type.courseLabelId)
                     }
                 });
-                this.optionalCourses = this.$store.commit('setOptionalCourses', res.data.data);
+                this.$store.commit('setOptionalCourses', res.data.data);
             }
-            catch (error) {
+            catch (error: any) {
                 // console.log("error:", err.response.data.msg);
                 errorNotify(error);
             }
@@ -196,7 +198,7 @@ export default {
                 this.$store.commit('setSpin', false);
             }
         },
-        filteredCourses(courses) {
+        filteredCourses(courses: stagedCourse[]) {
             // 根据已选课程来过滤，德摩根律啊！思考一下为什么是 && 而不是 ||
             courses = courses.filter((course) => {
                 return !this.$store.state.commonLists.stagedCourses.some(stagedCourse => stagedCourse.courseCode === course.courseCode);
@@ -222,7 +224,7 @@ export default {
     },
     components: {
         SearchOutlined,
-        AdvancedSearch
+        AdvancedSearch: defineAsyncComponent(() => import('@/components/AdvancedSearch.vue'))
     },
     computed: {
         localSelectedRowKeys: {
@@ -230,7 +232,7 @@ export default {
                 // console.log("本地的！", this.selectedRowKeys);
                 return this.selectedRowKeys;
             },
-            set(value) {
+            set(value: string[]) {
                 // console.log("我也更新：", value);
                 this.$emit('update:selectedRowKeys', value);
             }

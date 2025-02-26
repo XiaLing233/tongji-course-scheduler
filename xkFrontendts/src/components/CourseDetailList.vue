@@ -35,8 +35,9 @@
     </a-layout-content>
 </template>
 
-<script>
+<script lang="ts">
 import { mapStatusToChinese } from '@/utils/statusManipulate';
+import type { teacherlet, arrangementInfolet, courseDetaillet } from '@/utils/myInterface';
 
     export default {
         data() {
@@ -47,14 +48,14 @@ import { mapStatusToChinese } from '@/utils/statusManipulate';
                         dataIndex: 'code',
                         key: 'code',
                         align: 'center',
-                        sorter: (a, b) => a.code - b.code
+                        sorter: (a: { code: number; }, b: { code: number; }) => a.code - b.code
                     },
                     {
                         title: '教师',
                         dataIndex: 'teachers',
                         key: 'teachers',
                         align: 'center',
-                        customRender: ({ text }) => text?.map(teacher => teacher.teacherName).join(', ')
+                        customRender: ({ text }: { text: teacherlet[] }) => text?.map(teacher => teacher.teacherName).join(', ')
                     },
                     {
                         title: '校区',
@@ -73,7 +74,7 @@ import { mapStatusToChinese } from '@/utils/statusManipulate';
                         dataIndex: 'arrangementInfo',
                         key: 'arrangementInfo',
                         align: 'center',
-                        customRender: ({ text }) => text?.map(arrangement => arrangement.arrangementText).join(', ')
+                        customRender: ({ text }: { text: arrangementInfolet[] }) => text?.map(arrangement => arrangement.arrangementText).join(', ')
                     },
                     {
                         title: '状态',
@@ -102,7 +103,7 @@ import { mapStatusToChinese } from '@/utils/statusManipulate';
             }
         },
         methods: {
-            getCampusClass(campus) {
+            getCampusClass(campus: string) {
                 switch (campus) {
                     case '四平路校区':
                         return 'bg-yellow-100/80';
@@ -114,7 +115,7 @@ import { mapStatusToChinese } from '@/utils/statusManipulate';
                         return 'bg-white';
                 }
             },
-            onRowEvent(courseDetaillet) {
+            onRowEvent(courseDetaillet: courseDetaillet) {
                 return {
                     onClick: () => {
                         // console.log("记录", courseDetaillet);
@@ -123,7 +124,7 @@ import { mapStatusToChinese } from '@/utils/statusManipulate';
                 }
             },
             mapStatusToChinese,
-            getStatusTextColor(status) {
+            getStatusTextColor(status: number) {
                 // console.log("132", status);
                 switch (status) {
                     case 0:
@@ -136,7 +137,7 @@ import { mapStatusToChinese } from '@/utils/statusManipulate';
                         return '';
                 }
             },
-            getRowClass(record, index) {
+            getRowClass(record: {status: number}, index: number) {
                 let className = index % 2 === 0 ? 'bg-white' : 'bg-gray-50';
                 
                 switch (record.status) {

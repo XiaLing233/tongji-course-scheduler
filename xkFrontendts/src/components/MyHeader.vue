@@ -64,7 +64,7 @@
     </a-layout-header>
 </template>
 
-<script>
+<script lang="ts">
 import { ExportOutlined, GithubOutlined, CalendarOutlined, LinkOutlined, ReadOutlined } from '@ant-design/icons-vue';
 import { codesToJsonForCSV, jsonToCSV, downloadCSV } from '@/utils/csvRelated';
 import { codesToJsonForXLS, jsonToXLS, downloadXLS } from '@/utils/xlsRelated';

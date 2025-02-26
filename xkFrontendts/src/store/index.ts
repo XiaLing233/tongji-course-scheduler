@@ -4,35 +4,12 @@ import type {
     courseDetaillet, 
     baseInfoTriplet, 
     courseInfo, 
-    occupyCell, 
-    courseOnTable,
     clickedCourseInfo,
     stagedCourse,
     optionalCourseType
  } from "@/utils/myInterface";
 import { errorNotify } from "@/utils/errorNotify";
-
-export interface State {
-    majorSelected: baseInfoTriplet, /* 持久化 */
-    commonLists: {
-        compulsoryCourses: courseInfo[],
-        optionalTypes: optionalCourseType[],
-        optionalCourses: courseInfo[],
-        stagedCourses: stagedCourse[], /* 持久化 */
-        selectedCourses: string[], /* 持久化 */
-        searchCourses: courseInfo[]
-    },
-    clickedCourseInfo: {
-        courseCode: string,
-        courseName: string
-    },
-    occupied: Array<Array<occupyCell[]>>, /* 持久化 */
-    timeTableData: courseOnTable[], /* 持久化 */
-    flags: {
-        majorNotChanged: boolean
-    },
-    isSpin: boolean
-}
+import type { State } from "vue";
 
 const store = createStore<State>({
     state() {
@@ -149,7 +126,7 @@ const store = createStore<State>({
                                         .find(course => course.courseCode === payload.code.substring(0, payload.code.length - 2));
                     if (stagedCourse) {
                         // console.log("目标", stagedCourse);
-                        const targetCourse = stagedCourse.courseDetail.find(course => isSameCourse(course.code, payload.code) && course.status === 1);
+                        const targetCourse = stagedCourse.courseDetail.find((course: { code: string; status: number; }) => isSameCourse(course.code, payload.code) && course.status === 1);
                         if (targetCourse) {
                             // console.log("找到了！");
                             targetCourse.status = 0;
@@ -203,7 +180,7 @@ const store = createStore<State>({
                     course.status = 2;
                     
                     // 把 courseDetail 中的 status 也修改为 2，并且 push 到 selectedCourses 中
-                    course.courseDetail.forEach(detail => {
+                    course.courseDetail.forEach((detail: { status: number; code: string; }) => {
                         if (detail.status === 1) {
                             detail.status = 2;
                             state.commonLists.selectedCourses.push(detail.code);

@@ -6,16 +6,18 @@
             :pagination="false"
             :row-selection="{ 
                 selectedRowKeys: localSelectedRowKeys,
-                onChange: (keys) => onOptionalSelectChange(keys) 
+                onChange: (keys: string[]) => onOptionalSelectChange(keys) 
             }"
-            :row-key="record => '选_' + record.courseNature + '_' + record.courseCode"
-            :row-class-name="(_record, index) => index % 2 === 1 ? 'bg-gray-50' : ''"
+            :row-key="(record: any) => '选_' + record.courseNature + '_' + record.courseCode"
+            :row-class-name="(_record: any, index: number) => index % 2 === 1 ? 'bg-gray-50' : ''"
         >
         </a-table>
     </div>
 </template>
 
-<script>
+<script lang="ts">
+import type { stagedCourse } from '@/utils/myInterface';
+
 export default {
     data() {
         return {
@@ -45,24 +47,24 @@ export default {
                     dataIndex: 'courseNature',
                     key: 'courseNature',
                     align: 'center',
-                    customRender: ({ text }) => text ? text.join('、') : ''
+                    customRender: ({ text }: { text: string[] }) => text ? text.join('、') : ''
                 },
                 {
                     title: '校区',
                     dataIndex: 'campus',
                     align: 'center',
-                    customRender: ({ text }) => text ? text.join('、') : ''
+                    customRender: ({ text }: { text: string[] }) => text ? text.join('、') : ''
                 }
             ],
         }
     },
     methods: {
-        filteredCourses(courses) {
+        filteredCourses(courses: stagedCourse[]) {
             return courses.filter((course) => {
                 return !this.$store.state.commonLists.stagedCourses.some(stagedCourse => stagedCourse.courseCode === course.courseCode);
             });
         },
-        onOptionalSelectChange(keys) {
+        onOptionalSelectChange(keys: string[]) {
             this.localSelectedRowKeys = keys;
         }
     },
@@ -72,7 +74,7 @@ export default {
                 // console.log('localSelectedRowKeys', this.selectedRowKeys);
                 return this.selectedRowKeys;
             },
-            set(value) {
+            set(value: string[]) {
                 this.$emit('update:selectedRowKeys', value);
             }
         }

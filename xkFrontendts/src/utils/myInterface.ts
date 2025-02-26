@@ -103,3 +103,15 @@ export interface xlsCourse {
     courseName: string; // 课程名称
     teacherName: string; // 老师
 }
+
+// vue 组件中的接口
+
+export interface rawCampus {
+    campusId: string;
+    campusName: string;
+}
+
+export interface rawFaculty {
+    facultyId: string;
+    facultyName: string;
+}

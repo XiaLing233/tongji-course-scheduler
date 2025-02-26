@@ -64,7 +64,7 @@
     </a-layout-content>
 </template>
 
-<script>
+<script lang="ts">
 import axios from 'axios';
 import { errorNotify } from '@/utils/errorNotify';
 
@@ -72,10 +72,10 @@ export default {
     data() {
         return {
             rawList: {
-                calendars: [],
+                calendars: [] as { calendarId: number, calendarName: string }[],
                 grades: [],
-                majors: []
-            },
+                majors: [] as { code: string, name: string }[]
+            }
         }
     },
     methods: {
@@ -89,7 +89,7 @@ export default {
                 });
                 this.rawList.calendars = res.data.data;
             }
-            catch (error) {
+            catch (error: any) {
                 // console.log("error:", error);
                 errorNotify(error.response.data.msg);
             }
@@ -97,7 +97,7 @@ export default {
                 this.$store.commit("setSpin", false);
             }
         },
-        async findGradeByCalendarId(value) {
+        async findGradeByCalendarId(value: number) {
             this.$store.commit('setSpin', true);
             this.$store.commit('clearStagednSelectedCourses');
             this.$store.commit('setMajorInfo', 
@@ -119,7 +119,7 @@ export default {
                 // 在年级更改时清空专业
                 this.rawList.majors = [];
             }
-            catch (error) {
+            catch (error: any) {
                 // console.log("error:", error);
                 errorNotify(error.response.data.msg);
             }
@@ -127,7 +127,7 @@ export default {
                 this.$store.commit('setSpin', false);
             }
         },
-        async findMajorByGrade(value) {
+        async findMajorByGrade(value: number) {
             this.$store.commit('setSpin', true);
             this.$store.commit('clearStagednSelectedCourses');
             this.$store.commit('setMajorInfo', 
@@ -147,7 +147,7 @@ export default {
                 });
                 this.rawList.majors = res.data.data;
             }
-            catch (error) {
+            catch (error: any) {
                 // console.log("error:", error);
                 errorNotify(error.response.data.msg);
             }
@@ -155,7 +155,7 @@ export default {
                 this.$store.commit('setSpin', false);
             }
         },
-        onMajorChange(value) {
+        onMajorChange(value: string) {
             this.$emit('changeMajor')
             this.$store.commit('clearStagednSelectedCourses');
             this.$store.commit('setMajorInfo', 
@@ -166,7 +166,7 @@ export default {
                 }
             )
         },
-        filterMajor(input, option) {
+        filterMajor(input: string, option: { label: string, value: string }) {
             return option.label.toLowerCase().indexOf(input.toLowerCase()) >= 0;
         }
     },
@@ -198,7 +198,7 @@ export default {
                 // 在年级更改时清空专业
                 this.rawList.majors = [];
             }
-            catch (error) {
+            catch (error: any) {
                 // console.log("error:", error);
                 errorNotify(error.response.data.msg);
             }
@@ -219,7 +219,7 @@ export default {
                 });
                 this.rawList.majors = res.data.data;
             }
-            catch (error) {
+            catch (error: any) {
                 errorNotify(error.response.data.msg);
             }
             finally {

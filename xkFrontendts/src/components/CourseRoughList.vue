@@ -46,10 +46,11 @@
     </a-layout-content>
 </template>
 
-<script>
+<script lang="ts">
 import axios from 'axios';
 import { mapStatusToChinese } from '@/utils/statusManipulate';
 import { errorNotify } from '@/utils/errorNotify';
+import type { teacherlet, courseInfo } from '@/utils/myInterface';
 
 export default {
     data() {
@@ -78,7 +79,7 @@ export default {
                 dataIndex: 'teacher',
                 key: 'teacher',
                 align: 'center',
-                customRender: ({ text }) => text?.map(teacher => teacher.teacherName).join(', ')
+                customRender: ({ text }: { text: teacherlet[] }) => text?.map(teacher => teacher.teacherName).join(', ')
             },
             {
                 title: '状态',
@@ -125,7 +126,7 @@ export default {
             this.$store.commit('setCompulsoryCourses', res.data.data);
             this.$emit('openOverview');
             }
-            catch (error) {
+            catch (error: any) {
                 // console.log("error:", error);
                 errorNotify(error.response.data.msg);
             }
@@ -133,7 +134,7 @@ export default {
                 this.$store.commit('setSpin', false);
             }
         },
-        getRowClass(record, index) {
+        getRowClass(record: any, index: number) {
             // console.log(index);
             let className = index % 2 === 0 ? 'bg-white' : 'bg-gray-50';
 
@@ -143,7 +144,7 @@ export default {
 
             return className;
         },
-        onRowEvent(record) {
+        onRowEvent(record: courseInfo) {
             return {
                 onClick: () => {
                     // console.log(record)
@@ -155,7 +156,7 @@ export default {
             }
         },
         mapStatusToChinese,
-        getStatusTextColor(status) {
+        getStatusTextColor(status: number) {
             switch(status) {
                 case 0:
                     return '';

@@ -10,7 +10,7 @@
     </a-layout>
 </template>
 
-<script>
+<script lang="ts">
 import { errorNotify } from '@/utils/errorNotify';
 import axios from 'axios';
 
@@ -32,7 +32,7 @@ export default {
                 });
                 this.updateTime = res.data.data;
             }
-            catch (error) {
+            catch (error: any) {
                 // console.log("error:", error);
                 errorNotify(error.response.data.msg);
             }
