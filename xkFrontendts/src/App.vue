@@ -40,15 +40,6 @@
 </template>
 
 <script lang="ts">
-import MyHeader from './components/MyHeader.vue';
-import MyFooter from './components/MyFooter.vue';
-import CourseRoughList from './components/CourseRoughList.vue';
-import CourseDetailList from './components/CourseDetailList.vue';
-import TimeTable from './components/TimeTable.vue';
-import MajorInfo from './components/MajorInfo.vue';
-import CourseOverview from './components/CourseOverview.vue';
-import OptionalCourseTimeOverview from './components/OptionalCourseTimeOverview.vue';
-
 import zhCN from 'ant-design-vue/es/locale/zh_CN';
 import dayjs from 'dayjs';
 import 'dayjs/locale/zh-cn';

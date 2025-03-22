@@ -43,17 +43,17 @@ class tjSql:
         Insert calendar into database
         '''
         # if exists, return
-        sql = f"SELECT * FROM calendar WHERE calendarId = %s"
+        sql = "SELECT * FROM calendar WHERE calendarId = %s"
 
         val = (course['calendarId'], )
 
         self.cursor.execute(sql, val)
 
-        if self.cursor.fetchone() != None:
+        if self.cursor.fetchone() is not None:
             return
         
         # Insert
-        sql = f"INSERT INTO calendar (calendarId, calendarIdI18n) VALUES (%s, %s)"
+        sql = "INSERT INTO calendar (calendarId, calendarIdI18n) VALUES (%s, %s)"
 
         val = (course['calendarId'], course['calendarIdI18n'])
 
@@ -66,21 +66,21 @@ class tjSql:
         Insert courseLabel into database
         '''
         # if none, return
-        if course['courseLabelId'] == None:
+        if course['courseLabelId'] is None:
             return
         
         # if exists, return
-        sql = f"SELECT * FROM coursenature WHERE courseLabelId = %s"
+        sql = "SELECT * FROM coursenature WHERE courseLabelId = %s"
 
         val = (course['courseLabelId'], )
 
         self.cursor.execute(sql, val)
 
-        if self.cursor.fetchone() != None:
+        if self.cursor.fetchone() is not None:
             return
         
         # Insert
-        sql = f"INSERT INTO coursenature (courseLabelId, courseLabelName) VALUES (%s, %s)"
+        sql = "INSERT INTO coursenature (courseLabelId, courseLabelName) VALUES (%s, %s)"
 
         val = (course['courseLabelId'], course['courseLabelName'])
 
@@ -93,21 +93,21 @@ class tjSql:
         Insert assessmentMode into database
         '''
         # if none, return
-        if course['assessmentMode'] == None:
+        if course['assessmentMode'] is None:
             return
         
         # if exists, return
-        sql = f"SELECT * FROM assessment WHERE assessmentMode = %s"
+        sql = "SELECT * FROM assessment WHERE assessmentMode = %s"
 
         val = (course['assessmentMode'], )
 
         self.cursor.execute(sql, val)
 
-        if self.cursor.fetchone() != None:
+        if self.cursor.fetchone() is not None:
             return
         
         # Insert
-        sql = f"INSERT INTO assessment (assessmentMode, assessmentModeI18n) VALUES (%s, %s)"
+        sql = "INSERT INTO assessment (assessmentMode, assessmentModeI18n) VALUES (%s, %s)"
 
         val = (course['assessmentMode'], course['assessmentModeI18n'])
 
@@ -120,21 +120,21 @@ class tjSql:
         Insert campus into database
         '''
         # if none, return
-        if course['campus'] == None:
+        if course['campus'] is None:
             return
         
         # if exists, return
-        sql = f"SELECT * FROM campus WHERE campus = %s"
+        sql = "SELECT * FROM campus WHERE campus = %s"
 
         val = (course['campus'], )
 
         self.cursor.execute(sql, val)
 
-        if self.cursor.fetchone() != None:
+        if self.cursor.fetchone() is None:
             return
         
         # Insert
-        sql = f"INSERT INTO campus (campus, campusI18n) VALUES (%s, %s)"
+        sql = "INSERT INTO campus (campus, campusI18n) VALUES (%s, %s)"
 
         val = (course['campus'], course['campusI18n'])
 
@@ -147,17 +147,17 @@ class tjSql:
         Insert faculty into database
         '''
         # if exists, return
-        sql = f"SELECT * FROM faculty WHERE faculty = %s"
+        sql = "SELECT * FROM faculty WHERE faculty = %s"
 
         val = (course['faculty'], )
 
         self.cursor.execute(sql, val)
 
-        if self.cursor.fetchone() != None:
+        if self.cursor.fetchone() is not None:
             return
         
         # Insert
-        sql = f"INSERT INTO faculty (faculty, facultyI18n) VALUES (%s, %s)"
+        sql = "INSERT INTO faculty (faculty, facultyI18n) VALUES (%s, %s)"
 
         val = (course['faculty'], course['facultyI18n'])
 
@@ -171,7 +171,7 @@ class tjSql:
         majors is an array
         '''
         # if majors is empty, return
-        if majors == None:
+        if majors is None:
             return
 
         for major in majors:
@@ -183,17 +183,17 @@ class tjSql:
             }
 
             # if exists, skip
-            sql = f"SELECT * FROM major WHERE code = %s AND grade = %s"
+            sql = "SELECT * FROM major WHERE code = %s AND grade = %s"
 
             val = (processedMajor['code'], processedMajor['grade'])
 
             self.cursor.execute(sql, val)
 
-            if self.cursor.fetchone() != None:
+            if self.cursor.fetchone() is not None:
                 continue
 
             # Insert
-            sql = f"INSERT INTO major (code, grade, name) VALUES (%s, %s, %s)"
+            sql = "INSERT INTO major (code, grade, name) VALUES (%s, %s, %s)"
 
             val = (processedMajor['code'], processedMajor['grade'], processedMajor['name'])
 
@@ -219,7 +219,7 @@ class tjSql:
                     teacherSchedule += info + '\n'
             
             # Insert teacher
-            sql = f"INSERT INTO teacher (id, teachingClassId, teacherCode, teacherName, arrangeInfoText) VALUES (%s, %s, %s, %s, %s)"
+            sql = "INSERT INTO teacher (id, teachingClassId, teacherCode, teacherName, arrangeInfoText) VALUES (%s, %s, %s, %s, %s)"
 
             val = (teacher['id'], teacher['teachingClassId'], teacher['teacherCode'], teacher['teacherName'], teacherSchedule)
 
@@ -232,12 +232,12 @@ class tjSql:
         Insert major and course into database
         '''
         # if majors is empty, return
-        if majors == None:
+        if majors is None:
             return
         
         for major in majors:
             # Get majorId
-            sql = f"SELECT id FROM major WHERE name = %s"
+            sql = "SELECT id FROM major WHERE name = %s"
 
             val = (major, )
 
@@ -246,7 +246,7 @@ class tjSql:
             majorId = self.cursor.fetchone()[0]
 
             # Insert
-            sql = f"INSERT INTO majorandcourse (majorId, courseId) VALUES (%s, %s)"
+            sql = "INSERT INTO majorandcourse (majorId, courseId) VALUES (%s, %s)"
 
             val = (majorId, courseId)
 
@@ -259,17 +259,17 @@ class tjSql:
         Insert language into database
         '''
         # if exists, return
-        sql = f"SELECT * FROM language WHERE teachingLanguage = %s"
+        sql = "SELECT * FROM language WHERE teachingLanguage = %s"
 
         val = (course['teachingLanguage'], )
 
         self.cursor.execute(sql, val)
 
-        if self.cursor.fetchone() != None:
+        if self.cursor.fetchone() is not None:
             return
         
         # Insert
-        sql = f"INSERT INTO language (teachingLanguage, teachingLanguageI18n) VALUES (%s, %s)"
+        sql = "INSERT INTO language (teachingLanguage, teachingLanguageI18n) VALUES (%s, %s)"
 
         val = (course['teachingLanguage'], course['teachingLanguageI18n'])
 
@@ -307,26 +307,26 @@ class tjSql:
 
             # Insert course
             sql = (
-                f"INSERT INTO coursedetail ("
-                f"id, "
-                f"code, "
-                f"name, "
-                f"courseLabelId, "
-                f"assessmentMode, "
-                f"period, "
-                f"weekHour, "
-                f"campus, "
-                f"number, "
-                f"elcNumber, "
-                f"startWeek, "
-                f"endWeek, "
-                f"courseCode, "
-                f"courseName, "
-                f"credit, "
-                f"teachingLanguage, "
-                f"faculty, "
-                f"calendarId"
-                f") VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+                "INSERT INTO coursedetail ("
+                "id, "
+                "code, "
+                "name, "
+                "courseLabelId, "
+                "assessmentMode, "
+                "period, "
+                "weekHour, "
+                "campus, "
+                "number, "
+                "elcNumber, "
+                "startWeek, "
+                "endWeek, "
+                "courseCode, "
+                "courseName, "
+                "credit, "
+                "teachingLanguage, "
+                "faculty, "
+                "calendarId"
+                ") VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
             )
 
             val = (
@@ -362,7 +362,7 @@ class tjSql:
         '''
         Update credits
         '''
-        sql = f"UPDATE coursedetail SET credit = %s WHERE id = %s"
+        sql = "UPDATE coursedetail SET credit = %s WHERE id = %s"
 
         val = (course['credits'], course['id'])
 
@@ -378,7 +378,7 @@ class tjSql:
         '''
         Update language
         '''
-        sql = f"UPDATE coursedetail SET teachingLanguage = %s WHERE id = %s"
+        sql = "UPDATE coursedetail SET teachingLanguage = %s WHERE id = %s"
 
         val = (course['teachingLanguage'], course['id'])
 
