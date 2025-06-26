@@ -130,7 +130,7 @@ class tjSql:
 
         self.cursor.execute(sql, val)
 
-        if self.cursor.fetchone() is None:
+        if self.cursor.fetchone() is not None:
             return
         
         # Insert

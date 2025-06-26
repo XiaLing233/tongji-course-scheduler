@@ -2,8 +2,28 @@ import requests
 from . import myEncrypt
 from urllib.parse import urlencode
 import json
+import time
+import xml.etree.ElementTree as ET
 
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email.utils import formataddr
+import smtplib
+from . import imap_email
+import configparser
+
+CONFIG = configparser.ConfigParser()
+CONFIG.read("config.ini")
+
+# 加强认证
+IMAP_SERVER = CONFIG["IMAP"]["server_domain"]
+IMAP_PORT = CONFIG["IMAP"]["server_port"]
+IMAP_USERNAME =  CONFIG["IMAP"]["qq_emailaddr"]
+IMAP_PASSWORD =  CONFIG["IMAP"]["qq_grantcode"]
+
+# 登录
 def login():
+    # ----- 第一步：登录前页面 ----- #
 
     entry_url = "https://1.tongji.edu.cn/api/ssoservice/system/loginIn"
 
@@ -17,7 +37,6 @@ def login():
 
     session = requests.Session()
     session.headers.update(headers)
-
     response = session.get(entry_url)
 
     # 获取 authnLcKey
@@ -26,21 +45,22 @@ def login():
 
     # ----- 第二步：ActionAuthChain ----- #
 
-    global RSA_URL
     # 获取 RSA 公钥所在 js 文件的链接
     for line in response.text.split('\n'):
         if 'crypt.js' in line:
             RSA_URL = "https://iam.tongji.edu.cn/idp/" + line.split('src=\"')[1].split('\"')[0]
             print(RSA_URL)
 
-    chain_url = response.url
+    CHAIN_URL = response.url
+
+    SP_AUTH_CHAIN_CODE = myEncrypt.getspAuthChainCode(response.text)
 
     login_data = urlencode({
         "j_username": myEncrypt.STU_NO,
         "j_password": myEncrypt.encryptPassword(RSA_URL),
         "j_checkcode": "请输入验证码",
         "op": "login",
-        "spAuthChainCode": myEncrypt.getspAuthChainCode(response.text), # 似乎是个固定值，写死在页面的 
+        "spAuthChainCode": SP_AUTH_CHAIN_CODE, # 似乎是个固定值，写死在页面的 
         "authnLcKey": authnLcKey,
     })
 
@@ -54,37 +74,99 @@ def login():
             'Content-Type': 'application/x-www-form-urlencoded', # 设置 Content-Type
         }
     )
+    response = session.post(CHAIN_URL, data=login_data, allow_redirects=False)
 
-    response = session.post(chain_url, data=login_data, allow_redirects=False)
+    # ----- 第 2.5 步 加强认证 ----- #
 
-    # ----- 第三步：AuthnEngine ----- #
+    is_enhance = False  # Flag
 
-    auth_url = "https://iam.tongji.edu.cn/idp/AuthnEngine?currentAuth=urn_oasis_names_tc_SAML_2.0_ac_classes_BAMUsernamePassword&authnLcKey=" + authnLcKey + "&entityId=SYS20230001"
+    # 检查是否需要加强认证
+    response_xml = ET.fromstring(response.text)  # 虽然是 json，但是本质是 XML 格式
 
-    response = session.post(auth_url, data=login_data, allow_redirects=False)
+    print(response.text)
+    # input()
 
-    # ----- 第四步：SSO 登录 ----- #
+    if response_xml.find('loginFailed').text != 'false':
+        is_enhance = True  # 是加强认证
 
-    sso_url = response.headers['Location']
+        # 发送验证码
+        veri_data = urlencode({
+            "j_username": myEncrypt.STU_NO,
+            "type": "email" #  邮箱是 email，短信是 sms
+        })  # 格式是 form_data
+
+        session.post("https://iam.tongji.edu.cn/idp/sendCheckCode.do",
+                        data=veri_data, allow_redirects=False)
+
+        sleep_time = 30
+        failed_time = 0
+
+    while True:
+        try:
+            if is_enhance:
+                time.sleep(sleep_time)  # 等待 30 秒
+
+                with imap_email.EmailVerifier(IMAP_USERNAME, IMAP_PASSWORD, IMAP_SERVER, IMAP_PORT) as v:
+                    code = v.get_latest_verification_code()
+                    if code:
+                        print(code)
+                    else:
+                        raise Exception("登录失败！未找到验证码")
+
+                login_data = urlencode({
+                "j_username": myEncrypt.STU_NO,
+                "type": "email",
+                "sms_checkcode": code,
+                "popViewException": "Pop2",
+                "j_checkcode": "请输入验证码",
+                "op": "login",
+                "spAuthChainCode": SP_AUTH_CHAIN_CODE, # 似乎是个固定值，写死在页面的
+                })
+
+                response = session.post(CHAIN_URL, data=login_data, allow_redirects=False)
+
+            # ----- 第三步：AuthnEngine ----- #
+
+            if is_enhance:
+                auth_url = "https://iam.tongji.edu.cn/idp/AuthnEngine?currentAuth=urn_oasis_names_tc_SAML_2.0_ac_classes_SMSUsernamePassword&authnLcKey=" + authnLcKey + "&entityId=SYS20230001"
+            else:  # Not enhance
+                auth_url = "https://iam.tongji.edu.cn/idp/AuthnEngine?currentAuth=urn_oasis_names_tc_SAML_2.0_ac_classes_BAMUsernamePassword&authnLcKey=" + authnLcKey + "&entityId=SYS20230001"
+
+            response = session.post(auth_url, data=login_data, allow_redirects=False)
+
+            # ----- 第四步：SSO 登录 ----- #
+
+            sso_url = response.headers['Location']
+            
+            # 有必要更新 headers
+            sso_headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+                'Accept-Language': 'zh-CN,zh;q=0.9',
+                'Accept-Encoding': 'gzip, deflate, br, zstd',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+            }
+            
+            session.headers.clear() # 记得清空 headers，因为有 Content-Type 等不需要的字段
+            session.headers.update(sso_headers)
+
+            response = session.get(sso_url, allow_redirects=False)
+
+            # ----- 第五步：LoginIn code & state----- #
+
+            loginIn_url = response.headers['Location']  # 如果给的验证码不正确, 这里不会有 Location 属性
+
+            response = session.get(loginIn_url, allow_redirects=False)
+
+            break
+        except Exception as e:
+            print(f"发生异常{e}，继续")
+            sleep_time = 10 + 5 * failed_time
+            failed_time += 1
+
+            if failed_time > 5:
+                print("登录失败，尝试次数过多")
+                return None
     
-    # 有必要更新 headers
-    sso_headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-        'Accept-Language': 'zh-CN,zh;q=0.9',
-        'Accept-Encoding': 'gzip, deflate, br, zstd',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-    }
-    
-    session.headers.clear() # 记得清空 headers，因为有 Content-Type 等不需要的字段
-    session.headers.update(sso_headers)
-
-    response = session.get(sso_url, allow_redirects=False)
-
-    # ----- 第五步：LoginIn code & state----- #
-
-    loginIn_url = response.headers['Location']
-
-    response = session.get(loginIn_url, allow_redirects=False)
 
     # ----- 第六步：ssologin token----- #
 
@@ -134,7 +216,7 @@ def login():
     else:
         print("登录失败！")
         return None
-    
+
 
 
 def logout(session):

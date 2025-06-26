@@ -9,7 +9,7 @@ def fetchCourseList(session):
 
     # 在这里指定每页的大小和要爬的学期
     PAGESIZE = 100
-    CALENDAR = 119
+    CALENDAR = 120
 
     # prepare payload
     payload = {
@@ -76,7 +76,7 @@ if __name__ == "__main__":
     # Login
     session = loginout.login()
 
-    if (session == None):
+    if (session is None):
         exit(-1)
 
     # import json
