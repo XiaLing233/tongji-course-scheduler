@@ -143,13 +143,16 @@ def optCourseQueryListGenerator(day, section):
     '''
     输入：1
     输出："1-2"
+    由于学校新作息删除了 12 节，且第 9 节开始排课，这段代码为了向后兼容前 4 年的数据，现在如此编写。未来可以想想更好的分组方式。
+    现在的不足在于，对新学期的数据点击第 10 节和第 11 节，本来应该显示的课程不会显示。
+    现在的迂回方式是，点击第 9 节可以获得完整的选修课数据，因为没有选修课从第 10 节开始。
     '''
     if section in [1, 2, 3, 4]:
         return ["%" + numToDayText(day) + str(2 * section - 1) + "-" + str(2 * section) + "%"]
     elif section == 5:
-        return [f"%{numToDayText(day)}9-9%"]
+        return [f"%{numToDayText(day)}9-%"]
     elif section == 6:
-        return [f"%{numToDayText(day)}10-11%", f"{numToDayText(day)}%10-12%"]
+        return [f"%{numToDayText(day)}10-11%", f"%{numToDayText(day)}10-12%"]
     else:
         return None
 
