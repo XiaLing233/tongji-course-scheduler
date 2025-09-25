@@ -29,6 +29,7 @@ declare module 'vue' {
         flags: {
             majorNotChanged: boolean
         },
+        updateTime: string,
         isSpin: boolean
     }
 
