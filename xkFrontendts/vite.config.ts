@@ -21,7 +21,8 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://localhost:1239',
+        // target: 'http://localhost:1239',
+        target: 'https://xk.xialing.icu/',
         changeOrigin: true,
       }
     }

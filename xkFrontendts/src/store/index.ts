@@ -44,6 +44,7 @@ const store = createStore<State>({
             flags: {
                 majorNotChanged: false // 专业是否被改变，如果改变了，需要重新向后端请求数据
             },
+            updateTime: '',
             isSpin: false
         }
     },
@@ -196,6 +197,11 @@ const store = createStore<State>({
         setSpin(state, payload: boolean) {
             state.isSpin = payload;
         },
+        setUpdateTime(state, payload: string) {
+            state.updateTime = payload;
+            localStorage.setItem("updateTime", state.updateTime);
+            console.log("Update time set to:", state.updateTime);
+        },
         solidify(state) {
             localStorage.setItem("majorSelected", JSON.stringify(state.majorSelected));
             localStorage.setItem("stagedCourses", JSON.stringify(state.commonLists.stagedCourses));
@@ -233,6 +239,18 @@ const store = createStore<State>({
             localStorage.removeItem("selectedCourses");
             localStorage.removeItem("occupied");
             localStorage.removeItem("timeTableData");
+        },
+        clearSolidifyCourse() {
+            localStorage.removeItem("stagedCourses");
+            localStorage.removeItem("selectedCourses");
+            localStorage.removeItem("occupied");
+            localStorage.removeItem("timeTableData");
+        },
+        loadSolidifyTime(state) {
+            const updateTime = localStorage.getItem("updateTime");
+            if (updateTime) {
+                state.updateTime = updateTime;
+            }
         }
     },
     getters: {
