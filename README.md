@@ -1,9 +1,5 @@
 # TONGJI-COURSE-SCHEDULER
 
-## Archived
-
-不再打算开发。未来可以提升的空间是，在数据库表的属性中添加爬取编号，从而便于同步 1 系统数据库的内容。
-
 ## Usage
 
 Download the project, at root folder, run
