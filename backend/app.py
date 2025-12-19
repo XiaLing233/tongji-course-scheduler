@@ -331,8 +331,10 @@ def findCourseByMajor():
     for res in result:
         for course in res['courses']:
             course['arrangementInfo'] = []
+            # 使用 set 去重处理 locations，避免多个老师共同授课导致的重复
+            unique_locations = list(set(splitEndline(course['locations'])))
 
-            for location in splitEndline(course['locations']):
+            for location in unique_locations:
                 course['arrangementInfo'].append(arrangementTextToObj(location))
 
             del course['locations']
@@ -351,9 +353,14 @@ def findCourseByMajor():
                 merged_courses.append(course)
                 current_course = course
             else:
-                # 如果arrangementInfo不同，则合并
+                # 如果arrangementInfo不同，则合并（去重）
                 if current_course['arrangementInfo'] != course['arrangementInfo']:
-                    current_course['arrangementInfo'].extend(course['arrangementInfo'])
+                    # 使用字典来去重 arrangementInfo（基于 arrangementText）
+                    existing_texts = {item['arrangementText'] for item in current_course['arrangementInfo']}
+                    for item in course['arrangementInfo']:
+                        if item['arrangementText'] not in existing_texts:
+                            current_course['arrangementInfo'].append(item)
+                            existing_texts.add(item['arrangementText'])
 
         res['courses'] = merged_courses
 
@@ -612,8 +619,10 @@ def findCourseDetailByCode():
 
     for course in result:
         course['arrangementInfo'] = []
+        # 使用 set 去重处理 locations，避免多个老师共同授课导致的重复
+        unique_locations = list(set(splitEndline(course['locations'])))
 
-        for location in splitEndline(course['locations']):
+        for location in unique_locations:
             course['arrangementInfo'].append(arrangementTextToObj(location))
 
         del course['locations']
@@ -631,9 +640,14 @@ def findCourseDetailByCode():
             merged_result.append(course)
             current_course = course
         else:
-            # 如果arrangementInfo不同，则合并
+            # 如果arrangementInfo不同，则合并（去重）
             if current_course['arrangementInfo'] != course['arrangementInfo']:
-                current_course['arrangementInfo'].extend(course['arrangementInfo'])
+                # 使用字典来去重 arrangementInfo（基于 arrangementText）
+                existing_texts = {item['arrangementText'] for item in current_course['arrangementInfo']}
+                for item in course['arrangementInfo']:
+                    if item['arrangementText'] not in existing_texts:
+                        current_course['arrangementInfo'].append(item)
+                        existing_texts.add(item['arrangementText'])
 
     result = merged_result
 
