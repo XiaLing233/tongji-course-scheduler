@@ -188,7 +188,7 @@ const store = createStore<State>({
                         }
                         else if (detail.status === 2) {
                             detail.status = 0; // 如果是之前选的课，要修改状态为未选
-                            state.commonLists.selectedCourses.filter(code => code !== detail.code);
+                            state.commonLists.selectedCourses = state.commonLists.selectedCourses.filter(code => code !== detail.code);
                         }
                     });
                 }
