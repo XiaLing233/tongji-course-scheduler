@@ -32,7 +32,7 @@
 </template>
 
 <script lang="ts">
-import { errorNotify } from '@/utils/errorNotify';
+import { errorNotify } from '@/utils/notify';
 import type { courseOnTable } from '@/utils/myInterface';
 
 export default {

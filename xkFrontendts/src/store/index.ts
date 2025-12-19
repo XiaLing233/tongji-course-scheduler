@@ -8,7 +8,7 @@ import type {
     stagedCourse,
     optionalCourseType
  } from "@/utils/myInterface";
-import { errorNotify } from "@/utils/errorNotify";
+import { errorNotify } from "@/utils/notify";
 import type { State } from "vue";
 
 const store = createStore<State>({
@@ -42,9 +42,11 @@ const store = createStore<State>({
             timeTableData: [], // 课程表数据
             // 标志位
             flags: {
-                majorNotChanged: false // 专业是否被改变，如果改变了，需要重新向后端请求数据
+                majorNotChanged: false, // 专业是否被改变，如果改变了，需要重新向后端请求数据
+                isDataOutdated: false // 数据是否过期
             },
             updateTime: '',
+            latestUpdateTime: '', // 后端的最新更新时间
             isSpin: false
         }
     },
@@ -201,6 +203,31 @@ const store = createStore<State>({
             state.updateTime = payload;
             localStorage.setItem("updateTime", state.updateTime);
             console.log("Update time set to:", state.updateTime);
+        },
+        setLatestUpdateTime(state, payload: string) {
+            state.latestUpdateTime = payload;
+            console.log("Latest update time set to:", state.latestUpdateTime);
+        },
+        setDataOutdated(state, payload: boolean) {
+            state.flags.isDataOutdated = payload;
+        },
+        syncLatestData(state) {
+            // 同步最新数据：清除课程缓存并更新时间
+            localStorage.removeItem("stagedCourses");
+            localStorage.removeItem("selectedCourses");
+            localStorage.removeItem("occupied");
+            localStorage.removeItem("timeTableData");
+            state.commonLists.stagedCourses = [];
+            state.commonLists.selectedCourses = [];
+            state.timeTableData = [];
+            state.occupied = Array(12).fill(null).map(() => Array(7).fill(undefined).map(() => []));
+            state.clickedCourseInfo = {
+                courseCode: '',
+                courseName: ''
+            };
+            state.updateTime = state.latestUpdateTime;
+            localStorage.setItem("updateTime", state.updateTime);
+            state.flags.isDataOutdated = false;
         },
         solidify(state) {
             localStorage.setItem("majorSelected", JSON.stringify(state.majorSelected));

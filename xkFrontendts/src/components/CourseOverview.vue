@@ -73,7 +73,7 @@
 <script lang="ts">
 import axios from 'axios';
 import { SearchOutlined } from '@ant-design/icons-vue';
-import { errorNotify } from '@/utils/errorNotify';
+import { errorNotify } from '@/utils/notify';
 import type { stagedCourse } from '@/utils/myInterface';
 import { defineAsyncComponent } from 'vue';
 

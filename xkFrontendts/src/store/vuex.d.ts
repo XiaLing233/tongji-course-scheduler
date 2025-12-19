@@ -27,9 +27,11 @@ declare module 'vue' {
         occupied: Array<Array<occupyCell[]>>, /* 持久化 */
         timeTableData: courseOnTable[], /* 持久化 */
         flags: {
-            majorNotChanged: boolean
+            majorNotChanged: boolean,
+            isDataOutdated: boolean
         },
         updateTime: string,
+        latestUpdateTime: string,
         isSpin: boolean
     }
 

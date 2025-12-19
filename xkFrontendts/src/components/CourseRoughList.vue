@@ -49,7 +49,7 @@
 <script lang="ts">
 import axios from 'axios';
 import { mapStatusToChinese } from '@/utils/statusManipulate';
-import { errorNotify } from '@/utils/errorNotify';
+import { errorNotify } from '@/utils/notify';
 import type { teacherlet, courseInfo } from '@/utils/myInterface';
 
 export default {

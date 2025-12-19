@@ -53,7 +53,7 @@
 
 <script lang="ts">
 import axios from 'axios';
-import { errorNotify } from '@/utils/errorNotify';
+import { errorNotify } from '@/utils/notify';
 import type { courseInfo, stagedCourse, rawCampus, rawFaculty } from '@/utils/myInterface';
 
 export default {

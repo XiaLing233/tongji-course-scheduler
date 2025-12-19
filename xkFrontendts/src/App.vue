@@ -46,7 +46,7 @@ import 'dayjs/locale/zh-cn';
 import axios from 'axios';
 import { LoadingOutlined } from '@ant-design/icons-vue';
 import { h } from 'vue';
-import { errorNotify } from './utils/errorNotify';
+import { errorNotify } from './utils/notify';
 import { getRowSection } from './utils/timetable';
 import { defineAsyncComponent } from 'vue';
 
