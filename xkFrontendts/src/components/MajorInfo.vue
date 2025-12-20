@@ -39,7 +39,40 @@
                 </a-select>
             </div>
             <div class="flex flex-row space-x-4 items-center">
-                <p>专业</p>
+                <div class="flex items-center space-x-2">
+                    <p>专业</p>
+                    <a-tooltip placement="topLeft" overlayClassName="max-w-md major-help-tooltip">
+                        <template #title>
+                            <div class="text-sm space-y-2">
+                                <p class="font-semibold">不确定专业代码？按以下步骤查询：</p>
+                                <ol class="list-decimal pl-4 space-y-2">
+                                    <li>登录 <a href="https://1.tongji.edu.cn" target="_blank" class="text-blue-600 underline hover:text-blue-800">1系统</a></li>
+                                    <li>
+                                        <div class="flex items-start space-x-2">
+                                            <span class="flex-1">回到当前页面，<strong>点击下方按钮复制链接</strong>，然后在地址栏粘贴并访问：</span>
+                                        </div>
+                                        <a-button 
+                                            size="small" 
+                                            type="primary" 
+                                            @click="copyApiUrl" 
+                                            class="mt-1 w-full"
+                                        >
+                                            <span class="flex items-center justify-center gap-1">
+                                                <CopyOutlined /> 复制查询链接
+                                            </span>
+                                        </a-button>
+                                        <code class="bg-gray-200 px-2 py-1 rounded text-xs block mt-1 break-all text-gray-800">{{ majorInfoApiUrl }}</code>
+                                    </li>
+                                    <li>在返回的JSON数据中找到 <code class="bg-gray-200 px-1 py-0.5 rounded text-xs text-gray-800">profession</code> 字段，即为您的专业代码</li>
+                                    <li>根据专业代码和年级，在下拉框中选择对应专业</li>
+                                </ol>
+                                <p class="text-xs text-gray-600 mt-2">💡 提示：使用浏览器的查找功能（Ctrl+F）搜索"profession"更便捷</p>
+                                <p class="text-xs text-orange-600 mt-1">⚠️ 注意：必须先登录1系统，再访问API地址，否则会被拒绝访问</p>
+                            </div>
+                        </template>
+                        <QuestionCircleOutlined class="text-gray-400 hover:text-blue-500 cursor-help text-sm transition-colors" />
+                    </a-tooltip>
+                </div>
                 <a-select
                     :value="$store.state.majorSelected.major"
                     placeholder="请选择专业"
@@ -66,9 +99,14 @@
 
 <script lang="ts">
 import axios from 'axios';
-import { errorNotify } from '@/utils/notify';
+import { errorNotify, successNotify } from '@/utils/notify';
+import { QuestionCircleOutlined, CopyOutlined } from '@ant-design/icons-vue';
 
 export default {
+    components: {
+        QuestionCircleOutlined,
+        CopyOutlined
+    },
     data() {
         return {
             rawList: {
@@ -76,6 +114,13 @@ export default {
                 grades: [],
                 majors: [] as { code: string, name: string }[]
             }
+        }
+    },
+    computed: {
+        majorInfoApiUrl(): string {
+            // 是最新的学期ID
+            const calendarId = this.rawList.calendars.length > 0 ? this.rawList.calendars[0].calendarId : 1;
+            return `https://1.tongji.edu.cn/api/electionservice/student/getElecStudentInfo?calendarId=${calendarId}`;
         }
     },
     methods: {
@@ -168,6 +213,14 @@ export default {
         },
         filterMajor(input: string, option: { label: string, value: string }) {
             return option.label.toLowerCase().indexOf(input.toLowerCase()) >= 0;
+        },
+        async copyApiUrl() {
+            try {
+                await navigator.clipboard.writeText(this.majorInfoApiUrl);
+                successNotify('链接已复制到剪贴板！请在当前页面的地址栏粘贴访问');
+            } catch (error) {
+                errorNotify('复制失败，请手动复制链接');
+            }
         }
     },
     async mounted() {
@@ -230,3 +283,17 @@ export default {
     emit: ['changeMajor']
 }
 </script>
+
+<style>
+.major-help-tooltip .ant-tooltip-inner {
+    background-color: white;
+    color: #000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border: 1px solid #e8e8e8;
+}
+
+.major-help-tooltip .ant-tooltip-arrow-content {
+    background-color: white;
+    border: 1px solid #e8e8e8;
+}
+</style>
