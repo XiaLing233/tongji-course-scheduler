@@ -55,29 +55,64 @@ export default {
             const newMaxSpans = Array.from({ length: 12 }, () => Array(7).fill(1))
             const newOccupied = Array.from({ length: 12 }, () => Array(7).fill(false))
 
-            // 填充课程数据
-            this.timeTableData.forEach((course: courseOnTable) => {
+            // 步骤1: 按课程长度排序（长课程优先处理）
+            const sortedCourses = [...this.timeTableData].sort((a, b) => b.occupyTime.length - a.occupyTime.length)
+
+            // 步骤2: 记录每个单元格覆盖的时间范围（用于判断重叠）
+            // cellRanges[row][col] = { startTime, endTime, courses }
+            const cellRanges: Array<Array<{ startTime: number, endTime: number, courses: courseOnTable[] } | null>> = 
+                Array(12).fill(null).map(() => Array(7).fill(null))
+
+            // 步骤3: 填充课程数据 - 短课程合并到长课程的单元格中
+            sortedCourses.forEach((course: courseOnTable) => {
                 const startRow = course.occupyTime[0] - 1
+                const endRow = course.occupyTime[course.occupyTime.length - 1] - 1
                 const dayIndex = course.occupyDay - 1
-                newTimeTable[startRow][dayIndex].push(course)
+
+                // 检查是否有已存在的课程覆盖了当前课程的时间段
+                let mergedIntoExisting = false
+                
+                for (let checkRow = 0; checkRow <= startRow; checkRow++) {
+                    const existingRange = cellRanges[checkRow][dayIndex]
+                    if (existingRange && 
+                        existingRange.startTime <= course.occupyTime[0] && 
+                        existingRange.endTime >= course.occupyTime[course.occupyTime.length - 1]) {
+                        // 当前课程的时间段完全在已有课程的范围内，合并到该单元格
+                        existingRange.courses.push(course)
+                        newTimeTable[checkRow][dayIndex].push(course)
+                        mergedIntoExisting = true
+                        break
+                    }
+                }
+
+                // 如果没有合并到已有单元格，创建新的单元格
+                if (!mergedIntoExisting) {
+                    newTimeTable[startRow][dayIndex].push(course)
+                    cellRanges[startRow][dayIndex] = {
+                        startTime: course.occupyTime[0],
+                        endTime: course.occupyTime[course.occupyTime.length - 1],
+                        courses: [course]
+                    }
+                }
             })
 
-            // 计算最大跨度
+            // 步骤4: 计算最大跨度（基于实际的课程长度）
             for (let row = 0; row < 12; row++) {
                 for (let col = 0; col < 7; col++) {
-                    const courses = newTimeTable[row][col] // 同一个起始格可能会出现多个课程
+                    const courses = newTimeTable[row][col]
                     if (courses.length > 0) {
-                        newMaxSpans[row][col] = Math.max(...courses.map(c => c.occupyTime.length)) // 取最大跨度，不过注意在课程的排课上还是不要有交叉，如1-3,2-5，不好
+                        // 取所有课程中最长的跨度
+                        newMaxSpans[row][col] = Math.max(...courses.map(c => c.occupyTime.length))
                     }
                 }
             }
 
-            // 标记被占用的单元格
+            // 步骤5: 标记被占用的单元格
             for (let row = 0; row < 12; row++) {
                 for (let col = 0; col < 7; col++) {
                     const span = newMaxSpans[row][col]
                     if (span > 1) {
-                        for (let i = 1; i < span; i++) { // 也要把自己标进去呀，不知要标下方的，所以 i 从 0 开始
+                        for (let i = 1; i < span; i++) {
                             if (row + i < 12) {
                                 newOccupied[row + i][col] = true
                             }
