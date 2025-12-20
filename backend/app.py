@@ -331,11 +331,14 @@ def findCourseByMajor():
     for res in result:
         for course in res['courses']:
             course['arrangementInfo'] = []
-            # 使用 set 去重处理 locations，避免多个老师共同授课导致的重复
-            unique_locations = list(set(splitEndline(course['locations'])))
+            # 使用 dict.fromkeys() 去重并保持顺序
+            unique_locations = list(dict.fromkeys(splitEndline(course['locations'])))
 
             for location in unique_locations:
                 course['arrangementInfo'].append(arrangementTextToObj(location))
+
+            # 按照星期（occupyDay）和节次（occupyTime第一节）排序
+            course['arrangementInfo'].sort(key=lambda x: (x['occupyDay'], x['occupyTime'][0] if x['occupyTime'] else 0))
 
             del course['locations']
 
@@ -619,11 +622,14 @@ def findCourseDetailByCode():
 
     for course in result:
         course['arrangementInfo'] = []
-        # 使用 set 去重处理 locations，避免多个老师共同授课导致的重复
-        unique_locations = list(set(splitEndline(course['locations'])))
+        # 使用 dict.fromkeys() 去重并保持顺序
+        unique_locations = list(dict.fromkeys(splitEndline(course['locations'])))
 
         for location in unique_locations:
             course['arrangementInfo'].append(arrangementTextToObj(location))
+
+        # 按照星期（occupyDay）和节次（occupyTime第一节）排序
+        course['arrangementInfo'].sort(key=lambda x: (x['occupyDay'], x['occupyTime'][0] if x['occupyTime'] else 0))
 
         del course['locations']
 
