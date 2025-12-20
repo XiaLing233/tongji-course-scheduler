@@ -142,7 +142,7 @@ const store = createStore<State>({
                     (arrangement) => {
                         const courseOnTable = { // 每次需要重新创建一个对象，否则会出现引用问题
                             showText: arrangement.teacherAndCode + ' ' 
-                                      + state.clickedCourseInfo.courseName + ' ' 
+                                      + state.clickedCourseInfo.courseName + '(' + payload.code + ') ' 
                                       + arrangement.arrangementText.split(' ').slice(1).join(' '),
                             courseName: state.clickedCourseInfo.courseName,
                             code: payload.code,
