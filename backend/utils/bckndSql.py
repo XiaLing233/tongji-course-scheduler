@@ -429,7 +429,7 @@ class bckndSql:
         AND ({' OR '.join(['t.arrangeInfoText LIKE %s' for _ in strSet])})
         AND n.courseLabelId IN ({','.join(['%s' for _ in labelList])})
         GROUP BY c.courseCode, c.courseName, f.facultyI18n, n.courseLabelName, c.credit
-        ORDER BY courseCode desc
+        ORDER BY courseCode ASC
         """
 
         print(strSet)
