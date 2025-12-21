@@ -38,7 +38,12 @@ export default {
                 this.$store.commit("loadSolidifyTime");
                 this.$store.commit("setLatestUpdateTime", res.data.data);
 
-                if (isUpToDate(this.$store.state.updateTime, res.data.data)) {
+                if (this.$store.state.updateTime === '') {
+                    // 初次加载，不弹窗
+                    this.$store.commit("syncLatestData");
+                    return;
+                }
+                else if (isUpToDate(this.$store.state.updateTime, res.data.data)) {
                     this.$store.commit("setDataOutdated", false);
                     return;
                 }
