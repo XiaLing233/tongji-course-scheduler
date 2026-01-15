@@ -4,7 +4,7 @@ on:
   push:
     branches: [ master ]
     paths:
-      - "frontend/**"
+      - "xkFrontendts/**"
 
 jobs:
   deploy:
