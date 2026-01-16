@@ -134,9 +134,10 @@ export default {
                 });
                 this.rawList.calendars = res.data.data;
             }
-            catch (error: any) {
+            catch (error: unknown) {
                 // console.log("error:", error);
-                errorNotify(error.response.data.msg);
+                const err = error as { response?: { data?: { msg?: string } } };
+                errorNotify(err.response?.data?.msg || '获取学期失败');
             }
             finally {
                 this.$store.commit("setSpin", false);
@@ -164,9 +165,10 @@ export default {
                 // 在年级更改时清空专业
                 this.rawList.majors = [];
             }
-            catch (error: any) {
+            catch (error: unknown) {
                 // console.log("error:", error);
-                errorNotify(error.response.data.msg);
+                const err = error as { response?: { data?: { msg?: string } } };
+                errorNotify(err.response?.data?.msg || '获取专业失败');
             }
             finally {
                 this.$store.commit('setSpin', false);
@@ -192,9 +194,10 @@ export default {
                 });
                 this.rawList.majors = res.data.data;
             }
-            catch (error: any) {
+            catch (error: unknown) {
                 // console.log("error:", error);
-                errorNotify(error.response.data.msg);
+                const err = error as { response?: { data?: { msg?: string } } };
+                errorNotify(err.response?.data?.msg || '获取专业失败');
             }
             finally {
                 this.$store.commit('setSpin', false);
@@ -218,7 +221,7 @@ export default {
             try {
                 await navigator.clipboard.writeText(this.majorInfoApiUrl);
                 successNotify('链接已复制到剪贴板！请在当前页面的地址栏粘贴访问');
-            } catch (error) {
+            } catch {
                 errorNotify('复制失败，请手动复制链接');
             }
         }
@@ -251,9 +254,10 @@ export default {
                 // 在年级更改时清空专业
                 this.rawList.majors = [];
             }
-            catch (error: any) {
+            catch (error: unknown) {
                 // console.log("error:", error);
-                errorNotify(error.response.data.msg);
+                const err = error as { response?: { data?: { msg?: string } } };
+                errorNotify(err.response?.data?.msg || '获取年级信息失败');
             }
             finally {
                 this.$store.commit('setSpin', false);
@@ -272,8 +276,9 @@ export default {
                 });
                 this.rawList.majors = res.data.data;
             }
-            catch (error: any) {
-                errorNotify(error.response.data.msg);
+            catch (error: unknown) {
+                const err = error as { response?: { data?: { msg?: string } } };
+                errorNotify(err.response?.data?.msg || '获取专业信息失败');
             }
             finally {
                 this.$store.commit('setSpin', false);

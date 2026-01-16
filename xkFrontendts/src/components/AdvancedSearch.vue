@@ -116,8 +116,9 @@ export default {
                 const res = await axios.get('/api/getAllCampus');
                 this.rawList.campus = res.data.data;
             }
-            catch (error: any) {
-                errorNotify(error.response.data.msg);
+            catch (error: unknown) {
+                const err = error as { response?: { data?: { msg?: string } } };
+                errorNotify(err.response?.data?.msg || '获取校区失败');
             }
             finally {
                 this.$store.commit('setSpin', false);
@@ -131,8 +132,9 @@ export default {
                 const res = await axios.get('/api/getAllFaculty');
                 this.rawList.faculty = res.data.data;
             }
-            catch (error: any) {
-                errorNotify(error.response.data.msg);
+            catch (error: unknown) {
+                const err = error as { response?: { data?: { msg?: string } } };
+                errorNotify(err.response?.data?.msg || '获取院系失败');
             }
             finally {
                 this.$store.commit('setSpin', false);
@@ -143,8 +145,8 @@ export default {
             this.$store.commit('setSpin', true);
 
             try {
-                const searchData = { ...this.searchBody } as any;
-                for (let key in searchData) {
+                const searchData = { ...this.searchBody } as Record<string, string | undefined>;
+                for (const key in searchData) {
                     if (searchData[key] === undefined) {
                         searchData[key] = '';
                     }
@@ -165,8 +167,9 @@ export default {
                     console.log("OK");
                 }
             }
-            catch (error: any) {
-                errorNotify(error.response.data.msg);
+            catch (error: unknown) {
+                const err = error as { response?: { data?: { msg?: string } } };
+                errorNotify(err.response?.data?.msg || '搜索失败');
             }
             finally {
                 this.$store.commit('setSpin', false);

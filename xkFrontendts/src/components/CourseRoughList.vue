@@ -32,7 +32,7 @@
                         </template>
                         <template v-else-if="column.key === 'action'">
                             <!-- .stop 是为了事件不冒泡 -->
-                            <a-button type="link" @click.stop="$store.commit('popStagedCourse', record.courseCode)">
+                            <a-button type="link" @click.stop="handleRemoveCourse(record)">
                                 <div class=" text-red-500">
                                     <span v-if="record.status === 2" >退课</span>
                                     <span v-else>清除</span>
@@ -48,6 +48,7 @@
 
 <script lang="ts">
 import axios from 'axios';
+import { Modal } from 'ant-design-vue';
 import { mapStatusToChinese } from '@/utils/statusManipulate';
 import { errorNotify } from '@/utils/notify';
 import type { teacherlet, courseInfo } from '@/utils/myInterface';
@@ -126,15 +127,16 @@ export default {
             this.$store.commit('setCompulsoryCourses', res.data.data);
             this.$emit('openOverview');
             }
-            catch (error: any) {
+            catch (error: unknown) {
                 // console.log("error:", error);
-                errorNotify(error.response.data.msg);
+                const err = error as { response?: { data?: { msg?: string } } };
+                errorNotify(err.response?.data?.msg || '获取必修课失败');
             }
             finally {
                 this.$store.commit('setSpin', false);
             }
         },
-        getRowClass(record: any, index: number) {
+        getRowClass(record: { courseCode: string }, index: number) {
             // console.log(index);
             let className = index % 2 === 0 ? 'bg-white' : 'bg-gray-50';
 
@@ -171,6 +173,27 @@ export default {
         handleSave() {
             this.$store.commit('saveSelectedCourses');
             this.$store.commit('solidify');
+        },
+        handleRemoveCourse(record: courseInfo) {
+            // 只有退课(status === 2)时才需要二次确认
+            if (record.status === 2) {
+                Modal.confirm({
+                    title: '确认退课',
+                    content: `确定要退掉 ${record.courseName} 课程吗？`,
+                    okText: '确认',
+                    cancelText: '取消',
+                    style: { top: '30%' },
+                    onOk: () => {
+                        this.$store.commit('popStagedCourse', record.courseCode);
+                        // 退课后自动保存课表
+                        this.$store.commit('saveSelectedCourses');
+                        this.$store.commit('solidify');
+                    }
+                });
+            } else {
+                // 清除操作直接执行，无需确认
+                this.$store.commit('popStagedCourse', record.courseCode);
+            }
         }
     },
     emits: ['openOverview'],

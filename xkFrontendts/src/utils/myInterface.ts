@@ -115,3 +115,26 @@ export interface rawFaculty {
     facultyId: string;
     facultyName: string;
 }
+
+// 课程同步变更类型
+export enum CourseChangeType {
+    NoChange = 'noChange', // 无变化
+    Closed = 'closed', // 课程关课
+    InfoChanged = 'infoChanged', // 信息变更
+    ConflictAfterUpdate = 'conflictAfterUpdate' // 更新后发生冲突
+}
+
+// 课程变更信息
+export interface CourseChangeInfo {
+    courseCode: string;
+    courseName: string;
+    changeType: CourseChangeType;
+    details?: string; // 变更详情描述
+    conflictWith?: string; // 冲突的课程
+}
+
+// 课程同步结果
+export interface CourseSyncResult {
+    changes: CourseChangeInfo[];
+    hasChanges: boolean;
+}

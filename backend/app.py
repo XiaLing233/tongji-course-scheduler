@@ -42,7 +42,8 @@ def getAllCalendar():
     }
     ```
     '''
-
+    import time
+    time.sleep(100)
     with bckndSql.bckndSql() as sql:
         result = sql.getAllCalendar(limit=8)
     
@@ -553,10 +554,9 @@ def findCourseByNatureId():
 @app.route('/api/findCourseDetailByCode', methods=['POST'])
 def findCourseDetailByCode():
     '''
-    Find course detail by code.
+    Find course detail by code(s).
 
-    Payload：
-
+    Payload for single course:
     ```json
     {
         "courseCode": "340012",
@@ -564,105 +564,102 @@ def findCourseDetailByCode():
     }
     ```
 
-    Response：
+    Payload for multiple courses:
+    ```json
+    {
+        "courseCodes": ["340012", "340013", "340014"],
+        "calendarId": 119
+    }
+    ```
 
+    Response for single course:
     ```json
     {
         "code": 200,
         "msg": "查询成功",
-        "data": {[
+        "data": [{
             "code": "34001201",
-            "teachers": [
-                {
-                    "teacherCode": "13060",
-                    "teacherName": "李华"
-                },
-                {
-                    "teacherCode": "17076",
-                    "teacherName": "朱梦皎"
-                }
-            ],
+            "teachers": [...],
             "campusI18n": "四平路校区",
-            "arrangementInfo": {
-                {
-                    "arrangementText": "星期三7-8节 [2-4双 5-6 10-12 14 17] 北214\n",
-                    "occupyDay": 3,
-                    "occupyTime": [7, 8],
-                    "occupyWeek": [
-                        2, 4, 5, 6, 10, 11, 12, 14, 17
-                    ],
-                    "occupyRoom": "北214"
-                },
-                {
-                    "arrangementText": "星期三7-8节 [1-3单 7-9 13-15单 16] 北214\n",
-                    "occupyDay": 3,
-                    "occupyTime": [7, 8],
-                    "occupyWeek": [
-                        1, 3, 7, 8, 9, 13, 15, 16
-                    ],
-                    "occupyRoom": "北214"
-                }
-            },
+            "arrangementInfo": [...]
+        }]
+    }
+    ```
 
-            // ...
-            
-        ]}
+    Response for multiple courses:
+    ```json
+    {
+        "code": 200,
+        "msg": "查询成功",
+        "data": {
+            "340012": [{...}],
+            "340013": [{...}],
+            "340014": [{...}]
+        }
     }
     ```
     '''
 
     payload = request.json
+    
+    # 判断是单个课程还是多个课程
+    if 'courseCodes' in payload:
+        # 批量查询
+        codes = payload['courseCodes']
+        is_batch = True
+    else:
+        # 单个查询（向后兼容）
+        codes = payload['courseCode']
+        is_batch = False
 
     with bckndSql.bckndSql() as sql:
-        result = sql.findCourseDetailByCode(payload['courseCode'], payload['calendarId'])
+        result = sql.findCourseDetailByCode(codes, payload['calendarId'])
 
-    # 处理 result 中的 locations 字段
-    # 由于 locations 字段是一个字符串，需要转换为数组
-    # 形如：关佶红(05222) 星期一3-4节 [1-17] 南129\n关佶红(05222) 星期三3-4节 [1-17单] 北301\n
+    def process_course_list(course_list):
+        """处理单个课程列表的通用函数"""
+        for course in course_list:
+            course['arrangementInfo'] = []
+            unique_locations = list(dict.fromkeys(splitEndline(course['locations'])))
 
-    for course in result:
-        course['arrangementInfo'] = []
-        # 使用 dict.fromkeys() 去重并保持顺序
-        unique_locations = list(dict.fromkeys(splitEndline(course['locations'])))
+            for location in unique_locations:
+                course['arrangementInfo'].append(arrangementTextToObj(location))
 
-        for location in unique_locations:
-            course['arrangementInfo'].append(arrangementTextToObj(location))
+            course['arrangementInfo'].sort(key=lambda x: (x['occupyDay'], x['occupyTime'][0] if x['occupyTime'] else 0))
+            del course['locations']
 
-        # 按照星期（occupyDay）和节次（occupyTime第一节）排序
-        course['arrangementInfo'].sort(key=lambda x: (x['occupyDay'], x['occupyTime'][0] if x['occupyTime'] else 0))
+        # 对于 code 相同的课程，合并 arrangementInfo
+        course_list = sorted(course_list, key=lambda x: x['code'])
+        
+        merged_result = []
+        current_course = None
 
-        del course['locations']
+        for course in course_list:
+            if not current_course or current_course['code'] != course['code']:
+                merged_result.append(course)
+                current_course = course
+            else:
+                if current_course['arrangementInfo'] != course['arrangementInfo']:
+                    existing_texts = {item['arrangementText'] for item in current_course['arrangementInfo']}
+                    for item in course['arrangementInfo']:
+                        if item['arrangementText'] not in existing_texts:
+                            current_course['arrangementInfo'].append(item)
+                            existing_texts.add(item['arrangementText'])
 
-    # 对于 code 相同的课程，合并 arrangementInfo
-    
-    result = sorted(result, key=lambda x: x['code']) # 先排序
+        return merged_result
 
-    # 合并相同课号的课程
-    merged_result = []
-    current_course = None
-
-    for course in result:
-        if not current_course or current_course['code'] != course['code']:
-            merged_result.append(course)
-            current_course = course
-        else:
-            # 如果arrangementInfo不同，则合并（去重）
-            if current_course['arrangementInfo'] != course['arrangementInfo']:
-                # 使用字典来去重 arrangementInfo（基于 arrangementText）
-                existing_texts = {item['arrangementText'] for item in current_course['arrangementInfo']}
-                for item in course['arrangementInfo']:
-                    if item['arrangementText'] not in existing_texts:
-                        current_course['arrangementInfo'].append(item)
-                        existing_texts.add(item['arrangementText'])
-
-    result = merged_result
-
-
+    if is_batch:
+        # 批量处理：result 是 dict {courseCode: [details]}
+        processed_result = {}
+        for course_code, course_list in result.items():
+            processed_result[course_code] = process_course_list(course_list)
+    else:
+        # 单个处理：result 是 list
+        processed_result = process_course_list(result)
 
     return jsonify({
         "code": 200,
         "msg": "查询成功",
-        "data": result
+        "data": processed_result
     }), 200
 
 
@@ -844,4 +841,106 @@ def getLatestUpdateTime():
         "code": 200,
         "msg": "查询成功",
         "data": datetime.strftime(result, "%Y-%m-%d")
+    }), 200
+
+@app.route('/api/getLatestCourseInfo', methods=['POST'])
+def getLatestCourseInfo():
+    '''
+    Get latest course information for staged courses (batch version of API 7).
+
+    Payload:
+
+    ```json
+    {
+        "courseCodes": ["340012", "100436", "100225"],
+        "calendarId": 119
+    }
+    ```
+
+    Response:
+
+    ```json
+    {
+        "code": 200,
+        "msg": "查询成功",
+        "data": {
+            "340012": [course details array],
+            "100436": [course details array],
+            "100225": []
+        }
+    }
+    ```
+    '''
+
+    payload = request.json
+
+    if not payload or 'calendarId' not in payload:
+        return jsonify({
+            "code": 400,
+            "msg": "参数错误: 缺少 calendarId",
+            "data": {}
+        }), 400
+
+    calendarId = payload['calendarId']
+    majorCourseCodes = payload.get('majorCourseCodes', [])  # 需要返回 isExclusive 的课程
+    otherCourseCodes = payload.get('otherCourseCodes', [])  # 不需要返回 isExclusive 的课程
+    majorInfo = payload.get('majorInfo', None)  # { grade, code }
+    
+    # 如果有 majorCourseCodes 但没有 majorInfo，返回错误
+    if majorCourseCodes and not majorInfo:
+        return jsonify({
+            "code": 400,
+            "msg": "参数错误: majorCourseCodes 需要配合 majorInfo 使用",
+            "data": {}
+        }), 400
+
+    with bckndSql.bckndSql() as sql:
+        result_dict = sql.getLatestCourseInfo(majorCourseCodes, otherCourseCodes, calendarId, majorInfo)
+        
+        # Process arrangement info for each course code
+        for course_code, course_details in result_dict.items():
+            for detail in course_details:
+                if 'arrangementInfo' in detail and isinstance(detail['arrangementInfo'], str):
+                    # Parse arrangement text - split into list and convert each element
+                    arrangement_text = detail['arrangementInfo']  # 先保存原始字符串
+                    detail['arrangementInfo'] = []  # 清空，准备填充解析后的数据
+                    unique_locations = list(dict.fromkeys(splitEndline(arrangement_text)))
+                    
+                    for location in unique_locations:
+                        detail['arrangementInfo'].append(arrangementTextToObj(location))
+                    
+                    # Sort by day and time
+                    detail['arrangementInfo'].sort(key=lambda x: (x['occupyDay'], x['occupyTime'][0] if x['occupyTime'] else 0))
+            
+            # 对于每个课程代码，合并相同 code 的课程（教学班号）
+            if course_details:
+                # 先按 code 排序
+                course_details.sort(key=lambda x: x['code'])
+                
+                # 合并相同 code 的课程
+                merged_details = []
+                current_detail = None
+                
+                for detail in course_details:
+                    if not current_detail or current_detail['code'] != detail['code']:
+                        merged_details.append(detail)
+                        current_detail = detail
+                    else:
+                        # 合并 arrangementInfo（去重）
+                        if current_detail['arrangementInfo'] != detail['arrangementInfo']:
+                            existing_texts = {item['arrangementText'] for item in current_detail['arrangementInfo']}
+                            for item in detail['arrangementInfo']:
+                                if item['arrangementText'] not in existing_texts:
+                                    current_detail['arrangementInfo'].append(item)
+                                    existing_texts.add(item['arrangementText'])
+                            
+                            # 重新排序合并后的 arrangementInfo
+                            current_detail['arrangementInfo'].sort(key=lambda x: (x['occupyDay'], x['occupyTime'][0] if x['occupyTime'] else 0))
+                
+                result_dict[course_code] = merged_details
+
+    return jsonify({
+        "code": 200,
+        "msg": "查询成功",
+        "data": result_dict
     }), 200

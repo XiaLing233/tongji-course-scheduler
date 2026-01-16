@@ -568,3 +568,117 @@ Response：
     "data": "2025-02-25"
 }
 ```
+
+## API 12 获得最新课程信息
+
+方法：`POST`
+
+地址：`/api/getLatestCourseInfo`
+
+Payload:
+
+```json
+{
+    "majorCourseCodes": ["340012", "100436"],
+    "otherCourseCodes": ["100225"],
+    "majorInfo": {
+        "grade": 2022,
+        "code": "1234"
+    },
+    "calendarId": 119
+}
+```
+
+参数说明：
+
+* `majorCourseCodes`：专业课程代码列表（通过 API 2 获取的课程），这些课程需要返回 `isExclusive` 字段
+* `otherCourseCodes`：其他课程代码列表（通过搜索等方式添加的课程），不返回 `isExclusive` 字段
+* `majorInfo`：专业信息，包含 `grade`（年级）和 `code`（专业代码），当 `majorCourseCodes` 不为空时必填
+* `calendarId`：校历 ID
+
+Response:
+
+```json
+{
+    "code": 200,
+    "msg": "查询成功",
+    "data": {
+        "340012": [
+            {
+                "code": "34001201",
+                "teachers": [
+                    {
+                        "teacherCode": "13060",
+                        "teacherName": "李华"
+                    }
+                ],
+                "campusI18n": "四平路校区",
+                "teachingLanguageI18n": "中文",
+                "isExclusive": true,
+                "arrangementInfo": [
+                    {
+                        "arrangementText": "星期一3-4节 [1-17] A楼101\n",
+                        "occupyDay": 1,
+                        "occupyTime": [3, 4],
+                        "occupyWeek": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
+                        "occupyRoom": "A楼101"
+                    }
+                ]
+            },
+            {
+                "code": "34001202",
+                "teachers": [
+                    {
+                        "teacherCode": "13061",
+                        "teacherName": "王五"
+                    }
+                ],
+                "campusI18n": "嘉定校区",
+                "teachingLanguageI18n": "中文",
+                "isExclusive": false,
+                "arrangementInfo": [
+                    {
+                        "arrangementText": "星期二5-6节 [1-17] B楼201\n",
+                        "occupyDay": 2,
+                        "occupyTime": [5, 6],
+                        "occupyWeek": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
+                        "occupyRoom": "B楼201"
+                    }
+                ]
+            }
+        ],
+        "100436": [
+            {
+                "code": "10043601",
+                "teachers": [
+                    {
+                        "teacherCode": "12345",
+                        "teacherName": "赵六"
+                    }
+                ],
+                "campusI18n": "四平路校区",
+                "teachingLanguageI18n": "中文",
+                "isExclusive": true,
+                "arrangementInfo": [
+                    {
+                        "arrangementText": "星期三7-8节 [1-17] C楼301\n",
+                        "occupyDay": 3,
+                        "occupyTime": [7, 8],
+                        "occupyWeek": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
+                        "occupyRoom": "C楼301"
+                    }
+                ]
+            }
+        ],
+        "100225": []
+    }
+}
+```
+
+说明：
+
+* 本接口是 API 7 的批量版本，支持一次查询多个课程的详细排课信息。
+* `data` 是一个对象，key 是课程代码 `courseCode`，value 是该课程的排课信息列表。
+* 对于 `majorCourseCodes` 中的课程，每个班级会返回 `isExclusive` 字段，表示该班级是否专属于指定专业。
+* 对于 `otherCourseCodes` 中的课程，不返回 `isExclusive` 字段。
+* 如果某个课程已经关课（不存在），则该 `courseCode` 对应的列表为空数组 `[]`。

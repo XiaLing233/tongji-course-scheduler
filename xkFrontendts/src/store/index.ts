@@ -6,7 +6,9 @@ import type {
     courseInfo, 
     clickedCourseInfo,
     stagedCourse,
-    optionalCourseType
+    optionalCourseType,
+    occupyCell,
+    courseOnTable
  } from "@/utils/myInterface";
 import { errorNotify } from "@/utils/notify";
 import type { State } from "vue";
@@ -227,6 +229,28 @@ const store = createStore<State>({
             };
             state.updateTime = state.latestUpdateTime;
             localStorage.setItem("updateTime", state.updateTime);
+            state.flags.isDataOutdated = false;
+        },
+        smartSyncCourses(state, payload: { 
+            newStagedCourses: stagedCourse[], 
+            newSelectedCodes: string[],
+            newOccupied: occupyCell[][][],
+            newTimeTableData: courseOnTable[]
+        }) {
+            // 智能同步：更新课程信息但保留用户选择
+            state.commonLists.stagedCourses = payload.newStagedCourses;
+            state.commonLists.selectedCourses = payload.newSelectedCodes;
+            state.occupied = payload.newOccupied;
+            state.timeTableData = payload.newTimeTableData;
+            state.updateTime = state.latestUpdateTime;
+            
+            // 更新localStorage
+            localStorage.setItem("stagedCourses", JSON.stringify(state.commonLists.stagedCourses));
+            localStorage.setItem("selectedCourses", JSON.stringify(state.commonLists.selectedCourses));
+            localStorage.setItem("occupied", JSON.stringify(state.occupied));
+            localStorage.setItem("timeTableData", JSON.stringify(state.timeTableData));
+            localStorage.setItem("updateTime", state.updateTime);
+            
             state.flags.isDataOutdated = false;
         },
         solidify(state) {
