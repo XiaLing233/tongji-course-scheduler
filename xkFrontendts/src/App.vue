@@ -48,6 +48,7 @@ import { h } from 'vue';
 import { errorNotify } from './utils/notify';
 import { getRowSection } from './utils/timetable';
 import { defineAsyncComponent } from 'vue';
+import type { courseInfo } from './utils/myInterface';
 
 dayjs.locale('zh-cn');
 
@@ -134,7 +135,7 @@ export default {
       // 第二步：处理必修课（直接从 vuex 获取）
       for (const key of compulsoryCourses) {
         const _courseCode = key.split('_')[2];
-        const originalCourse = this.$store.state.commonLists.compulsoryCourses.find(course => course.courseCode === _courseCode);
+        const originalCourse = this.$store.state.commonLists.compulsoryCourses.find((course: courseInfo) => course.courseCode === _courseCode);
         
         const _courseObject = {
           courseCode: originalCourse.courseCode,
@@ -229,7 +230,7 @@ export default {
           for (const courseCode of searchCodes) {
             try {
               const _roughCourse = this.$store.state.commonLists.searchCourses
-                .find(course => course.courseCode === courseCode);
+                .find((course: courseInfo) => course.courseCode === courseCode);
               
               if (!_roughCourse) {
                 throw new Error(`找不到课程 ${courseCode} 的基本信息`);

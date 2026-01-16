@@ -48,7 +48,7 @@
                     <div class="h-150 overflow-auto">
                         <a-table
                         :columns="columns.optional"
-                        :data-source="filteredCourses($store.state.commonLists.optionalCourses.find(item => item.courseLabelId === type.courseLabelId)?.courses)"
+                        :data-source="filteredCourses($store.state.commonLists.optionalCourses.find((item: any) => item.courseLabelId === type.courseLabelId)?.courses)"
                         :pagination="false"
                         :row-selection="{ 
                             selectedRowKeys: localSelectedRowKeys.filter((key: string) => key.startsWith('选_' + type.courseLabelId + '_')), 
@@ -74,7 +74,7 @@
 import axios from 'axios';
 import { SearchOutlined } from '@ant-design/icons-vue';
 import { errorNotify } from '@/utils/notify';
-import type { stagedCourse } from '@/utils/myInterface';
+import type { stagedCourse, optionalCourseType, courseInfo } from '@/utils/myInterface';
 import { defineAsyncComponent } from 'vue';
 
 export default {
@@ -185,7 +185,7 @@ export default {
                     method: 'post',
                     data: {
                         calendarId: this.$store.state.majorSelected.calendarId,
-                        ids: this.$store.state.commonLists.optionalTypes.map(type => type.courseLabelId)
+                        ids: this.$store.state.commonLists.optionalTypes.map((type: optionalCourseType) => type.courseLabelId)
                     }
                 });
                 this.$store.commit('setOptionalCourses', res.data.data);
@@ -199,10 +199,10 @@ export default {
                 this.$store.commit('setSpin', false);
             }
         },
-        filteredCourses(courses: stagedCourse[]) {
+        filteredCourses(courses: courseInfo[]) {
             // 根据已选课程来过滤，德摩根律啊！思考一下为什么是 && 而不是 ||
-            courses = courses.filter((course) => {
-                return !this.$store.state.commonLists.stagedCourses.some(stagedCourse => stagedCourse.courseCode === course.courseCode);
+            courses = courses.filter((course: courseInfo) => {
+                return !this.$store.state.commonLists.stagedCourses.some((stagedCourse: stagedCourse) => stagedCourse.courseCode === course.courseCode);
                 // && !this.$store.state.commonLists.selectedCourses.some(selectedCourse => selectedCourse.courseCode === course.courseCode) // 这句不需要，因为被上面的包含了
             });
 

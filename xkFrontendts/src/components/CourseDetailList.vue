@@ -37,7 +37,7 @@
 
 <script lang="ts">
 import { mapStatusToChinese } from '@/utils/statusManipulate';
-import type { teacherlet, arrangementInfolet, courseDetaillet } from '@/utils/myInterface';
+import type { teacherlet, arrangementInfolet, courseDetaillet, stagedCourse } from '@/utils/myInterface';
 
     export default {
         data() {
@@ -94,7 +94,7 @@ import type { teacherlet, arrangementInfolet, courseDetaillet } from '@/utils/my
         computed: {
             localDetailList() {
                 // console.log(this.$store.state.commonLists.stagedCourses.find(course => course.courseCode === this.$store.state.clickedCourseInfo.courseCode)?.courseDetail)
-                return this.$store.state.commonLists.stagedCourses.find(course => course.courseCode === this.$store.state.clickedCourseInfo.courseCode)?.courseDetail || [];
+                return this.$store.state.commonLists.stagedCourses.find((course: stagedCourse) => course.courseCode === this.$store.state.clickedCourseInfo.courseCode)?.courseDetail || [];
             },
             title() {
                 const courseInfo = this.$store.state.clickedCourseInfo;

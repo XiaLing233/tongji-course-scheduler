@@ -16,8 +16,7 @@
 </template>
 
 <script lang="ts">
-import type { stagedCourse } from '@/utils/myInterface';
-
+    import type { stagedCourse, courseInfo } from '@/utils/myInterface';
 export default {
     data() {
         return {
@@ -59,9 +58,9 @@ export default {
         }
     },
     methods: {
-        filteredCourses(courses: stagedCourse[]) {
-            return courses.filter((course) => {
-                return !this.$store.state.commonLists.stagedCourses.some(stagedCourse => stagedCourse.courseCode === course.courseCode);
+        filteredCourses(courses: courseInfo[]) {
+            return courses.filter((course: courseInfo) => {
+                return !this.$store.state.commonLists.stagedCourses.some((stagedCourse: stagedCourse) => stagedCourse.courseCode === course.courseCode);
             });
         },
         onOptionalSelectChange(keys: string[]) {
