@@ -71,6 +71,7 @@ def fetchCourseList(session, calendar=120, depth=1):
         else:
             time.sleep(3)
 
+
     print("Course list fetched successfully")
 
     # loginout.logout(session)
@@ -83,8 +84,11 @@ if __name__ == "__main__":
     if (session is None):
         exit(-1)
 
-    latest_calendar = 121
-    depth = 2  # 爬取深度，从当前学期开始往前爬取的学期数
+    config = configparser.ConfigParser()
+    config.read("config.ini")
+
+    latest_calendar = config.getint("Spider", "latest_term")
+    depth = config.getint("Spider", "depth")  # 爬取深度，从当前学期开始往前爬取的学期数
 
     # Delete old records in the depth range before fetching
     print(f"\n开始删除旧记录，当前学期 {latest_calendar}，深度 {depth}")
@@ -106,8 +110,6 @@ if __name__ == "__main__":
 
     # Send email notification after all fetching is done
     email_client = SMTPEmailClient("config.ini")
-    config = configparser.ConfigParser()
-    config.read("config.ini")
     me = config.get("SMTP", "me")
     
     now = datetime.now()

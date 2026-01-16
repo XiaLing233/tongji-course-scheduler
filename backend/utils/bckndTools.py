@@ -100,6 +100,16 @@ def arrangementTextToObj(text):
     }
     '''
 
+    if text is None or text.strip() == "":
+        return {
+            "arrangementText": "",
+            "occupyDay": None,
+            "occupyTime": None,
+            "occupyWeek": None,
+            "occupyRoom": None,
+            "teacherAndCode": None
+        }
+
     # print(text)
 
     result = {
@@ -116,7 +126,10 @@ def arrangementTextToObj(text):
     result["occupyDay"] = dayTextToNum("星期" + text.split(" 星期")[1][0])
 
     # 节次
-    result["occupyTime"] = timeTextToArray(text.split(" 星期")[1][1:].split(" [")[0])
+    try:
+        result["occupyTime"] = timeTextToArray(text.split(" 星期")[1][1:].split(" [")[0])
+    except:
+        print("Error parsing time from text:", text)
 
     # 周次
     result["occupyWeek"] = weekTextToArray(text.split("[")[1].split("]")[0])

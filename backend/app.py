@@ -42,8 +42,6 @@ def getAllCalendar():
     }
     ```
     '''
-    import time
-    time.sleep(100)
     with bckndSql.bckndSql() as sql:
         result = sql.getAllCalendar(limit=8)
     
@@ -533,6 +531,12 @@ def findCourseByNatureId():
     '''
 
     payload = request.json
+
+    if not payload['ids'] or len(payload['ids']) == 0:
+        return jsonify({
+            "code": 400,
+            "msg": "ids 不能为空",
+        }), 400
 
     # 字段合法性检验
     for id in payload['ids']:

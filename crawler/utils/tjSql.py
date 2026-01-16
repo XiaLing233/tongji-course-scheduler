@@ -208,6 +208,9 @@ class tjSql:
         no need to check if exists,
         because schedule is unique
         '''
+        if arrangeInfo is None:
+            arrangeInfo = ""
+        
         # split arrangeInfo to array by '\n'
         arrangeInfo = arrangeInfo.split('\n')
 
@@ -264,19 +267,28 @@ class tjSql:
 
         val = (course['teachingLanguage'], )
 
+        if val is None:
+            return
+
         self.cursor.execute(sql, val)
 
         if self.cursor.fetchone() is not None:
             return
         
-        # Insert
-        sql = "INSERT INTO language (teachingLanguage, teachingLanguageI18n, calendarId) VALUES (%s, %s, %s)"
+        try:
+            # Insert
+            sql = "INSERT INTO language (teachingLanguage, teachingLanguageI18n, calendarId) VALUES (%s, %s, %s)"
 
-        val = (course['teachingLanguage'], course['teachingLanguageI18n'], course['calendarId'])
+            val = (course['teachingLanguage'], course['teachingLanguageI18n'], course['calendarId'])
 
-        self.cursor.execute(sql, val)
+            self.cursor.execute(sql, val)
 
-        self.db.commit()
+            self.db.commit()
+        except Exception as e:
+            print(e)
+            print(course)
+            print("\n\n\n插入语言数据发生异常\n\n\n")
+            # input()
 
     def insertCourseList(self, courses):
         '''
@@ -367,6 +379,7 @@ class tjSql:
                 self.insertTeachers(course['teacherList'], course['arrangeInfo']) # Insert teachers
                 self.insertMajorAndCourse(course['majorList'], course['id']) # Insert major and course
             except Exception as e:
+                print(course)
                 print(e)
                 print("\n\n\n插入教师数据发生异常\n\n\n")
                 # input()
