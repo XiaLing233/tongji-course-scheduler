@@ -1,12 +1,12 @@
 CREATE TABLE `calendar` (
   `calendarId` int NOT NULL,
-  `calendarIdI18n` varchar(45) DEFAULT NULL,
+  `calendarIdI18n` varchar(200) DEFAULT NULL,
   PRIMARY KEY (`calendarId`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE `assessment` (
-  `assessmentMode` varchar(45) NOT NULL,
-  `assessmentModeI18n` varchar(45) DEFAULT NULL,
+  `assessmentMode` varchar(200) NOT NULL,
+  `assessmentModeI18n` varchar(200) DEFAULT NULL,
   `calendarId` int NOT NULL,
   PRIMARY KEY (`assessmentMode`),
   KEY `assessment_calendar_idx` (`calendarId`),
@@ -14,8 +14,8 @@ CREATE TABLE `assessment` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE `campus` (
-  `campus` varchar(45) NOT NULL,
-  `campusI18n` varchar(45) DEFAULT NULL,
+  `campus` varchar(200) NOT NULL,
+  `campusI18n` varchar(200) DEFAULT NULL,
   `calendarId` int NOT NULL,
   PRIMARY KEY (`campus`),
   KEY `campus_calendar_idx` (`calendarId`),
@@ -24,7 +24,7 @@ CREATE TABLE `campus` (
 
 CREATE TABLE `coursenature` (
   `courseLabelId` int NOT NULL,
-  `courseLabelName` varchar(100) DEFAULT NULL,
+  `courseLabelName` varchar(200) DEFAULT NULL,
   `calendarId` int NOT NULL,
   PRIMARY KEY (`courseLabelId`),
   KEY `coursenature_calendar_idx` (`calendarId`),
@@ -32,8 +32,8 @@ CREATE TABLE `coursenature` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE `faculty` (
-  `faculty` varchar(45) NOT NULL,
-  `facultyI18n` varchar(100) DEFAULT NULL,
+  `faculty` varchar(200) NOT NULL,
+  `facultyI18n` varchar(200) DEFAULT NULL,
   `calendarId` int NOT NULL,
   PRIMARY KEY (`faculty`),
   KEY `faculty_calendar_idx` (`calendarId`),
@@ -43,13 +43,13 @@ CREATE TABLE `faculty` (
 CREATE TABLE `fetchlog` (
   `id` int NOT NULL AUTO_INCREMENT,
   `fetchTime` datetime DEFAULT NULL,
-  `msg` varchar(100) DEFAULT NULL,
+  `msg` varchar(200) DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE `language` (
-  `teachingLanguage` varchar(45) NOT NULL,
-  `teachingLanguageI18n` varchar(45) DEFAULT NULL,
+  `teachingLanguage` varchar(200) NOT NULL,
+  `teachingLanguageI18n` varchar(200) DEFAULT NULL,
   `calendarId` int NOT NULL,
   PRIMARY KEY (`teachingLanguage`),
   KEY `language_calendar_idx` (`calendarId`),
@@ -58,7 +58,7 @@ CREATE TABLE `language` (
 
 CREATE TABLE `major` (
   `id` int NOT NULL AUTO_INCREMENT,
-  `code` varchar(45) DEFAULT NULL,
+  `code` varchar(200) DEFAULT NULL,
   `grade` int DEFAULT NULL,
   `name` varchar(200) DEFAULT NULL,
   `calendarId` int NOT NULL,
@@ -69,25 +69,25 @@ CREATE TABLE `major` (
 
 CREATE TABLE `coursedetail` (
   `id` bigint NOT NULL,
-  `code` varchar(45) DEFAULT NULL,
-  `name` varchar(45) DEFAULT NULL,
+  `code` varchar(200) DEFAULT NULL,
+  `name` varchar(200) DEFAULT NULL,
   `courseLabelId` int DEFAULT NULL,
-  `assessmentMode` varchar(45) DEFAULT NULL,
+  `assessmentMode` varchar(200) DEFAULT NULL,
   `period` int DEFAULT NULL,
   `weekHour` int DEFAULT NULL,
-  `campus` varchar(45) DEFAULT NULL,
+  `campus` varchar(200) DEFAULT NULL,
   `number` int DEFAULT NULL,
   `elcNumber` int DEFAULT NULL,
   `startWeek` int DEFAULT NULL,
   `endWeek` int DEFAULT NULL,
-  `courseCode` varchar(45) DEFAULT NULL,
-  `courseName` varchar(45) DEFAULT NULL,
+  `courseCode` varchar(200) DEFAULT NULL,
+  `courseName` varchar(200) DEFAULT NULL,
   `credit` double DEFAULT NULL,
-  `teachingLanguage` varchar(45) DEFAULT NULL,
-  `faculty` varchar(45) DEFAULT NULL,
+  `teachingLanguage` varchar(200) DEFAULT NULL,
+  `faculty` varchar(200) DEFAULT NULL,
   `calendarId` int DEFAULT NULL,
-  `newCourseCode` varchar(45) DEFAULT NULL,
-  `newCode` varchar(45) DEFAULT NULL,
+  `newCourseCode` varchar(200) DEFAULT NULL,
+  `newCode` varchar(200) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `nature_idx` (`courseLabelId`),
   KEY `assess_idx` (`assessmentMode`),
@@ -117,8 +117,8 @@ CREATE TABLE `majorandcourse` (
 CREATE TABLE `teacher` (
   `id` bigint NOT NULL,
   `teachingClassId` bigint DEFAULT NULL,
-  `teacherCode` varchar(45) DEFAULT NULL,
-  `teacherName` varchar(100) DEFAULT NULL,
+  `teacherCode` varchar(200) DEFAULT NULL,
+  `teacherName` varchar(200) DEFAULT NULL,
   `arrangeInfoText` mediumtext,
   PRIMARY KEY (`id`),
   KEY `classKey_idx` (`teachingClassId`),
