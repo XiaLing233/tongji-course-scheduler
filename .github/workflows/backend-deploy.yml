@@ -24,6 +24,6 @@ jobs:
             set -e
             cd ~/xkB/
             git fetch origin
-            git reset --hard origin/main
+            git reset --hard origin/master
             sudo systemctl restart xkB.service
           EOF
