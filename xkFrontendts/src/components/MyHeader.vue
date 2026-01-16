@@ -48,6 +48,9 @@
                         <a-menu-item key="tongji">
                             <a href="https://1.tongji.edu.cn" target="_blank">1 系统</a>
                         </a-menu-item>
+                        <a-menu-item key="courseSystem">
+                            <a href="https://tongji.xialing.icu" target="_blank">课程检索</a>
+                        </a-menu-item>
                         <a-menu-item key="wlc">
                             <a href="https://1.tongji.icu" target="_blank">乌龙茶</a>
                         </a-menu-item>
