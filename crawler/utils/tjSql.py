@@ -80,9 +80,9 @@ class tjSql:
             return
         
         # Insert
-        sql = "INSERT INTO coursenature (courseLabelId, courseLabelName) VALUES (%s, %s)"
+        sql = "INSERT INTO coursenature (courseLabelId, courseLabelName, calendarId) VALUES (%s, %s, %s)"
 
-        val = (course['courseLabelId'], course['courseLabelName'])
+        val = (course['courseLabelId'], course['courseLabelName'], course['calendarId'])
 
         self.cursor.execute(sql, val)
 
@@ -107,9 +107,9 @@ class tjSql:
             return
         
         # Insert
-        sql = "INSERT INTO assessment (assessmentMode, assessmentModeI18n) VALUES (%s, %s)"
+        sql = "INSERT INTO assessment (assessmentMode, assessmentModeI18n, calendarId) VALUES (%s, %s, %s)"
 
-        val = (course['assessmentMode'], course['assessmentModeI18n'])
+        val = (course['assessmentMode'], course['assessmentModeI18n'], course['calendarId'])
 
         self.cursor.execute(sql, val)
 
@@ -134,9 +134,9 @@ class tjSql:
             return
         
         # Insert
-        sql = "INSERT INTO campus (campus, campusI18n) VALUES (%s, %s)"
+        sql = "INSERT INTO campus (campus, campusI18n, calendarId) VALUES (%s, %s, %s)"
 
-        val = (course['campus'], course['campusI18n'])
+        val = (course['campus'], course['campusI18n'], course['calendarId'])
 
         self.cursor.execute(sql, val)
 
@@ -157,18 +157,19 @@ class tjSql:
             return
         
         # Insert
-        sql = "INSERT INTO faculty (faculty, facultyI18n) VALUES (%s, %s)"
+        sql = "INSERT INTO faculty (faculty, facultyI18n, calendarId) VALUES (%s, %s, %s)"
 
-        val = (course['faculty'], course['facultyI18n'])
+        val = (course['faculty'], course['facultyI18n'], course['calendarId'])
 
         self.cursor.execute(sql, val)
 
         self.db.commit()
 
-    def insertMajors(self, majors):
+    def insertMajors(self, majors, calendarId):
         '''
         Insert major into database,
         majors is an array
+        calendarId: the calendarId when this major first appears
         '''
         # if majors is empty, return
         if majors is None:
@@ -182,7 +183,7 @@ class tjSql:
                 "name": major
             }
 
-            # if exists, skip
+            # Check if exists, if exists, keep the existing calendarId (earliest one)
             sql = "SELECT * FROM major WHERE code = %s AND grade = %s"
 
             val = (processedMajor['code'], processedMajor['grade'])
@@ -192,10 +193,10 @@ class tjSql:
             if self.cursor.fetchone() is not None:
                 continue
 
-            # Insert
-            sql = "INSERT INTO major (code, grade, name) VALUES (%s, %s, %s)"
+            # Insert with calendarId
+            sql = "INSERT INTO major (code, grade, name, calendarId) VALUES (%s, %s, %s, %s)"
 
-            val = (processedMajor['code'], processedMajor['grade'], processedMajor['name'])
+            val = (processedMajor['code'], processedMajor['grade'], processedMajor['name'], calendarId)
 
             self.cursor.execute(sql, val)
 
@@ -269,9 +270,9 @@ class tjSql:
             return
         
         # Insert
-        sql = "INSERT INTO language (teachingLanguage, teachingLanguageI18n) VALUES (%s, %s)"
+        sql = "INSERT INTO language (teachingLanguage, teachingLanguageI18n, calendarId) VALUES (%s, %s, %s)"
 
-        val = (course['teachingLanguage'], course['teachingLanguageI18n'])
+        val = (course['teachingLanguage'], course['teachingLanguageI18n'], course['calendarId'])
 
         self.cursor.execute(sql, val)
 
@@ -284,9 +285,11 @@ class tjSql:
         for course in courses: # The courses array contains 20 courses
             # Handle Foreign Key Constraint First
             
-            print(course)
-            print("\n\n\n")
+            # print(course)
+            # print("\n\n\n")
             # input()
+
+            self.insertCalendar(course) # Insert calendar
 
             self.insertLanguage(course) # Insert language
             
@@ -298,12 +301,21 @@ class tjSql:
 
             self.insertFaculty(course) # Insert faculty
 
-            self.insertCalendar(course) # Insert calendar
-
-            self.insertMajors(course['majorList']) # Insert major
+            self.insertMajors(course['majorList'], course['calendarId']) # Insert major
 
             # print("下面要插入课程啦，按回车键继续")
             # input()
+
+            # Calculate newCode: newCourseCode + (code - courseCode)
+            newCourseCode = course.get('newCourseCode', None)
+            newCode = None
+            if newCourseCode is not None and newCourseCode != '':
+                try:
+                    # Extract the last 2 digits from code
+                    codeSuffix = course['code'][-2:] if course.get('code') and course.get('courseCode') and course['code'].startswith(course['courseCode']) else ''
+                    newCode = newCourseCode + codeSuffix if codeSuffix else None
+                except:
+                    newCode = None
 
             # Insert course
             sql = (
@@ -325,8 +337,10 @@ class tjSql:
                 "credit, "
                 "teachingLanguage, "
                 "faculty, "
-                "calendarId"
-                ") VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+                "calendarId, "
+                "newCourseCode, "
+                "newCode"
+                ") VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
             )
 
             val = (
@@ -335,7 +349,8 @@ class tjSql:
                 course['weekHour'], course['campus'], course['number'], 
                 course['elcNumber'], course['startWeek'], course['endWeek'], 
                 course['courseCode'], course['courseName'], course['credits'],
-                course['teachingLanguage'], course['faculty'], course['calendarId']
+                course['teachingLanguage'], course['faculty'], course['calendarId'],
+                newCourseCode, newCode
             )
 
             try:
@@ -355,6 +370,55 @@ class tjSql:
                 print(e)
                 print("\n\n\n插入教师数据发生异常\n\n\n")
                 # input()
+
+    def deleteOldRecordsInRange(self, currentCalendarId, depth):
+        '''
+        Delete records in the range of [currentCalendarId - depth + 1, currentCalendarId]
+        Returns the list of calendarIds that will be deleted
+        If depth is 0, no records will be deleted
+        '''
+        # If depth is 0, don't delete anything
+        if depth <= 0:
+            print("深度为 0，不删除任何记录")
+            return []
+        
+        # Calculate the range of calendarIds to delete
+        startCalendarId = currentCalendarId - depth + 1
+        endCalendarId = currentCalendarId
+        
+        calendarIdsToDelete = list(range(startCalendarId, endCalendarId + 1))
+        
+        print(f"准备删除 calendarId 范围: {calendarIdsToDelete}")
+        
+        # Delete records from all tables
+        # The foreign key constraints will automatically cascade delete
+        for calendarId in calendarIdsToDelete:
+            # Delete from calendar table (will cascade to other tables)
+            sql = "DELETE FROM calendar WHERE calendarId = %s"
+            self.cursor.execute(sql, (calendarId,))
+        
+        self.db.commit()
+        
+        print(f"已删除 {len(calendarIdsToDelete)} 个学期的记录")
+        
+        return calendarIdsToDelete
+
+    def insertFetchLog(self, latestCalendar, depth):
+        '''
+        Insert fetch log into database
+        '''
+        from datetime import datetime
+        
+        currentTime = datetime.now()
+        msg = f"{currentTime.strftime('%Y-%m-%d %H:%M:%S')}例行更新，最新学期{latestCalendar}，深度{depth}"
+        
+        sql = "INSERT INTO fetchlog (fetchTime, msg) VALUES (%s, %s)"
+        val = (currentTime, msg)
+        
+        self.cursor.execute(sql, val)
+        self.db.commit()
+        
+        print(f"已记录日志: {msg}")
 
 # 亡羊补牢（更新表格结构）的时候需要的函数，暂时不用
 
@@ -389,3 +453,20 @@ class tjSql:
         # input()
 
         self.db.commit()
+
+    def calendarIdToText(self, calendarId):
+        '''
+        Convert calendarId to text
+        '''
+        sql = "SELECT calendarIdI18n FROM calendar WHERE calendarId = %s"
+
+        val = (calendarId, )
+
+        self.cursor.execute(sql, val)
+
+        result = self.cursor.fetchone()
+
+        if result is not None:
+            return result[0]
+        else:
+            return None

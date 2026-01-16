@@ -5,10 +5,6 @@ import json
 import time
 import xml.etree.ElementTree as ET
 
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from email.utils import formataddr
-import smtplib
 from . import imap_email
 import configparser
 

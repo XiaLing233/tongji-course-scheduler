@@ -1,31 +1,43 @@
-CREATE TABLE `assessment` (
-  `assessmentMode` varchar(45) NOT NULL,
-  `assessmentModeI18n` varchar(45) DEFAULT NULL,
-  PRIMARY KEY (`assessmentMode`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
 CREATE TABLE `calendar` (
   `calendarId` int NOT NULL,
   `calendarIdI18n` varchar(45) DEFAULT NULL,
   PRIMARY KEY (`calendarId`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+CREATE TABLE `assessment` (
+  `assessmentMode` varchar(45) NOT NULL,
+  `assessmentModeI18n` varchar(45) DEFAULT NULL,
+  `calendarId` int NOT NULL,
+  PRIMARY KEY (`assessmentMode`),
+  KEY `assessment_calendar_idx` (`calendarId`),
+  CONSTRAINT `assessment_calendar_fk` FOREIGN KEY (`calendarId`) REFERENCES `calendar` (`calendarId`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
 CREATE TABLE `campus` (
   `campus` varchar(45) NOT NULL,
   `campusI18n` varchar(45) DEFAULT NULL,
-  PRIMARY KEY (`campus`)
+  `calendarId` int NOT NULL,
+  PRIMARY KEY (`campus`),
+  KEY `campus_calendar_idx` (`calendarId`),
+  CONSTRAINT `campus_calendar_fk` FOREIGN KEY (`calendarId`) REFERENCES `calendar` (`calendarId`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE `coursenature` (
   `courseLabelId` int NOT NULL,
   `courseLabelName` varchar(100) DEFAULT NULL,
-  PRIMARY KEY (`courseLabelId`)
+  `calendarId` int NOT NULL,
+  PRIMARY KEY (`courseLabelId`),
+  KEY `coursenature_calendar_idx` (`calendarId`),
+  CONSTRAINT `coursenature_calendar_fk` FOREIGN KEY (`calendarId`) REFERENCES `calendar` (`calendarId`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE `faculty` (
   `faculty` varchar(45) NOT NULL,
   `facultyI18n` varchar(100) DEFAULT NULL,
-  PRIMARY KEY (`faculty`)
+  `calendarId` int NOT NULL,
+  PRIMARY KEY (`faculty`),
+  KEY `faculty_calendar_idx` (`calendarId`),
+  CONSTRAINT `faculty_calendar_fk` FOREIGN KEY (`calendarId`) REFERENCES `calendar` (`calendarId`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE `fetchlog` (
@@ -38,7 +50,10 @@ CREATE TABLE `fetchlog` (
 CREATE TABLE `language` (
   `teachingLanguage` varchar(45) NOT NULL,
   `teachingLanguageI18n` varchar(45) DEFAULT NULL,
-  PRIMARY KEY (`teachingLanguage`)
+  `calendarId` int NOT NULL,
+  PRIMARY KEY (`teachingLanguage`),
+  KEY `language_calendar_idx` (`calendarId`),
+  CONSTRAINT `language_calendar_fk` FOREIGN KEY (`calendarId`) REFERENCES `calendar` (`calendarId`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE `major` (
@@ -46,7 +61,10 @@ CREATE TABLE `major` (
   `code` varchar(45) DEFAULT NULL,
   `grade` int DEFAULT NULL,
   `name` varchar(200) DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  `calendarId` int NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `major_calendar_idx` (`calendarId`),
+  CONSTRAINT `major_calendar_fk` FOREIGN KEY (`calendarId`) REFERENCES `calendar` (`calendarId`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=1116 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE `coursedetail` (
@@ -68,6 +86,8 @@ CREATE TABLE `coursedetail` (
   `teachingLanguage` varchar(45) DEFAULT NULL,
   `faculty` varchar(45) DEFAULT NULL,
   `calendarId` int DEFAULT NULL,
+  `newCourseCode` varchar(45) DEFAULT NULL,
+  `newCode` varchar(45) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `nature_idx` (`courseLabelId`),
   KEY `assess_idx` (`assessmentMode`),
@@ -90,8 +110,8 @@ CREATE TABLE `majorandcourse` (
   PRIMARY KEY (`id`),
   KEY `courseKey_idx` (`courseId`),
   KEY `majorKeyForMajor_idx` (`majorId`),
-  CONSTRAINT `courseKeyForMajor` FOREIGN KEY (`courseId`) REFERENCES `coursedetail` (`id`),
-  CONSTRAINT `majorKeyForMajor` FOREIGN KEY (`majorId`) REFERENCES `major` (`id`)
+  CONSTRAINT `courseKeyForMajor` FOREIGN KEY (`courseId`) REFERENCES `coursedetail` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `majorKeyForMajor` FOREIGN KEY (`majorId`) REFERENCES `major` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=82013 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE `teacher` (
@@ -102,5 +122,5 @@ CREATE TABLE `teacher` (
   `arrangeInfoText` mediumtext,
   PRIMARY KEY (`id`),
   KEY `classKey_idx` (`teachingClassId`),
-  CONSTRAINT `courseKey` FOREIGN KEY (`teachingClassId`) REFERENCES `coursedetail` (`id`)
+  CONSTRAINT `courseKey` FOREIGN KEY (`teachingClassId`) REFERENCES `coursedetail` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;

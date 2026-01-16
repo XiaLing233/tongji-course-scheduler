@@ -11,6 +11,7 @@ DB_HOST = CONFIG['Sql']['host']
 DB_USER = CONFIG['Sql']['user']
 DB_R_USER = CONFIG['Sql']['r_user']
 DB_PASSWORD = CONFIG['Sql']['password']
+DB_NAME = CONFIG['Sql']['database']
 
 def initNewDatabase(self):
     '''
@@ -26,8 +27,7 @@ def initNewDatabase(self):
     cursor = connection.cursor()
 
     # Create database if not exists
-    compact_date = datetime.now().strftime("%y%m%d")
-    new_db_name = f"tongjicourse_{compact_date}"
+    new_db_name = DB_NAME
 
     print("DEBUG: Now creating new database:", new_db_name)
 

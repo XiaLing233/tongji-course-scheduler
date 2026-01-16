@@ -44,7 +44,7 @@ def getAllCalendar():
     '''
 
     with bckndSql.bckndSql() as sql:
-        result = sql.getAllCalendar()
+        result = sql.getAllCalendar(limit=8)
     
     return jsonify({
         "code": 200,

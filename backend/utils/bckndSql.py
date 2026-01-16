@@ -38,11 +38,12 @@ class bckndSql:
     def __exit__(self, exc_type, exc_value, traceback):
         self.cursor.close()
         self.db.close()
-    def getAllCalendar(self):
+    def getAllCalendar(self, limit=8):
         '''
         Get all calendar data
+        Limit recent 'limit' semesters
         '''
-        self.cursor.execute(f'SELECT JSON_OBJECT("calendarId", calendarId, "calendarName", calendarIdI18n) FROM calendar ORDER BY calendarId DESC')
+        self.cursor.execute(f'SELECT JSON_OBJECT("calendarId", calendarId, "calendarName", calendarIdI18n) FROM calendar ORDER BY calendarId DESC LIMIT {limit}')
 
         result = self.cursor.fetchall()
 
