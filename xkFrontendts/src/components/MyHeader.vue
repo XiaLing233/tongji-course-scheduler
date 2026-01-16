@@ -73,12 +73,20 @@
 </template>
 
 <script lang="ts">
-import { ExportOutlined, GithubOutlined, CalendarOutlined, LinkOutlined, ReadOutlined, SyncOutlined, ExclamationCircleOutlined } from '@ant-design/icons-vue';
+import { ExportOutlined, GithubOutlined, LinkOutlined, ReadOutlined, SyncOutlined, ExclamationCircleOutlined } from '@ant-design/icons-vue';
 import { codesToJsonForCSV, jsonToCSV, downloadCSV } from '@/utils/csvRelated';
 import { codesToJsonForXLS, jsonToXLS, downloadXLS } from '@/utils/xlsRelated';
 import { errorNotify, successNotify } from '@/utils/notify';
 import { Modal } from 'ant-design-vue';
 import { createVNode } from 'vue';
+import { 
+    fetchLatestCourseInfo, 
+    detectCourseChanges, 
+    applyCourseSync
+} from '@/utils/courseSync';
+import { renderSyncChanges } from '@/utils/syncRender';
+import { insertOccupied } from '@/utils/courseManipulate';
+import type { occupyCell, courseOnTable } from '@/utils/myInterface';
 
 export default {
     components: {
@@ -86,26 +94,176 @@ export default {
         GithubOutlined,
         ReadOutlined,
         LinkOutlined,
-        CalendarOutlined,
         SyncOutlined
     },
     methods: {
-        syncData() {
-            Modal.confirm({
-                title: '确认同步最新数据',
-                icon: createVNode(ExclamationCircleOutlined),
-                content: '同步最新数据后，您当前选择的所有课程将被清空，此操作不可恢复。确定要继续吗？',
-                okText: '确定同步',
-                okType: 'danger',
-                cancelText: '取消',
-                onOk: () => {
-                    this.$store.commit("syncLatestData");
-                    successNotify("已同步最新数据，请重新选择课程");
-                },
-                onCancel: () => {
-                    console.log("User cancelled data sync");
+        async syncData() {
+            try {
+                // 获取当前的stagedCourses和selectedCourses
+                const stagedCourses = this.$store.state.commonLists.stagedCourses;
+                const selectedCourses = this.$store.state.commonLists.selectedCourses;
+                const calendarId = this.$store.state.majorSelected.calendarId;
+
+                if (!calendarId) {
+                    errorNotify('未选择学期，无法同步');
+                    return;
                 }
-            });
+
+                if (stagedCourses.length === 0 && selectedCourses.length === 0) {
+                    // 没有课程，直接同步时间即可
+                    Modal.confirm({
+                        title: '确认同步最新数据',
+                        icon: createVNode(ExclamationCircleOutlined),
+                        content: '当前没有已选课程，确认同步更新时间？',
+                        okText: '确定',
+                        okType: 'primary',
+                        cancelText: '取消',
+                        onOk: () => {
+                            this.$store.commit("syncLatestData");
+                            successNotify("已同步最新数据");
+                        }
+                    });
+                    return;
+                }
+
+                // 获取专业信息（用于判断 isExclusive）
+                // 注意：majorSelected.major 实际上存储的是专业代码 (code)
+                const majorInfo = this.$store.state.majorSelected.grade && this.$store.state.majorSelected.major
+                    ? {
+                        grade: this.$store.state.majorSelected.grade,
+                        code: this.$store.state.majorSelected.major  // major 字段存储的是 code
+                    }
+                    : undefined;
+
+                // 显示加载中
+                this.$store.commit("setIsSpin", true);
+
+                // 从后端获取最新课程信息
+                const latestCourses = await fetchLatestCourseInfo(calendarId, stagedCourses, selectedCourses, majorInfo);
+
+                // 检测课程变更
+                const syncResult = detectCourseChanges(
+                    stagedCourses,
+                    latestCourses,
+                    selectedCourses,
+                    this.$store.state.occupied
+                );
+
+                this.$store.commit("setIsSpin", false);
+
+                if (!syncResult.hasChanges) {
+                    // 没有变更，直接更新时间
+                    Modal.info({
+                        title: '课程已是最新',
+                        content: '所有课程信息均为最新版本，已自动更新同步时间。',
+                        okText: '确定',
+                        onOk: () => {
+                            this.$store.commit("setUpdateTime", this.$store.state.latestUpdateTime);
+                            this.$store.commit("setDataOutdated", false);
+                            successNotify("已更新同步时间");
+                        }
+                    });
+                    return;
+                }
+
+                // 显示确认对话框
+                Modal.confirm({
+                    title: '课程同步',
+                    icon: createVNode(ExclamationCircleOutlined),
+                    content: renderSyncChanges(syncResult.changes),
+                    width: 700,
+                    bodyStyle: { maxHeight: '500px', overflow: 'auto' },
+                    okText: '确认同步',
+                    okType: 'primary',
+                    cancelText: '取消',
+                    onOk: async () => {
+                        try {
+                            // 应用课程同步
+                            const { newStagedCourses, newSelectedCodes } = applyCourseSync(
+                                syncResult.changes,
+                                stagedCourses,
+                                selectedCourses,
+                                latestCourses
+                            );
+
+                            // 重新构建occupied和timeTableData
+                            const newOccupied: occupyCell[][][] = Array(12).fill(null).map(() => 
+                                Array(7).fill(undefined).map(() => [])
+                            );
+                            const newTimeTableData: courseOnTable[] = [];
+
+                            // 重新添加已选课程到课程表
+                            newSelectedCodes.forEach(selectedCode => {
+                                const courseCode = selectedCode.substring(0, selectedCode.length - 2);
+                                const course = newStagedCourses.find(c => c.courseCode === courseCode);
+                                
+                                if (course) {
+                                    const detail = course.courseDetail.find(d => d.code === selectedCode);
+                                    if (detail) {
+                                        // 添加到occupied
+                                        insertOccupied(newOccupied, detail.arrangementInfo, detail.code, course.courseNameReserved);
+                                        
+                                        // 添加到timeTableData
+                                        detail.arrangementInfo.forEach(arrangement => {
+                                            newTimeTableData.push({
+                                                showText: `${arrangement.teacherAndCode} ${course.courseNameReserved}(${detail.code}) ${arrangement.arrangementText.split(' ').slice(1).join(' ')}`,
+                                                courseName: course.courseNameReserved,
+                                                code: detail.code,
+                                                occupyTime: arrangement.occupyTime,
+                                                occupyDay: arrangement.occupyDay
+                                            });
+                                        });
+                                    }
+                                }
+                            });
+
+                            // 提交到store
+                            this.$store.commit("smartSyncCourses", {
+                                newStagedCourses,
+                                newSelectedCodes,
+                                newOccupied,
+                                newTimeTableData
+                            });
+
+                            // 生成成功消息
+                            // const closedCount = syncResult.changes.filter(c => c.changeType === 'closed').length;
+                            // const conflictCount = syncResult.changes.filter(c => c.changeType === 'conflictAfterUpdate').length;
+                            // const changedCount = syncResult.changes.filter(c => c.changeType === 'infoChanged').length;
+
+                            const successMsg = '同步成功！';
+                            // if (closedCount > 0) successMsg += ` ${closedCount}门课程已删除，`;
+                            // if (conflictCount > 0) successMsg += ` ${conflictCount}门课程已移至备选，`;
+                            // if (changedCount > 0) successMsg += ` ${changedCount}门课程已更新`;
+                            
+                            successNotify(successMsg);
+                        } catch (error) {
+                            console.error('同步失败:', error);
+                            errorNotify('同步失败，请重试');
+                        }
+                    },
+                    onCancel: () => {
+                        console.log("User cancelled smart sync");
+                    }
+                });
+
+            } catch (error) {
+                this.$store.commit("setIsSpin", false);
+                console.error('获取课程信息失败:', error);
+                
+                // 如果获取失败，提供降级选项：清空所有课程
+                Modal.confirm({
+                    title: '无法获取最新课程信息',
+                    icon: createVNode(ExclamationCircleOutlined),
+                    content: '无法从服务器获取最新课程信息。您可以选择清空所有课程并同步，或稍后重试。',
+                    okText: '清空并同步',
+                    okType: 'danger',
+                    cancelText: '稍后重试',
+                    onOk: () => {
+                        this.$store.commit("syncLatestData");
+                        successNotify("已清空课程并同步最新数据");
+                    }
+                });
+            }
         },
         wakeUpCSV() {
             const csv = codesToJsonForCSV(this.$store.state.commonLists.selectedCourses, this.$store.state.commonLists.stagedCourses);

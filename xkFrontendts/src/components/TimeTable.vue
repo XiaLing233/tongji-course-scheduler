@@ -66,7 +66,6 @@ export default {
             // 步骤3: 填充课程数据 - 短课程合并到长课程的单元格中
             sortedCourses.forEach((course: courseOnTable) => {
                 const startRow = course.occupyTime[0] - 1
-                const endRow = course.occupyTime[course.occupyTime.length - 1] - 1
                 const dayIndex = course.occupyDay - 1
 
                 // 检查是否有已存在的课程覆盖了当前课程的时间段

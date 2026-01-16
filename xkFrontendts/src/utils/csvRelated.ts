@@ -13,16 +13,16 @@ const csvHeader = {
 
 // 接收一个课号数组，返回一个 csvCourse 数组
 export function codesToJsonForCSV(codes: string[], rawList: stagedCourse[]): csvCourse[] {
-    let ret: csvCourse[] = [];
+    const ret: csvCourse[] = [];
 
     ret.push(csvHeader);
 
-    for (let code of codes) {
+    for (const code of codes) {
         const course = rawList.find((course) => course.courseCode === code.substring(0, code.length - 2)); // 先找到这门课
         if (course) {
             const targetClass = course.courseDetail.find((detail) => detail.code === code); // 再找到班级
             if (targetClass) {
-                for (let arr of targetClass.arrangementInfo) {
+                for (const arr of targetClass.arrangementInfo) {
                     const csvCourse: csvCourse = {
                         courseName: course.courseNameReserved,
                         occupyDay: arr.occupyDay,
@@ -54,6 +54,6 @@ export function downloadCSV(csvData: string) {
 }
 
 export function jsonToCSV(jsonData: csvCourse[]): string {
-    let csvData = Papa.unparse(jsonData, { header: false });
+    const csvData = Papa.unparse(jsonData, { header: false });
     return csvData;
 }

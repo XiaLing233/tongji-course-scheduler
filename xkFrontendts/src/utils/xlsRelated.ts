@@ -5,9 +5,9 @@ const xlsHeader = ['课程代码', '课程名称', '教师姓名']
 
 // 接收一个课号数组，返回一个 xlsCourse 数组
 export function codesToJsonForXLS(codes: string[], rawList: stagedCourse[]): xlsCourse[] {
-    let ret: xlsCourse[] = [];
+    const ret: xlsCourse[] = [];
 
-    for (let code of codes) {
+    for (const code of codes) {
         const course = rawList.find((course) => course.courseCode === code.substring(0, code.length - 2)); // 先找到这门课
         if (course) {
             const targetClass = course.courseDetail.find((detail) => detail.code === code); // 再找到班级

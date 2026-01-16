@@ -14,7 +14,7 @@
             >
                 <template #bodyCell="{ column, record }">
                     <template v-if="column.key === 'campus'">
-                        <div :class="getCampusClass(record.campus)" class="h-full flex items-center justify-center">
+                        <div :class="getCampusClass(record.campus)" class="absolute inset-0 flex items-center justify-center">
                             <p>{{ record.campus }}</p>
                         </div>
                     </template>
@@ -64,8 +64,8 @@ import type { teacherlet, arrangementInfolet, courseDetaillet } from '@/utils/my
                         align: 'center',
                         customCell: () => ({
                             style: {
-                            padding: '0',
-                            height: '4px' // 几 px 都无所谓，没效果的..但是得有，不然占不满整个单元格
+                                padding: '0',
+                                position: 'relative'  // 使绝对定位的子元素能正确填充
                             }
                         })
                     },

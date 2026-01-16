@@ -172,9 +172,10 @@ export default {
                 });
                 this.$store.commit('setOptionalTypes', res.data.data);
             }
-            catch (error: any) {
+            catch (error: unknown) {
                 // console.log("error:", error);
-                errorNotify(error.response.data.msg);
+                const err = error as { response?: { data?: { msg?: string } } };
+                errorNotify(err.response?.data?.msg || '获取选修课类型失败');
             }
 
             // 获取选修课程具体信息
@@ -189,9 +190,10 @@ export default {
                 });
                 this.$store.commit('setOptionalCourses', res.data.data);
             }
-            catch (error: any) {
-                // console.log("error:", err.response.data.msg);
-                errorNotify(error);
+            catch (error: unknown) {
+                // console.log("error:", error);
+                const err = error as Error;
+                errorNotify(err.message || '获取选修课程失败');
             }
             finally {
                 this.$store.commit('setSpin', false);

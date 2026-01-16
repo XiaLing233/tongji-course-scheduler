@@ -278,13 +278,26 @@ class bckndSql:
 
         return result
     
-    def findCourseDetailByCode(self, code, calendarId):
+    def findCourseDetailByCode(self, codes, calendarId):
         '''
-        Find course detail by code
+        Find course detail by code(s)
+        codes: can be a single code (string) or a list of codes
+        Returns: if single code, returns list; if multiple codes, returns dict {code: [details]}
         '''
-        3
+        # 兼容单个课程代码和多个课程代码
+        is_single = isinstance(codes, str)
+        if is_single:
+            codes = [codes]
+        
+        if not codes:
+            return {} if not is_single else []
+        
+        # 构建查询，使用 IN 语句
+        placeholders = ','.join(['%s' for _ in codes])
+        
         query = f"""
         SELECT
+            c.courseCode,
             JSON_OBJECT(
             'code', c.code,
             'teachers', teachers.teachers,
@@ -315,20 +328,25 @@ class bckndSql:
                 t.arrangeInfoText AS locations
             FROM teacher AS t
         ) AS locations ON c.id = locations.teachingClassid
-        WHERE c.courseCode = %s
+        WHERE c.courseCode IN ({placeholders})
         AND c.calendarId = %s
         """
 
-        self.cursor.execute(query, (code, calendarId))
-
+        self.cursor.execute(query, tuple(codes) + (calendarId,))
         result = self.cursor.fetchall()
 
-        # json
-        result = [json.loads(res[0]) for res in result]
-
-        # print(result)
-
-        return result
+        if is_single:
+            # 单个课程代码，返回列表
+            return [json.loads(res[1]) for res in result]
+        else:
+            # 多个课程代码，返回字典 {courseCode: [details]}
+            result_dict = {code: [] for code in codes}
+            for row in result:
+                course_code = row[0]
+                course_detail = json.loads(row[1])
+                if course_code in result_dict:
+                    result_dict[course_code].append(course_detail)
+            return result_dict
     
     def findCourseBySearch(self, searchBody, sizeLimit=50):
         '''
@@ -453,6 +471,130 @@ class bckndSql:
         result = self.cursor.fetchall()
 
         return result[0][0]
+    
+    def getLatestCourseInfo(self, majorCourseCodes, otherCourseCodes, calendarId, majorInfo=None):
+        '''
+        Get latest course information for given course codes (batch version of findCourseDetailByCode)
+        majorCourseCodes: list of course codes that need isExclusive field (from findCourseByMajor)
+        otherCourseCodes: list of course codes that don't need isExclusive field
+        calendarId: calendar ID
+        majorInfo: dict with 'grade' and 'code' for checking isExclusive (required if majorCourseCodes is not empty)
+        Returns: dict where key is courseCode and value is list of course details (same format as API 7)
+        '''
+        result_dict = {}
+        
+        # Process majorCourseCodes (with isExclusive)
+        if majorCourseCodes and majorInfo:
+            grade = majorInfo.get('grade')
+            code = majorInfo.get('code')
+            
+            result_dict.update({c: [] for c in majorCourseCodes})
+            
+            query = f"""
+            SELECT
+                c.courseCode,
+                JSON_OBJECT(
+                    'code', c.code,
+                    'teachers', teachers.teachers,
+                    'campusI18n', ca.campusI18n,
+                    'teachingLanguageI18n', l.teachingLanguageI18n,
+                    'arrangementInfo', locations.locations,
+                    'isExclusive', IF(mac_exclusive.majorId IS NOT NULL, TRUE, FALSE)
+                )
+            FROM coursedetail as c
+            JOIN campus as ca ON c.campus = ca.campus
+            JOIN language as l ON l.teachingLanguage = c.teachingLanguage
+            -- Get teachers grouped by teaching class
+            JOIN (
+                SELECT t.teachingClassid,
+                       JSON_ARRAYAGG(
+                           JSON_OBJECT(
+                               'teacherCode', t.teacherCode,
+                               'teacherName', t.teacherName
+                           )
+                       ) as teachers
+                FROM teacher as t
+                GROUP BY t.teachingClassid
+            ) as teachers ON c.id = teachers.teachingClassid
+            -- Get arrangement info
+            JOIN (
+                SELECT t.teachingClassid,
+                       t.arrangeInfoText as locations
+                FROM teacher as t
+            ) as locations ON c.id = locations.teachingClassid
+            -- Get target major ID
+            JOIN (
+                SELECT m.id as targetMajorId
+                FROM major AS m
+                WHERE m.grade <= %s AND m.code = %s
+                LIMIT 1
+            ) AS target_major ON 1=1
+            -- Check if course is exclusive to the major
+            LEFT JOIN majorandcourse AS mac_exclusive 
+                ON mac_exclusive.courseid = c.id 
+                AND mac_exclusive.majorId = target_major.targetMajorId
+            WHERE c.courseCode IN ({','.join(['%s' for _ in majorCourseCodes])})
+            AND c.calendarId = %s
+            """
+            
+            self.cursor.execute(query, (grade, code) + tuple(majorCourseCodes) + (calendarId,))
+            rows = self.cursor.fetchall()
+            
+            for row in rows:
+                course_code = row[0]
+                course_detail = json.loads(row[1])
+                if course_code in result_dict:
+                    result_dict[course_code].append(course_detail)
+        
+        # Process otherCourseCodes (without isExclusive)
+        if otherCourseCodes:
+            result_dict.update({c: [] for c in otherCourseCodes})
+            
+            query = f"""
+            SELECT
+                c.courseCode,
+                JSON_OBJECT(
+                    'code', c.code,
+                    'teachers', teachers.teachers,
+                    'campusI18n', ca.campusI18n,
+                    'teachingLanguageI18n', l.teachingLanguageI18n,
+                    'arrangementInfo', locations.locations
+                )
+            FROM coursedetail as c
+            JOIN campus as ca ON c.campus = ca.campus
+            JOIN language as l ON l.teachingLanguage = c.teachingLanguage
+            -- Get teachers grouped by teaching class
+            JOIN (
+                SELECT t.teachingClassid,
+                       JSON_ARRAYAGG(
+                           JSON_OBJECT(
+                               'teacherCode', t.teacherCode,
+                               'teacherName', t.teacherName
+                           )
+                       ) as teachers
+                FROM teacher as t
+                GROUP BY t.teachingClassid
+            ) as teachers ON c.id = teachers.teachingClassid
+            -- Get arrangement info
+            JOIN (
+                SELECT t.teachingClassid,
+                       t.arrangeInfoText as locations
+                FROM teacher as t
+            ) as locations ON c.id = locations.teachingClassid
+            WHERE c.courseCode IN ({','.join(['%s' for _ in otherCourseCodes])})
+            AND c.calendarId = %s
+            """
+            
+            self.cursor.execute(query, tuple(otherCourseCodes) + (calendarId,))
+            rows = self.cursor.fetchall()
+            
+            for row in rows:
+                course_code = row[0]
+                course_detail = json.loads(row[1])
+                if course_code in result_dict:
+                    result_dict[course_code].append(course_detail)
+        
+        return result_dict
 
 # testObject = {
 #     "calendarId": 119,
