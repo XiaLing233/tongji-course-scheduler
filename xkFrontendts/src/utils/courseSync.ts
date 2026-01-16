@@ -362,9 +362,9 @@ function compareClassDetails(
         const newExclBool = newExcl === true || newExcl === 1;
         
         if (oldExclBool !== newExclBool) {
-            const oldExclText = oldExclBool ? '互斥' : '不互斥';
-            const newExclText = newExclBool ? '互斥' : '不互斥';
-            classDetails.push(`互斥状态: ${oldExclText} → ${newExclText}`);
+            const oldExclText = oldExclBool ? '在专业课表' : '不在专业课表';
+            const newExclText = newExclBool ? '在专业课表' : '不在专业课表';
+            classDetails.push(`专业课表状态: ${oldExclText} → ${newExclText}`);
         }
     }
     

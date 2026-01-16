@@ -522,13 +522,21 @@ class bckndSql:
                        t.arrangeInfoText as locations
                 FROM teacher as t
             ) as locations ON c.id = locations.teachingClassid
-            -- Get target major ID
-            JOIN (
-                SELECT m.id as targetMajorId
+            -- Get the target major IDs that are associated with courses matching the criteria
+            -- This subquery finds major IDs that: 1) match the user's criteria (grade/code)
+            -- 2) are actually linked to courses through majorandcourse table
+            LEFT JOIN (
+                SELECT DISTINCT 
+                    c2.id as courseId,
+                    m.id as targetMajorId
                 FROM major AS m
-                WHERE m.grade <= %s AND m.code = %s
-                LIMIT 1
-            ) AS target_major ON 1=1
+                JOIN majorandcourse AS mac ON m.id = mac.majorId
+                JOIN coursedetail as c2 ON mac.courseid = c2.id
+                WHERE 
+                    m.grade <= %s
+                    AND m.code = %s
+                    AND c2.calendarId = %s
+            ) AS target_major ON c.id = target_major.courseId
             -- Check if course is exclusive to the major
             LEFT JOIN majorandcourse AS mac_exclusive 
                 ON mac_exclusive.courseid = c.id 
@@ -537,7 +545,7 @@ class bckndSql:
             AND c.calendarId = %s
             """
             
-            self.cursor.execute(query, (grade, code) + tuple(majorCourseCodes) + (calendarId,))
+            self.cursor.execute(query, (grade, code, calendarId) + tuple(majorCourseCodes) + (calendarId,))
             rows = self.cursor.fetchall()
             
             for row in rows:
