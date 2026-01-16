@@ -5,6 +5,7 @@ on:
     branches: [ master ]
     paths:
       - "xkFrontendts/**"
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -20,7 +21,7 @@ jobs:
           node-version: 18
 
       - name: Build Frontend
-        working-directory: frontend
+        working-directory: xkFrontendts
         run: |
           npm ci
           npm run build
@@ -33,10 +34,12 @@ jobs:
       - name: Deploy dist to server
         run: |
           rsync -avz --delete \
-            frontend/dist/ \
+            -e "ssh -o StrictHostKeyChecking=no" \
+            xkFrontendts/dist/ \
             ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:${{ secrets.FRONTEND_PATH }}
 
       - name: Reload Nginx
         run: |
-          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
+          ssh -o StrictHostKeyChecking=no \
+          ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
           "sudo systemctl reload nginx"
