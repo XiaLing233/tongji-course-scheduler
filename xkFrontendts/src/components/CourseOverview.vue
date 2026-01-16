@@ -71,10 +71,8 @@
 </template>
 
 <script lang="ts">
-import axios from 'axios';
 import { SearchOutlined } from '@ant-design/icons-vue';
-import { errorNotify } from '@/utils/notify';
-import type { stagedCourse, optionalCourseType, courseInfo } from '@/utils/myInterface';
+import type { stagedCourse, courseInfo } from '@/utils/myInterface';
 import { defineAsyncComponent } from 'vue';
 
 export default {
@@ -158,47 +156,6 @@ export default {
             this.localSelectedRowKeys = localSelectedRowKeys;
             // console.log('localSelectedRowKeys changed: ', this.localSelectedRowKeys);
         },
-        async getOptionalCourses() {
-            this.$store.commit('setSpin', true);
-
-            // 获取选修课程
-            try {
-                const res = await axios({
-                    url: '/api/findOptionalCourseType',
-                    method: 'post',
-                    data: {
-                        calendarId: this.$store.state.majorSelected.calendarId
-                    }
-                });
-                this.$store.commit('setOptionalTypes', res.data.data);
-            }
-            catch (error: unknown) {
-                // console.log("error:", error);
-                const err = error as { response?: { data?: { msg?: string } } };
-                errorNotify(err.response?.data?.msg || '获取选修课类型失败');
-            }
-
-            // 获取选修课程具体信息
-            try {
-                const res = await axios({
-                    url: '/api/findCourseByNatureId',
-                    method: 'post',
-                    data: {
-                        calendarId: this.$store.state.majorSelected.calendarId,
-                        ids: this.$store.state.commonLists.optionalTypes.map((type: optionalCourseType) => type.courseLabelId)
-                    }
-                });
-                this.$store.commit('setOptionalCourses', res.data.data);
-            }
-            catch (error: unknown) {
-                // console.log("error:", error);
-                const err = error as Error;
-                errorNotify(err.message || '获取选修课程失败');
-            }
-            finally {
-                this.$store.commit('setSpin', false);
-            }
-        },
         filteredCourses(courses: courseInfo[]) {
             // 根据已选课程来过滤，德摩根律啊！思考一下为什么是 && 而不是 ||
             courses = courses.filter((course: courseInfo) => {
@@ -217,11 +174,10 @@ export default {
         }
     },
     mounted() {
-        this.getOptionalCourses().then(() => {
-            if (this.$store.state.commonLists.optionalTypes.length > 0) {
-                this.selectedOptionalType = this.$store.state.commonLists.optionalTypes[0].courseLabelId;
-            }
-        });
+        // 设置默认选修课类型
+        if (this.$store.state.commonLists.optionalTypes.length > 0) {
+            this.selectedOptionalType = this.$store.state.commonLists.optionalTypes[0].courseLabelId;
+        }
     },
     components: {
         SearchOutlined,

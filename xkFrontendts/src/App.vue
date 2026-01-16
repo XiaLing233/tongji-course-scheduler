@@ -346,7 +346,7 @@ export default {
 :deep(.fixed-spin .ant-spin-text) {
   color: #409eff !important;
   font-size: 14px !important;
-  margin-top: 18px !important;
+  margin-top: 32px !important;
   padding-top: 0 !important;
 }
 

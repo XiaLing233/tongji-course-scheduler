@@ -113,9 +113,28 @@ export default {
 
             this.$store.commit('setSpin', true);
 
-            // 获取必修课程
             try {
-                const res = await axios({
+                // 并行获取必修课程和选修课程
+                await Promise.all([
+                    this.fetchCompulsoryCourses(),
+                    this.fetchOptionalCourses()
+                ]);
+                
+                // 所有课程加载完成后，才打开弹窗
+                this.$emit('openOverview');
+            }
+            catch (error: unknown) {
+                // console.log("error:", error);
+                const err = error as { response?: { data?: { msg?: string } } };
+                errorNotify(err.response?.data?.msg || '获取课程失败');
+            }
+            finally {
+                this.$store.commit('setSpin', false);
+            }
+        },
+        async fetchCompulsoryCourses() {
+            // 获取必修课程
+            const res = await axios({
                 url: '/api/findCourseByMajor',
                 method: 'post',
                 data: {
@@ -123,18 +142,30 @@ export default {
                     code: this.$store.state.majorSelected.major,
                     calendarId: this.$store.state.majorSelected.calendarId
                 }
-            })
+            });
             this.$store.commit('setCompulsoryCourses', res.data.data);
-            this.$emit('openOverview');
-            }
-            catch (error: unknown) {
-                // console.log("error:", error);
-                const err = error as { response?: { data?: { msg?: string } } };
-                errorNotify(err.response?.data?.msg || '获取必修课失败');
-            }
-            finally {
-                this.$store.commit('setSpin', false);
-            }
+        },
+        async fetchOptionalCourses() {
+            // 获取选修课程类型
+            const typesRes = await axios({
+                url: '/api/findOptionalCourseType',
+                method: 'post',
+                data: {
+                    calendarId: this.$store.state.majorSelected.calendarId
+                }
+            });
+            this.$store.commit('setOptionalTypes', typesRes.data.data);
+
+            // 获取选修课程具体信息
+            const coursesRes = await axios({
+                url: '/api/findCourseByNatureId',
+                method: 'post',
+                data: {
+                    calendarId: this.$store.state.majorSelected.calendarId,
+                    ids: typesRes.data.data.map((type: any) => type.courseLabelId)
+                }
+            });
+            this.$store.commit('setOptionalCourses', coursesRes.data.data);
         },
         getRowClass(record: { courseCode: string }, index: number) {
             // console.log(index);
