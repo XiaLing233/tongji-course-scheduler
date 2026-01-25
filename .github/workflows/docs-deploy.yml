@@ -18,13 +18,13 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
 
       - name: Build Docs
-        working-directory: xkDocs
+        working-directory: .
         run: |
           npm ci
-          npm run build
+          npm run docs:build
 
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.9.0
@@ -35,7 +35,7 @@ jobs:
         run: |
           rsync -avz --delete \
             -e "ssh -o StrictHostKeyChecking=no" \
-            xkDocs/dist/ \
+            xkDocs/.vitepress/dist/ \
             ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:${{ secrets.DOCS_PATH }}
 
       - name: Reload Nginx
