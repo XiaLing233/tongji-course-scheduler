@@ -279,7 +279,7 @@ export default {
             downloadXLS(xlsBlob);
         },
         readTheDocs() {
-            errorNotify("敬请期待");
+            window.open('/docs/', '_blank');
         }
     }
 }

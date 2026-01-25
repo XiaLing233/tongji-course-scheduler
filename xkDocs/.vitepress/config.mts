@@ -11,8 +11,8 @@ export default defineConfig({
     // https://vitepress.dev/reference/default-theme-config
     nav: [
       { text: '首页', link: '/' },
-      { text: '用户指南', link: '/user/' },
-      { text: '开发者文档', link: '/developer/' }
+      { text: '用户指南', link: '/docs/user/' },
+      { text: '开发者文档', link: '/docs/developer/' }
     ],
 
     sidebar: {
@@ -21,11 +21,11 @@ export default defineConfig({
           text: '用户指南',
           collapsed: false,
           items: [
-            { text: '概述', link: '/user/' },
-            { text: '选择基本信息', link: '/user/major' },
-            { text: '选择课程', link: '/user/opt' },
-            { text: '导出与其他工具', link: '/user/export' },
-            { text: '课程信息同步', link: '/user/sync' }
+            { text: '概述', link: '/docs/user/' },
+            { text: '选择基本信息', link: '/docs/user/major' },
+            { text: '选择课程', link: '/docs/user/opt' },
+            { text: '导出与其他工具', link: '/docs/user/export' },
+            { text: '课程信息同步', link: '/docs/user/sync' }
           ]
         }
       ],
@@ -34,9 +34,9 @@ export default defineConfig({
           text: '开发者文档',
           collapsed: false,
           items: [
-            { text: '概述', link: '/developer/' },
-            { text: '如何构建', link: '/developer/how2build' },
-            { text: '如何开发', link: '/developer/how2dev' }
+            { text: '概述', link: '/docs/developer/' },
+            { text: '如何构建', link: '/docs/developer/how2build' },
+            { text: '如何开发', link: '/docs/developer/how2dev' }
           ]
         }
       ]
