@@ -19,21 +19,24 @@ export default defineConfig({
       '/user/': [
         {
           text: '用户指南',
+          collapsed: false,
           items: [
             { text: '概述', link: '/user/' },
             { text: '选择基本信息', link: '/user/major' },
             { text: '选择课程', link: '/user/opt' },
-            { text: '导出与其他工具', link: '/user/export' }
+            { text: '导出与其他工具', link: '/user/export' },
+            { text: '课程信息同步', link: '/user/sync' }
           ]
         }
       ],
       '/developer/': [
         {
           text: '开发者文档',
+          collapsed: false,
           items: [
             { text: '概述', link: '/developer/' },
-            { text: '如何开发', link: '/developer/how2dev' },
-            { text: '如何构建', link: '/developer/how2build' }
+            { text: '如何构建', link: '/developer/how2build' },
+            { text: '如何开发', link: '/developer/how2dev' }
           ]
         }
       ]
@@ -82,10 +85,9 @@ export default defineConfig({
       next: '下一页'
     },
 
-    outline: {
-      label: '页面导航',
-      level: [2, 3]
-    },
+    outline: [2, 3],
+    
+    outlineTitle: '页面导航',
 
     returnToTopLabel: '回到顶部',
     sidebarMenuLabel: '菜单',
