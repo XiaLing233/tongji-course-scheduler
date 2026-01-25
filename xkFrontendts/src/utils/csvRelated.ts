@@ -44,10 +44,17 @@ export function codesToJsonForCSV(codes: string[], rawList: stagedCourse[]): csv
 }
 
 export function downloadCSV(csvData: string) {
+    const now = new Date();
+    const timestamp = now.getFullYear().toString() +
+        (now.getMonth() + 1).toString().padStart(2, '0') +
+        now.getDate().toString().padStart(2, '0') + '_' +
+        now.getHours().toString().padStart(2, '0') +
+        now.getMinutes().toString().padStart(2, '0') +
+        now.getSeconds().toString().padStart(2, '0');
     const blob = new Blob([csvData], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob); // 创建下载链接
     const a = document.createElement('a'); // 创建 a 标签
-    a.download = '同济排课助手-课程表.csv'; // 设置下载文件名
+    a.download = `同济排课助手-课程表-${timestamp}.csv`; // 设置下载文件名
     a.href = URL.createObjectURL(blob); // 设置下载链接
     a.click(); // 模拟点击
     window.URL.revokeObjectURL(url); // 释放内存

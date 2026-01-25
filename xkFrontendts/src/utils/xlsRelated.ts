@@ -39,9 +39,16 @@ export function jsonToXLS(jsonData: xlsCourse[]): Blob {
 
 // 下载 xlsx 文件
 export function downloadXLS(xlsData: Blob) {
+    const now = new Date();
+    const timestamp = now.getFullYear().toString() +
+        (now.getMonth() + 1).toString().padStart(2, '0') +
+        now.getDate().toString().padStart(2, '0') + '_' +
+        now.getHours().toString().padStart(2, '0') +
+        now.getMinutes().toString().padStart(2, '0') +
+        now.getSeconds().toString().padStart(2, '0');
     const url = window.URL.createObjectURL(xlsData); // 创建下载链接
     const a = document.createElement('a'); // 创建 a 标签
-    a.download = '同济排课助手-辅助表.xlsx'; // 设置下载文件名
+    a.download = `同济排课助手-辅助表-${timestamp}.xlsx`; // 设置下载文件名
     a.href = URL.createObjectURL(xlsData); // 设置下载链接
     a.click(); // 模拟点击
     window.URL.revokeObjectURL(url); // 释放内存

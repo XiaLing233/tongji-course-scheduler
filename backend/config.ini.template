@@ -1,0 +1,11 @@
+[Sql]
+host = localhost
+r_user = 
+r_password = 
+database = 
+port = 3306
+charset = utf8mb4
+
+
+[Switch]
+debug = 1
