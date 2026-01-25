@@ -152,22 +152,41 @@ def splitEndline(text):
 
     return text.split("\n")[:-1]
 
-def optCourseQueryListGenerator(day, section):
+def optCourseQueryListGenerator(day, section, calendarId=0):
     '''
-    输入：1
-    输出："1-2"
-    由于学校新作息删除了 12 节，且第 9 节开始排课，这段代码为了向后兼容前 4 年的数据，现在如此编写。未来可以想想更好的分组方式。
-    现在的不足在于，对新学期的数据点击第 10 节和第 11 节，本来应该显示的课程不会显示。
-    现在的迂回方式是，点击第 9 节可以获得完整的选修课数据，因为没有选修课从第 10 节开始。
+    输入：day=1, section=5, calendarId=120
+    输出：["%星期一9-10%"]
+    
+    根据 calendarId 判断学期，生成不同的查询模式：
+    - calendarId < 120: 使用旧的12节课制
+      1-2节, 3-4节, 5-6节, 7-8节, 9节, 10-12节
+    - calendarId >= 120: 使用新的11节课制（2025-2026学年第1学期及以后）
+      1-2节, 3-4节, 5-6节, 7-8节, 9-10节, 11节
     '''
-    if section in [1, 2, 3, 4]:
-        return ["%" + numToDayText(day) + str(2 * section - 1) + "-" + str(2 * section) + "%"]
-    elif section == 5:
-        return [f"%{numToDayText(day)}9-%"]
-    elif section == 6:
-        return [f"%{numToDayText(day)}10-11%", f"%{numToDayText(day)}10-12%"]
+    dayText = numToDayText(day)
+    
+    if calendarId >= 120:
+        # 新学期逻辑：11节课制
+        if section in [1, 2, 3, 4]:
+            return [f"%{dayText}{2 * section - 1}-{2 * section}%"]
+        elif section == 5:
+            # 9-10节
+            return [f"%{dayText}9-1_%"]
+        elif section == 6:
+            # 11节
+            return [f"%{dayText}_-11%"]
+        else:
+            return None
     else:
-        return None
+        # 旧学期逻辑：12节课制
+        if section in [1, 2, 3, 4]:
+            return [f"%{dayText}{2 * section - 1}-{2 * section}%"]
+        elif section == 5:
+            return [f"%{dayText}9-%"]
+        elif section == 6:
+            return [f"%{dayText}10-1_%"]
+        else:
+            return None
 
 
 # debug

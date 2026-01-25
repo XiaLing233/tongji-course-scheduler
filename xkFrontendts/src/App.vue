@@ -270,7 +270,7 @@ export default {
       this.selectedRowKeys = [];
       this.$store.commit("setSpin", false);
     },
-    async findCourseByTime(cell: { day: number; class: number }) {
+    async findCourseByTime(cell: { day: number; class: number; calendarId: number }) {
       this.$store.commit("setSpin", true);
       console.log("cell", cell);
 
@@ -279,9 +279,9 @@ export default {
           url: '/api/findCourseByTime',
           method: 'post',
           data: {
-            calendarId: this.$store.state.majorSelected.calendarId,
+            calendarId: cell.calendarId,
             day: cell.day,
-            section: getRowSection(cell.class)
+            section: getRowSection(cell.class, cell.calendarId)
           }
         });
 

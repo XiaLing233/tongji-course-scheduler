@@ -803,7 +803,7 @@ def findCourseByTime():
 
     payload = request.json
 
-    queryStr = optCourseQueryListGenerator(payload['day'], payload['section'])
+    queryStr = optCourseQueryListGenerator(payload['day'], payload['section'], payload.get('calendarId', 0))
 
     if queryStr == None:
         return jsonify({
