@@ -507,17 +507,26 @@ export function detectCourseChanges(
             const change = changes.find(c => c.courseCode === courseCode);
             
             if (change) {
+                // 获取冲突课程的信息
+                const conflictCourseCode = conflictWithCode.substring(0, conflictWithCode.length - 2);
+                const conflictChange = changes.find(c => c.courseCode === conflictCourseCode);
+                
+                // 检查冲突的课程是否已关停
+                if (conflictChange && conflictChange.changeType === CourseChangeType.Closed) {
+                    // 冲突的课程已关停，不算作冲突，因为该课程会被删除
+                    // 不需要将当前课程标记为冲突
+                    return;
+                }
+                
                 change.changeType = CourseChangeType.ConflictAfterUpdate;
                 
                 // 获取冲突课程的名称
-                const conflictCourseCode = conflictWithCode.substring(0, conflictWithCode.length - 2);
                 const conflictCourse = oldCourses.find(c => c.courseCode === conflictCourseCode);
                 const conflictCourseName = conflictCourse ? conflictCourse.courseName : conflictCourseCode;
                 change.conflictWith = conflictCourseName;
                 
                 // 检查是否与同样变更的课程冲突
                 if (changedCourseArrangements.has(conflictWithCode)) {
-                    const conflictChange = changes.find(c => c.courseCode === conflictCourseCode);
                     if (conflictChange) {
                         change.details = `${change.details}\n 与同样变更的课程 ${conflictChange.courseName} 冲突`;
                     }
