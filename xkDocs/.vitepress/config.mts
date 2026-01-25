@@ -2,7 +2,7 @@ import { defineConfig } from 'vitepress'
 
 // https://vitepress.vuejs.org/config/app-configs
 export default defineConfig({
-  title: "同济排课助手",
+  title: "同济排课助手-文档说明",
   description: "同济大学选课辅助工具文档",
   base: '/docs/',
   lang: 'zh-CN',
