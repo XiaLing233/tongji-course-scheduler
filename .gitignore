@@ -4,3 +4,4 @@ cookies.json
 __pycache__/
 node_modules/
 sqls/
+*测试*
