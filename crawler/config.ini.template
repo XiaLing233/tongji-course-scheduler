@@ -1,0 +1,32 @@
+[Account]
+sno = 
+passwd = 
+
+[Sql]
+host = localhost
+user = 
+password = 
+database = 
+port = 3306
+charset = utf8mb4
+
+# should be different in production
+r_user = 
+r_password = 
+
+[IMAP]
+qq_emailaddr = 
+qq_grantcode = 
+server_domain = imap.qq.com
+server_port = 993
+
+[SMTP]
+smtp_server = 
+smtp_port = 465
+smtp_username = 
+smtp_password = 
+me = 
+
+[Spider]
+latest_term = 121
+depth = 8

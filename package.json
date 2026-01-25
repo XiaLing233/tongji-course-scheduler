@@ -1,6 +1,7 @@
 {
   "devDependencies": {
-    "cz-conventional-changelog": "^3.3.0"
+    "cz-conventional-changelog": "^3.3.0",
+    "vitepress": "^2.0.0-alpha.15"
   },
   "config": {
     "commitizen": {
@@ -9,5 +10,10 @@
   },
   "dependencies": {
     "vuex": "^4.0.2"
+  },
+  "scripts": {
+    "docs:dev": "vitepress dev xkDocs",
+    "docs:build": "vitepress build xkDocs",
+    "docs:preview": "vitepress preview xkDocs"
   }
 }

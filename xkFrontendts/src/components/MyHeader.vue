@@ -17,7 +17,7 @@
                         <a-menu-item key="wakeUp" @click="wakeUpCSV">
                             <div class="flex flex-row space-x-2 items-center">
                                 <p>WakeUp 课程表支持的 csv 格式</p>
-                                <p><a href="https://www.wakeup.fun/" target="_blank">[官网]</a></p>
+                                <p><a href="https://www.wakeup.fun/" target="_blank" @click.stop>[官网]</a></p>
                             </div>
                         </a-menu-item>
                         <a-menu-item key="excel" @click="helpExcel">
