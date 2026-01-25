@@ -7,6 +7,9 @@ hero:
   actions:
     - theme: brand
       text: 开始使用
+      link: https://xk.xialing.icu
+    - theme: alt
+      text: 用户指南
       link: /user/
     - theme: alt
       text: 开发者文档
