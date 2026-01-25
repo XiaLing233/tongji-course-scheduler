@@ -39,9 +39,20 @@ export default {
     name: 'timeTable',
     data() {
         return {
-            timeTable: Array(12).fill(null).map(() => Array(7).fill(undefined).map(() => [])) as courseOnTable[][][],
-            maxSpans: Array.from({ length: 12 }, () => Array(7).fill(1)),
-            occupied: Array.from({ length: 12 }, () => Array(7).fill(false)), // 这个 occupied 表示的并不是一个单元格内有没有课程，而是这个单元格有没有被 startTime 不是这节课的课程占用
+            timeTable: [] as courseOnTable[][][],
+            maxSpans: [] as number[][],
+            occupied: [] as boolean[][], // 这个 occupied 表示的并不是一个单元格内有没有课程，而是这个单元格有没有被 startTime 不是这节课的课程占用
+        }
+    },
+    computed: {
+        timeTableData() {
+            // console.log("tongbu", this.$store.state.timeTableData)
+            return this.$store.state.timeTableData;
+        },
+        maxRows(): number {
+            // calendarId >= 120 为 2025-2026学年第1学期及以后，使用11节课制
+            const calendarId = this.$store.state.majorSelected?.calendarId || 0;
+            return calendarId >= 120 ? 11 : 12;
         }
     },
     methods: {
@@ -51,9 +62,10 @@ export default {
         },
         updateTimeTable() {
             // 初始化数据结构
-            const newTimeTable = Array(12).fill(null).map(() => Array(7).fill(undefined).map(() => [])) as courseOnTable[][][]
-            const newMaxSpans = Array.from({ length: 12 }, () => Array(7).fill(1))
-            const newOccupied = Array.from({ length: 12 }, () => Array(7).fill(false))
+            const maxRows = this.maxRows;
+            const newTimeTable = Array(maxRows).fill(null).map(() => Array(7).fill(undefined).map(() => [])) as courseOnTable[][][]
+            const newMaxSpans = Array.from({ length: maxRows }, () => Array(7).fill(1))
+            const newOccupied = Array.from({ length: maxRows }, () => Array(7).fill(false))
 
             // 步骤1: 按课程长度排序（长课程优先处理）
             const sortedCourses = [...this.timeTableData].sort((a, b) => b.occupyTime.length - a.occupyTime.length)
@@ -61,7 +73,7 @@ export default {
             // 步骤2: 记录每个单元格覆盖的时间范围（用于判断重叠）
             // cellRanges[row][col] = { startTime, endTime, courses }
             const cellRanges: Array<Array<{ startTime: number, endTime: number, courses: courseOnTable[] } | null>> = 
-                Array(12).fill(null).map(() => Array(7).fill(null))
+                Array(maxRows).fill(null).map(() => Array(7).fill(null))
 
             // 步骤3: 填充课程数据 - 短课程合并到长课程的单元格中
             sortedCourses.forEach((course: courseOnTable) => {
@@ -96,7 +108,7 @@ export default {
             })
 
             // 步骤4: 计算最大跨度（基于实际的课程长度）
-            for (let row = 0; row < 12; row++) {
+            for (let row = 0; row < maxRows; row++) {
                 for (let col = 0; col < 7; col++) {
                     const courses = newTimeTable[row][col]
                     if (courses.length > 0) {
@@ -107,12 +119,12 @@ export default {
             }
 
             // 步骤5: 标记被占用的单元格
-            for (let row = 0; row < 12; row++) {
+            for (let row = 0; row < maxRows; row++) {
                 for (let col = 0; col < 7; col++) {
                     const span = newMaxSpans[row][col]
                     if (span > 1) {
                         for (let i = 1; i < span; i++) {
-                            if (row + i < 12) {
+                            if (row + i < maxRows) {
                                 newOccupied[row + i][col] = true
                             }
                         }
@@ -138,14 +150,12 @@ export default {
                 return
             }
 
-            // 传入后，要 +1
-            this.$emit('cellClick', { day: cell.dayIndex + 1, class: cell.rowIndex + 1 });
-        }
-    },
-    computed: {
-        timeTableData() {
-            // console.log("tongbu", this.$store.state.timeTableData)
-            return this.$store.state.timeTableData;
+            // 传入后，要 +1，同时传递 calendarId
+            this.$emit('cellClick', { 
+                day: cell.dayIndex + 1, 
+                class: cell.rowIndex + 1,
+                calendarId: this.$store.state.majorSelected?.calendarId || 0
+            });
         }
     },
     watch: {
