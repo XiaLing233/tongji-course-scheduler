@@ -948,3 +948,11 @@ def getLatestCourseInfo():
         "msg": "查询成功",
         "data": result_dict
     }), 200
+
+
+@app.route('/api/health')
+def health():
+    return jsonify({
+        "code": 200,
+        "msg": "服务健康！",
+    }), 200
