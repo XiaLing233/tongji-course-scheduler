@@ -1,5 +1,5 @@
 [Sql]
-host = localhost
+host = host.docker.internal
 r_user = 
 r_password = 
 database = 

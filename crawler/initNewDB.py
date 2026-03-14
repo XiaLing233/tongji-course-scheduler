@@ -36,6 +36,7 @@ def initNewDatabase(self):
 
     # Grant privileges to user
     cursor.execute(f"GRANT SELECT ON {new_db_name}.* TO '{DB_R_USER}'@'localhost'")
+    cursor.execute(f"GRANT SELECT ON {new_db_name}.* TO '{DB_R_USER}'@'172.19.%'")
 
     # Create tables
     with open('course_template.sql', 'r', encoding='utf-8') as f:
