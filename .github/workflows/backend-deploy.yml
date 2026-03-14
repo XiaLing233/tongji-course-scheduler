@@ -17,7 +17,7 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Pull latest code & restart backend
+      - name: Deploy backend container
         run: |
           ssh -o StrictHostKeyChecking=no \
           ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
@@ -25,5 +25,5 @@ jobs:
             cd ~/xkB/
             git fetch origin
             git reset --hard origin/master
-            sudo systemctl restart xkB.service
+            docker compose up -d --build
           EOF
