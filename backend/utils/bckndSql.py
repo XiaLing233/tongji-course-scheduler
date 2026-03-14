@@ -38,6 +38,7 @@ class bckndSql:
     def __exit__(self, exc_type, exc_value, traceback):
         self.cursor.close()
         self.db.close()
+    
     def getAllCalendar(self, limit=8):
         '''
         Get all calendar data
@@ -603,6 +604,10 @@ class bckndSql:
                     result_dict[course_code].append(course_detail)
         
         return result_dict
+
+    def getHealth(self):
+        self.cursor.execute('SELECT 1')
+        return self.cursor.fetchone()
 
 # testObject = {
 #     "calendarId": 119,

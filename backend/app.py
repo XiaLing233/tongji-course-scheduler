@@ -950,9 +950,19 @@ def getLatestCourseInfo():
     }), 200
 
 
-@app.route('/api/health')
+@app.route('/api/health', methods=['GET'])
 def health():
+    try:
+        with bckndSql.bckndSql() as sql:
+            sql.getHealth()
+    except Exception as e:
+        print(e)
+        return jsonify({
+            "code": 500,
+            "msg": "数据库连接失败！"
+        }), 500
+    
     return jsonify({
         "code": 200,
-        "msg": "服务健康！",
+        "msg": "服务健康！"
     }), 200
