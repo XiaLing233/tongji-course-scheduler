@@ -53,6 +53,7 @@ class EmailVerifier:
         
         # Search unread verification email, criteria is title
         search_criteria = '(UNSEEN SUBJECT "加强认证验证码通知")'.encode('utf-8')  # because Chinese chars are contained, encode is a MUST
+        self.mailbox.select("&UXZO1mWHTvZZOQ-/IAM&kK5O9pAad+U-")  # 本来应该是"IAM邮件通知", 但是腾讯给重新编码了下
         result, data = self.mailbox.search(None, search_criteria)
 
         if data[0]:  # Is not none
@@ -99,3 +100,25 @@ class EmailVerifier:
         if self.mailbox:
             self.mailbox.logout()
             self.mailbox = None
+
+
+# Unit test
+if __name__ == "__main__":
+    import configparser
+
+    # Read config
+    CONFIG = configparser.ConfigParser()
+    CONFIG.read('../config.ini')
+
+    # 加强认证
+    IMAP_SERVER = CONFIG["IMAP"]["server_domain"]
+    IMAP_PORT = CONFIG["IMAP"]["server_port"]
+    IMAP_USERNAME =  CONFIG["IMAP"]["qq_emailaddr"]
+    IMAP_PASSWORD =  CONFIG["IMAP"]["qq_grantcode"]
+
+    with EmailVerifier(IMAP_USERNAME, IMAP_PASSWORD, IMAP_SERVER, IMAP_PORT) as verifier:
+        code = verifier.get_latest_verification_code()
+        if code:
+            print(f"Verification code: {code}")
+        else:
+            print("No verification code found.")
