@@ -15,32 +15,25 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Deploy shared_pages to server
-        uses: appleboy/scp-action@v0.1.7
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
         with:
-          host: ${{ secrets.HOST }}
-          username: ${{ secrets.USERNAME }}
-          key: ${{ secrets.SSH_KEY }}
-          port: ${{ secrets.PORT }}
-          source: "shared_pages/"
-          target: "/tmp/github_actions_shared_pages"
-          strip_components: 0
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Deploy shared_pages to server
+        run: |
+          rsync -avz --delete \
+            -e "ssh -o StrictHostKeyChecking=no" \
+            shared_pages/ \
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/github_actions_shared_pages/shared_pages/
 
       - name: Move files and set permissions
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.HOST }}
-          username: ${{ secrets.USERNAME }}
-          key: ${{ secrets.SSH_KEY }}
-          port: ${{ secrets.PORT }}
-          script: |
-            # Remove old directory if exists
-            sudo rm -rf /var/www/shared_pages
-            # Move new files to target location
-            sudo mv /tmp/github_actions_shared_pages/shared_pages /var/www/shared_pages
-            # Set correct ownership for nginx
-            sudo chown -R www-data:www-data /var/www/shared_pages
-            # Set correct permissions
-            sudo chmod -R 644 /var/www/shared_pages/*
-            sudo chmod 755 /var/www/shared_pages
-            echo "Shared pages deployed successfully"
+        run: |
+          ssh -o StrictHostKeyChecking=no \
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
+            'sudo rm -rf /var/www/shared_pages && \
+             sudo mv /tmp/github_actions_shared_pages/shared_pages /var/www/shared_pages && \
+             sudo chown -R www-data:www-data /var/www/shared_pages && \
+             sudo find /var/www/shared_pages -type d -exec chmod 755 {} \; && \
+             sudo find /var/www/shared_pages -type f -exec chmod 644 {} \; && \
+             echo "Shared pages deployed successfully"'
