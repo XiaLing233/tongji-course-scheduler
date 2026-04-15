@@ -45,7 +45,7 @@ def login():
     for line in response.text.split('\n'):
         if 'crypt.js' in line:
             RSA_URL = "https://iam.tongji.edu.cn/idp/" + line.split('src=\"')[1].split('\"')[0]
-            print(RSA_URL)
+            print(f"正在获取 RSA 公钥: {RSA_URL}")
 
     CHAIN_URL = response.url
 
@@ -79,7 +79,7 @@ def login():
     # 检查是否需要加强认证
     response_xml = ET.fromstring(response.text)  # 虽然是 json，但是本质是 XML 格式
 
-    print(response.text)
+    # print(response.text)  # Removed: contains sensitive auth response data
     # input()
 
     if response_xml.find('loginFailed').text != 'false':
@@ -104,9 +104,7 @@ def login():
 
                 with imap_email.EmailVerifier(IMAP_USERNAME, IMAP_PASSWORD, IMAP_SERVER, IMAP_PORT) as v:
                     code = v.get_latest_verification_code()
-                    if code:
-                        print(code)
-                    else:
+                    if not code:
                         raise Exception("登录失败！未找到验证码")
 
                 login_data = urlencode({
@@ -182,8 +180,8 @@ def login():
     for line in response.text.split('>'): # 混淆过的，没有换行符
         if '/static/js/app.' in line:
             # print(line)
-            AES_URL = "https://1.tongji.edu.cn" + line.split('src=')[1].split('>')[0] # 提取链接 
-            print(AES_URL)
+            AES_URL = "https://1.tongji.edu.cn" + line.split('src=')[1].split('>')[0] # 提取链接
+            print(f"正在获取 AES 公钥: {AES_URL}")
 
 
     # ----- 第八步：https://1.tongji.edu.cn/api/sessionservice/session/login ----- #
@@ -206,7 +204,7 @@ def login():
     if response.status_code == 200:
         print("登录成功！")
         # print("当前链接", response.url) # 输出 URL
-        print(session.cookies) # 输出 cookies
+        # print(session.cookies) # Removed: contains sensitive session data
         # print(session.headers) # 输出 headers
         return session
     else:
@@ -236,7 +234,7 @@ def logout(session):
 
     session.headers.update(headers)
 
-    print(headers)
+    # print(headers)  # Removed: contains sensitive header data
 
     response = session.post("https://1.tongji.edu.cn/api/sessionservice/session/logout", data=logout_data)
 
