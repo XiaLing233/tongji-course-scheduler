@@ -132,22 +132,26 @@
             overflow: hidden;
             height: 100%;
             min-height: 0;
-            display: grid;
-            grid-template-rows: 1fr;
+            display: flex;
+            flex-direction: column;
         }
 
         .work-grid {
             display: grid;
             grid-template-columns: 3fr 1fr;
             gap: 0;
+            height: 100%;
+            min-height: 0;
         }
 
         .console-panel,
         .meta-panel {
             min-height: 0;
-            display: grid;
-            grid-template-rows: auto 1fr;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
             background: transparent;
+            overflow: hidden;
         }
 
         .panel-head {
@@ -174,11 +178,13 @@
             font-family: "Cascadia Mono", "JetBrains Mono", "Consolas", monospace;
             font-size: 12.5px;
             line-height: 1.55;
-            padding: 16px 18px;
+            padding: 16px 0 16px 18px;
             min-height: 0;
+            height: 100%;
             overflow-y: auto;
             white-space: pre-wrap;
             word-wrap: break-word;
+            counter-reset: line-number;
         }
 
         .meta-panel {
@@ -187,18 +193,23 @@
 
         .terminal-line {
             margin: 1px 0;
-            padding-left: 14px;
+            padding-left: 50px;
             position: relative;
+            counter-increment: line-number;
+            min-height: 1.55em;
         }
 
         .terminal-line::before {
-            content: "";
+            content: counter(line-number);
             position: absolute;
             left: 0;
-            top: 0.67em;
-            width: 6px;
-            height: 1px;
-            background: var(--console-line);
+            top: 0;
+            width: 36px;
+            text-align: right;
+            color: var(--console-line);
+            font-size: 11px;
+            line-height: inherit;
+            user-select: none;
         }
 
         .terminal-line.info {
@@ -222,9 +233,13 @@
         }
 
         .terminal::-webkit-scrollbar-thumb {
-            background: #30363d;
+            background: #6e7681;
             border-radius: 999px;
             border: 2px solid #0b1016;
+        }
+
+        .terminal::-webkit-scrollbar-thumb:hover {
+            background: #8b949e;
         }
 
         .meta-content {
@@ -448,7 +463,11 @@
 
             line.textContent = text;
             terminal.appendChild(line);
-            terminal.scrollTop = terminal.scrollHeight;
+            // Only auto-scroll if user is already near the bottom
+            const isNearBottom = terminal.scrollHeight - terminal.scrollTop - terminal.clientHeight < 50;
+            if (isNearBottom) {
+                terminal.scrollTop = terminal.scrollHeight;
+            }
         }
 
         async function fetchLog() {

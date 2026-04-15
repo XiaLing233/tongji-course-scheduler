@@ -51,7 +51,7 @@ trap 'restore_nginx' EXIT
 # Clear old log and start fresh
 > "$LOG_FILE"
 START_TIME=$(date '+%Y-%m-%dT%H:%M:%S')
-echo "[$START_TIME] 开始数据更新任务" >> "$LOG_FILE"
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] 开始数据更新任务" >> "$LOG_FILE"
 
 # Write initial status
 write_status "running" "正在更新数据..." "$START_TIME" ""

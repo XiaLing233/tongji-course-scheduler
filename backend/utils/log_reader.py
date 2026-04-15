@@ -5,7 +5,10 @@ Utility module for reading and sanitizing crawler logs
 import os
 import re
 import json
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
+
+# Define Asia/Shanghai timezone (UTC+8)
+SHANGHAI_TZ = timezone(timedelta(hours=8))
 
 
 def sanitize_log_line(line):
@@ -160,9 +163,17 @@ def read_fetch_log(log_file_path, offset=0, status_file_path=None):
         except ValueError:
             pass
 
-    # Calculate elapsed time
+    # Calculate elapsed time (use Asia/Shanghai timezone)
+    now = datetime.now(SHANGHAI_TZ)
+    if start_time and start_time.tzinfo is None:
+        # If start_time is naive, assume it's Asia/Shanghai
+        start_time = start_time.replace(tzinfo=SHANGHAI_TZ)
+    if end_time and end_time.tzinfo is None:
+        # If end_time is naive, assume it's Asia/Shanghai
+        end_time = end_time.replace(tzinfo=SHANGHAI_TZ)
+
     if is_running and start_time:
-        elapsed_seconds = int((datetime.now() - start_time).total_seconds())
+        elapsed_seconds = int((now - start_time).total_seconds())
     elif end_time and start_time:
         elapsed_seconds = int((end_time - start_time).total_seconds())
     else:
