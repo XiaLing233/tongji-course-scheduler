@@ -978,6 +978,9 @@ def get_fetch_log():
     Get crawler fetch log content and status.
     Returns sanitized log lines and whether crawler is running.
 
+    Query Parameters:
+        offset (int): Number of lines to skip (for streaming/pagination)
+
     Response:
     ```json
     {
@@ -986,13 +989,17 @@ def get_fetch_log():
         "data": {
             "running": true,
             "startTime": "2025-04-15T07:00:00",
-            "logs": ["07:00:01 开始删除旧记录...", "07:00:05 正在爬取学期 119"]
+            "logs": ["07:00:01 开始删除旧记录...", "07:00:05 正在爬取学期 119"],
+            "totalLines": 100,
+            "offset": 0
         }
     }
     ```
     '''
     try:
-        log_data = read_fetch_log(CRAWLER_LOG_FILE)
+        # Get offset from query parameter (default to 0)
+        offset = request.args.get('offset', 0, type=int)
+        log_data = read_fetch_log(CRAWLER_LOG_FILE, offset=offset)
         return jsonify({
             "code": 200,
             "msg": "查询成功",
