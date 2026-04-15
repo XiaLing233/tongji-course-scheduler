@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" href="/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据更新中... - 同济排课助手</title>
+    <style>
+        :root {
+            --page-bg: #f4f6f8;
+            --panel: #ffffff;
+            --panel-soft: #f8fafc;
+            --border: #d0d7de;
+            --text-main: #1f2328;
+            --text-sub: #636c76;
+            --brand: #0969da;
+            --ok: #1a7f37;
+            --error: #cf222e;
+            --console-bg: #0d1117;
+            --console-fg: #c9d1d9;
+            --console-line: #7d8590;
+            --shadow: 0 12px 24px rgba(31, 35, 40, 0.08);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, "Helvetica Neue", Helvetica, "GitLab Sans", "GitHub Sans", "SimHei", "STHeiti", "Microsoft YaHei", sans-serif;
+            background: var(--page-bg);
+            height: 100dvh;
+            color: var(--text-main);
+            overflow: hidden;
+        }
+
+        .app {
+            height: 100dvh;
+            display: grid;
+            grid-template-rows: 64px 1fr;
+        }
+
+        .header {
+            background: #24292f;
+            color: #f0f6fc;
+            border-bottom: 1px solid #30363d;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 18px;
+            gap: 16px;
+        }
+
+        .header-left {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+        }
+
+        .header-left .title {
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: 0.01em;
+            white-space: nowrap;
+        }
+
+        .status-bar {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #c9d1d9;
+        }
+
+        .status-indicator {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: var(--ok);
+            box-shadow: 0 0 0 0 rgba(26, 127, 55, 0.45);
+            animation: pulse 1.8s infinite;
+        }
+
+        .status-text {
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            font-size: 17px;
+        }
+
+        .header-right a {
+            color: #c9d1d9;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            line-height: 1.2;
+            transition: color 120ms ease, border-color 120ms ease;
+        }
+
+        .header-right a:hover {
+            color: #ffffff;
+            border-bottom-color: #ffffff;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(26, 127, 55, 0.45); }
+            70% { box-shadow: 0 0 0 7px rgba(26, 127, 55, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(26, 127, 55, 0); }
+        }
+
+        .body {
+            width: 100%;
+            max-width: 1360px;
+            margin: 0 auto;
+            padding: 18px;
+            height: 100%;
+            min-height: 0;
+        }
+
+        .work-card {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            height: 100%;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .work-grid {
+            display: grid;
+            grid-template-columns: 3fr 1fr;
+            gap: 0;
+            height: 100%;
+            min-height: 0;
+        }
+
+        .console-panel,
+        .meta-panel {
+            min-height: 0;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            background: transparent;
+            overflow: hidden;
+        }
+
+        .panel-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            border-bottom: 1px solid #e8edf2;
+            background: #fbfcfd;
+            min-height: 46px;
+        }
+
+        .panel-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-sub);
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+        }
+
+        .terminal {
+            background: var(--console-bg);
+            color: var(--console-fg);
+            font-family: "Cascadia Mono", "JetBrains Mono", "Consolas", monospace;
+            font-size: 12.5px;
+            line-height: 1.55;
+            padding: 16px 0 16px 18px;
+            min-height: 0;
+            height: 100%;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            counter-reset: line-number;
+        }
+
+        .meta-panel {
+            background: linear-gradient(180deg, #fcfdff 0%, #ffffff 100%);
+        }
+
+        .terminal-line {
+            margin: 1px 0;
+            padding-left: 50px;
+            position: relative;
+            counter-increment: line-number;
+            min-height: 1.55em;
+        }
+
+        .terminal-line::before {
+            content: counter(line-number);
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 36px;
+            text-align: right;
+            color: var(--console-line);
+            font-size: 11px;
+            line-height: inherit;
+            user-select: none;
+        }
+
+        .terminal-line.info {
+            color: var(--console-fg);
+        }
+
+        .terminal-line.success {
+            color: #7ee787;
+        }
+
+        .terminal-line.error {
+            color: #ff7b72;
+        }
+
+        .terminal::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        .terminal::-webkit-scrollbar-track {
+            background: #0b1016;
+        }
+
+        .terminal::-webkit-scrollbar-thumb {
+            background: #6e7681;
+            border-radius: 999px;
+            border: 2px solid #0b1016;
+        }
+
+        .terminal::-webkit-scrollbar-thumb:hover {
+            background: #8b949e;
+        }
+
+        .meta-content {
+            padding: 12px;
+            display: grid;
+            gap: 0;
+            align-content: start;
+            background: transparent;
+        }
+
+        .meta-item {
+            border: 0;
+            border-bottom: 1px solid rgba(208, 215, 222, 0.55);
+            padding: 10px 2px;
+            background: transparent;
+            display: grid;
+            gap: 4px;
+        }
+
+        .meta-item:last-child {
+            border-bottom: 0;
+        }
+
+        .meta-label {
+            color: var(--text-sub);
+            font-size: 12px;
+        }
+
+        .meta-value {
+            color: var(--text-main);
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .footer {
+            padding: 10px 14px;
+            color: var(--text-sub);
+            font-size: 12px;
+            background: var(--panel-soft);
+            border-top: 1px solid var(--border);
+        }
+
+        .refresh-banner {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--brand);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(9, 105, 218, 0.4);
+            z-index: 1000;
+            display: none;
+        }
+
+        .refresh-banner.show {
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .app {
+                grid-template-rows: auto 1fr;
+            }
+
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 10px 12px;
+                min-height: 78px;
+            }
+
+            .header-left .title {
+                font-size: 18px;
+            }
+
+            .header-right {
+                font-size: 15px;
+            }
+
+            .body {
+                padding: 12px;
+            }
+
+            .work-card {
+                min-height: auto;
+            }
+
+            .work-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .console-panel,
+            .meta-panel {
+                min-height: auto;
+            }
+
+            .console-panel {
+                min-height: 62vh;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <header class="header">
+            <div class="header-left">
+                 <div class="title">数据更新中...</div>
+            </div>
+            <div class="header-right">
+                <a href="https://github.com/XiaLing233/tongji-course-scheduler" target="_blank">同济排课助手</a>
+                <a href="https://github.com/XiaLing233/jkd_website" target="_blank">课程检索</a>
+            </div>
+        </header>
+
+        <main class="body">
+            <section class="work-card">
+                <div class="work-grid">
+                    <section class="console-panel">
+                        <div class="panel-head">
+                            <div class="panel-title">Console Output</div>
+                        </div>
+                        <div class="terminal" id="terminal"></div>
+                    </section>
+
+                    <aside class="meta-panel">
+                        <div class="panel-head">
+                            <div class="panel-title">Meta Info</div>
+                        </div>
+                        <div class="meta-content">
+                            <div class="meta-item">
+                                <span class="meta-label">启动时间</span>
+                                <span class="meta-value" id="metaStartTime">-</span>
+                            </div>
+                            <div class="meta-item">
+                                <span class="meta-label">执行时长</span>
+                                <span class="meta-value" id="metaDuration">-</span>
+                            </div>
+                            <div class="meta-item">
+                                <span class="meta-label">当前状态</span>
+                                <span class="meta-value" id="metaStatusText">等待中</span>
+                            </div>
+                            <div class="meta-item">
+                                <span class="meta-label">更新进度</span>
+                                <span class="meta-value" id="metaProgress">-</span>
+                            </div>
+                        </div>
+                    </aside>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div class="refresh-banner" id="refreshBanner">
+        更新完成，页面即将刷新...
+    </div>
+
+    <script>
+        const terminal = document.getElementById('terminal');
+        const statusText = document.getElementById('statusText');
+        const statusIndicator = document.getElementById('statusIndicator');
+        const metaStatusText = document.getElementById('metaStatusText');
+        const metaStartTime = document.getElementById('metaStartTime');
+        const metaDuration = document.getElementById('metaDuration');
+        const metaProgress = document.getElementById('metaProgress');
+        const refreshBanner = document.getElementById('refreshBanner');
+
+        let lineOffset = 0;
+        let startTime = null;
+        let elapsedSeconds = 0;
+        let isComplete = false;
+        let refreshTimer = null;
+
+        function formatDuration(seconds) {
+            const hours = Math.floor(seconds / 3600);
+            const mins = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+            if (hours > 0) {
+                return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            }
+            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function formatDateTime(isoString) {
+            if (!isoString) return '-';
+            const date = new Date(isoString);
+            return date.toLocaleString('zh-CN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        }
+
+        function updateDuration() {
+            if (startTime && !isComplete) {
+                const now = new Date();
+                const start = new Date(startTime);
+                elapsedSeconds = Math.floor((now - start) / 1000);
+            }
+            if (metaDuration) {
+                metaDuration.textContent = formatDuration(elapsedSeconds);
+            }
+        }
+
+        function addLogLine(text) {
+            const line = document.createElement('div');
+            line.className = 'terminal-line';
+
+            if (text.includes('成功') || text.includes('完成') || text.includes('OK')) {
+                line.classList.add('success');
+            } else if (text.includes('错误') || text.includes('失败') || text.includes('Error')) {
+                line.classList.add('error');
+            } else {
+                line.classList.add('info');
+            }
+
+            line.textContent = text;
+            terminal.appendChild(line);
+            // Only auto-scroll if user is already near the bottom
+            const isNearBottom = terminal.scrollHeight - terminal.scrollTop - terminal.clientHeight < 50;
+            if (isNearBottom) {
+                terminal.scrollTop = terminal.scrollHeight;
+            }
+        }
+
+        async function fetchLog() {
+            try {
+                const response = await fetch('/api/getFetchLog?offset=' + lineOffset);
+                const result = await response.json();
+
+                if (result.code === 200) {
+                    const data = result.data;
+
+                    // Update start time from backend
+                    if (data.startTime && !startTime) {
+                        startTime = data.startTime;
+                        if (metaStartTime) metaStartTime.textContent = formatDateTime(startTime);
+                    }
+
+                    // Update elapsed time from backend
+                    if (data.elapsedSeconds !== undefined) {
+                        elapsedSeconds = data.elapsedSeconds;
+                    }
+
+                    // Check completion status
+                    if (data.isComplete && !isComplete) {
+                        isComplete = true;
+                        // Show refresh banner and schedule page reload
+                        if (refreshBanner) refreshBanner.classList.add('show');
+                        refreshTimer = setTimeout(() => {
+                            window.location.reload();
+                        }, 10000); // Refresh after 10 seconds
+                    }
+
+                    // Update status display
+                    if (data.running) {
+                        if (statusText) statusText.textContent = '正在更新...';
+                        if (statusIndicator) {
+                            statusIndicator.style.background = '#28a745';
+                            statusIndicator.style.animation = 'pulse 1.8s infinite';
+                        }
+                        if (metaStatusText) metaStatusText.textContent = '运行中';
+                    } else if (data.isComplete) {
+                        if (statusText) statusText.textContent = '完成';
+                        if (statusIndicator) {
+                            statusIndicator.style.background = '#0969da';
+                            statusIndicator.style.animation = 'none';
+                        }
+                        if (metaStatusText) metaStatusText.textContent = '已完成';
+                    } else {
+                        if (statusText) statusText.textContent = '等待中';
+                        if (statusIndicator) {
+                            statusIndicator.style.background = '#6c757d';
+                            statusIndicator.style.animation = 'none';
+                        }
+                        if (metaStatusText) metaStatusText.textContent = '等待中';
+                    }
+
+                    // Update progress
+                    if (metaProgress) {
+                        metaProgress.textContent = `${data.totalLines} 行`;
+                    }
+
+                    // Add new log lines
+                    const logs = data.logs || [];
+                    if (logs.length > 0) {
+                        logs.forEach(line => addLogLine(line));
+                        lineOffset = data.totalLines;
+                    }
+                } else {
+                    console.error('API error:', result.msg);
+                }
+            } catch (error) {
+                console.error('Fetch error:', error);
+                if (statusText) statusText.textContent = '连接失败';
+                if (statusIndicator) statusIndicator.style.background = '#dc3545';
+                if (metaStatusText) metaStatusText.textContent = '连接失败';
+            }
+        }
+
+        // Update duration display every second
+        setInterval(updateDuration, 1000);
+
+        // Initial load
+        fetchLog();
+
+        // Poll every 3 seconds
+        setInterval(fetchLog, 3000);
+    </script>
+</body>
+</html>
