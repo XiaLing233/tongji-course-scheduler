@@ -20,12 +20,18 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
+      - name: Prepare remote temp directory
+        run: |
+          ssh -o StrictHostKeyChecking=no \
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
+            'mkdir -p /tmp/github_actions_shared_pages/shared_pages'
+
       - name: Deploy shared_pages to server
         run: |
           rsync -avz --delete \
             -e "ssh -o StrictHostKeyChecking=no" \
             shared_pages/ \
-            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/github_actions_shared_pages/shared_pages/
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/github_actions_shared_pages/shared_pages
 
       - name: Move files and set permissions
         run: |
