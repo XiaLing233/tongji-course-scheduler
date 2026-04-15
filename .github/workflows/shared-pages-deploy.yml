@@ -20,26 +20,22 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Prepare remote temp directory
+      - name: Validate required secrets
         run: |
-          ssh -o StrictHostKeyChecking=no \
-            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
-            'mkdir -p /tmp/github_actions_shared_pages/shared_pages'
+          test -n "${{ secrets.SERVER_HOST }}" || (echo "Missing secret: SERVER_HOST" && exit 1)
+          test -n "${{ secrets.SERVER_USER }}" || (echo "Missing secret: SERVER_USER" && exit 1)
+          test -n "${{ secrets.SSH_PRIVATE_KEY }}" || (echo "Missing secret: SSH_PRIVATE_KEY" && exit 1)
+          test -n "${{ secrets.SHARED_PAGES_PATH }}" || (echo "Missing secret: SHARED_PAGES_PATH" && exit 1)
 
       - name: Deploy shared_pages to server
         run: |
           rsync -avz --delete \
             -e "ssh -o StrictHostKeyChecking=no" \
             shared_pages/ \
-            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/github_actions_shared_pages/shared_pages
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:${{ secrets.SHARED_PAGES_PATH }}
 
-      - name: Move files and set permissions
+      - name: Reload Nginx
         run: |
           ssh -o StrictHostKeyChecking=no \
             ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
-            'sudo rm -rf /var/www/shared_pages && \
-             sudo mv /tmp/github_actions_shared_pages/shared_pages /var/www/shared_pages && \
-             sudo chown -R www-data:www-data /var/www/shared_pages && \
-             sudo find /var/www/shared_pages -type d -exec chmod 755 {} \; && \
-             sudo find /var/www/shared_pages -type f -exec chmod 644 {} \; && \
-             echo "Shared pages deployed successfully"'
+            "sudo systemctl reload nginx"
