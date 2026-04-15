@@ -971,6 +971,7 @@ def health():
 from utils.log_reader import read_fetch_log
 
 CRAWLER_LOG_FILE = CONFIG['Crawler']['log_file']
+CRAWLER_STATUS_FILE = CONFIG['Crawler']['status_file']
 
 @app.route('/api/getFetchLog', methods=['GET'])
 def get_fetch_log():
@@ -999,7 +1000,7 @@ def get_fetch_log():
     try:
         # Get offset from query parameter (default to 0)
         offset = request.args.get('offset', 0, type=int)
-        log_data = read_fetch_log(CRAWLER_LOG_FILE, offset=offset)
+        log_data = read_fetch_log(CRAWLER_LOG_FILE, offset=offset, status_file_path=CRAWLER_STATUS_FILE)
         return jsonify({
             "code": 200,
             "msg": "查询成功",

@@ -267,6 +267,26 @@
             border-top: 1px solid var(--border);
         }
 
+        .refresh-banner {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--brand);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(9, 105, 218, 0.4);
+            z-index: 1000;
+            display: none;
+        }
+
+        .refresh-banner.show {
+            display: block;
+        }
+
         @media (max-width: 768px) {
             .app {
                 grid-template-rows: auto 1fr;
@@ -314,7 +334,7 @@
     <div class="app">
         <header class="header">
             <div class="header-left">
-                <div class="title">数据更新中...</div>
+                 <div class="title">数据更新中...</div>
             </div>
             <div class="header-right">
                 <a href="https://github.com/XiaLing233/tongji-course-scheduler" target="_blank">同济排课助手</a>
@@ -339,19 +359,19 @@
                         <div class="meta-content">
                             <div class="meta-item">
                                 <span class="meta-label">启动时间</span>
-                                <span class="meta-value" id="metaStartTime">2026-04-15 20:30:00</span>
+                                <span class="meta-value" id="metaStartTime">-</span>
                             </div>
                             <div class="meta-item">
                                 <span class="meta-label">执行时长</span>
-                                <span class="meta-value" id="metaDuration">00:12:36</span>
-                            </div>
-                            <div class="meta-item">
-                                <span class="meta-label">更新学期范围</span>
-                                <span class="meta-value" id="metaTermRange">2025-2026-2 ~ 2026-2027-1</span>
+                                <span class="meta-value" id="metaDuration">-</span>
                             </div>
                             <div class="meta-item">
                                 <span class="meta-label">当前状态</span>
-                                <span class="meta-value" id="metaStatusText">检查中</span>
+                                <span class="meta-value" id="metaStatusText">等待中</span>
+                            </div>
+                            <div class="meta-item">
+                                <span class="meta-label">更新进度</span>
+                                <span class="meta-value" id="metaProgress">-</span>
                             </div>
                         </div>
                     </aside>
@@ -360,19 +380,64 @@
         </main>
     </div>
 
+    <div class="refresh-banner" id="refreshBanner">
+        更新完成，页面即将刷新...
+    </div>
+
     <script>
         const terminal = document.getElementById('terminal');
         const statusText = document.getElementById('statusText');
         const statusIndicator = document.getElementById('statusIndicator');
         const metaStatusText = document.getElementById('metaStatusText');
-        // Track how many lines we've received (offset for next request)
+        const metaStartTime = document.getElementById('metaStartTime');
+        const metaDuration = document.getElementById('metaDuration');
+        const metaProgress = document.getElementById('metaProgress');
+        const refreshBanner = document.getElementById('refreshBanner');
+
         let lineOffset = 0;
+        let startTime = null;
+        let elapsedSeconds = 0;
+        let isComplete = false;
+        let refreshTimer = null;
+
+        function formatDuration(seconds) {
+            const hours = Math.floor(seconds / 3600);
+            const mins = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+            if (hours > 0) {
+                return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            }
+            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function formatDateTime(isoString) {
+            if (!isoString) return '-';
+            const date = new Date(isoString);
+            return date.toLocaleString('zh-CN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        }
+
+        function updateDuration() {
+            if (startTime && !isComplete) {
+                const now = new Date();
+                const start = new Date(startTime);
+                elapsedSeconds = Math.floor((now - start) / 1000);
+            }
+            if (metaDuration) {
+                metaDuration.textContent = formatDuration(elapsedSeconds);
+            }
+        }
 
         function addLogLine(text) {
             const line = document.createElement('div');
             line.className = 'terminal-line';
 
-            // Color coding based on content
             if (text.includes('成功') || text.includes('完成') || text.includes('OK')) {
                 line.classList.add('success');
             } else if (text.includes('错误') || text.includes('失败') || text.includes('Error')) {
@@ -394,45 +459,75 @@
                 if (result.code === 200) {
                     const data = result.data;
 
-                    // Update status
+                    // Update start time from backend
+                    if (data.startTime && !startTime) {
+                        startTime = data.startTime;
+                        if (metaStartTime) metaStartTime.textContent = formatDateTime(startTime);
+                    }
+
+                    // Update elapsed time from backend
+                    if (data.elapsedSeconds !== undefined) {
+                        elapsedSeconds = data.elapsedSeconds;
+                    }
+
+                    // Check completion status
+                    if (data.isComplete && !isComplete) {
+                        isComplete = true;
+                        // Show refresh banner and schedule page reload
+                        if (refreshBanner) refreshBanner.classList.add('show');
+                        refreshTimer = setTimeout(() => {
+                            window.location.reload();
+                        }, 10000); // Refresh after 10 seconds
+                    }
+
+                    // Update status display
                     if (data.running) {
-                        if (statusText) statusText.textContent = '正在更新数据...';
+                        if (statusText) statusText.textContent = '正在更新...';
                         if (statusIndicator) {
                             statusIndicator.style.background = '#28a745';
                             statusIndicator.style.animation = 'pulse 1.8s infinite';
                         }
                         if (metaStatusText) metaStatusText.textContent = '运行中';
+                    } else if (data.isComplete) {
+                        if (statusText) statusText.textContent = '完成';
+                        if (statusIndicator) {
+                            statusIndicator.style.background = '#0969da';
+                            statusIndicator.style.animation = 'none';
+                        }
+                        if (metaStatusText) metaStatusText.textContent = '已完成';
                     } else {
-                        if (statusText) statusText.textContent = '更新已完成或尚未开始';
+                        if (statusText) statusText.textContent = '等待中';
                         if (statusIndicator) {
                             statusIndicator.style.background = '#6c757d';
                             statusIndicator.style.animation = 'none';
                         }
-                        if (metaStatusText) metaStatusText.textContent = '空闲';
+                        if (metaStatusText) metaStatusText.textContent = '等待中';
+                    }
+
+                    // Update progress
+                    if (metaProgress) {
+                        metaProgress.textContent = `${data.totalLines} 行`;
                     }
 
                     // Add new log lines
                     const logs = data.logs || [];
                     if (logs.length > 0) {
                         logs.forEach(line => addLogLine(line));
-                        // Update offset for next request
                         lineOffset = data.totalLines;
-                    }
-
-                    // If offset was 0 (first load) and we got logs, scroll to bottom
-                    if (lineOffset === logs.length && logs.length > 0) {
-                        terminal.scrollTop = terminal.scrollHeight;
                     }
                 } else {
                     console.error('API error:', result.msg);
                 }
             } catch (error) {
                 console.error('Fetch error:', error);
-                if (statusText) statusText.textContent = '连接失败，正在重试...';
+                if (statusText) statusText.textContent = '连接失败';
                 if (statusIndicator) statusIndicator.style.background = '#dc3545';
                 if (metaStatusText) metaStatusText.textContent = '连接失败';
             }
         }
+
+        // Update duration display every second
+        setInterval(updateDuration, 1000);
 
         // Initial load
         fetchLog();

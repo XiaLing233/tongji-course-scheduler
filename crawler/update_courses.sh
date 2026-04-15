@@ -13,6 +13,24 @@ NGINX_CONF_XK="/etc/nginx/sites-available/xk"
 NGINX_CONF_TONGJI="/etc/nginx/sites-available/flask_vue_app"
 NGINX_BACKUP_DIR="/tmp/nginx_backup_$(date +%s)"
 STATIC_PAGE_DIR="/var/www/shared_pages"
+STATUS_FILE="/tmp/crawler_status.json"
+
+# Function to write status to JSON file
+write_status() {
+    local status="$1"
+    local message="${2:-}"
+    local start_time="${3:-}"
+    local end_time="${4:-}"
+    cat > "$STATUS_FILE" << EOF
+{
+    "status": "$status",
+    "message": "$message",
+    "startTime": "$start_time",
+    "endTime": "$end_time",
+    "logFile": "$LOG_FILE"
+}
+EOF
+}
 
 # Function to restore original nginx configs on exit
 restore_nginx() {
@@ -32,7 +50,11 @@ trap 'restore_nginx' EXIT
 
 # Clear old log and start fresh
 > "$LOG_FILE"
-echo "[$(date '+%Y-%m-%d %H:%M:%S')] 开始数据更新任务" >> "$LOG_FILE"
+START_TIME=$(date '+%Y-%m-%dT%H:%M:%S')
+echo "[$START_TIME] 开始数据更新任务" >> "$LOG_FILE"
+
+# Write initial status
+write_status "running" "正在更新数据..." "$START_TIME" ""
 
 # Create backup directory
 mkdir -p "$NGINX_BACKUP_DIR"
@@ -168,10 +190,13 @@ fi
 CRAWLER_EXIT_CODE=$?
 
 # Check exit status
+END_TIME=$(date '+%Y-%m-%dT%H:%M:%S')
 if [ $CRAWLER_EXIT_CODE -eq 0 ]; then
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] 数据更新完成" >> "$LOG_FILE"
+    write_status "completed" "数据更新完成" "$START_TIME" "$END_TIME"
 else
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] 数据更新失败 (退出码: $CRAWLER_EXIT_CODE)" >> "$LOG_FILE"
+    write_status "failed" "数据更新失败 (退出码: $CRAWLER_EXIT_CODE)" "$START_TIME" "$END_TIME"
 fi
 
 # Wait a moment so users can see the final status
