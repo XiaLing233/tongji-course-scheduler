@@ -119,6 +119,6 @@ if __name__ == "__main__":
     with EmailVerifier(IMAP_USERNAME, IMAP_PASSWORD, IMAP_SERVER, IMAP_PORT) as verifier:
         code = verifier.get_latest_verification_code()
         if code:
-            print(f"Verification code: {code}")
+            print("验证码获取成功")
         else:
-            print("No verification code found.")
+            print("未找到验证码")
