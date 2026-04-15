@@ -4,6 +4,8 @@ services:
     container_name: xk-backend
     ports:
       - "1239:1239"
+    volumes:
+      - /tmp/crawler_fetch.log:/tmp/crawler_fetch.log
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:1239/api/health"]
       interval: 30s
