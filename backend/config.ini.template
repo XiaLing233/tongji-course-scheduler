@@ -9,3 +9,6 @@ charset = utf8mb4
 
 [Switch]
 debug = 1
+
+[Crawler]
+log_file = /tmp/crawler_fetch.log

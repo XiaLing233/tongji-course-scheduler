@@ -961,8 +961,52 @@ def health():
             "code": 500,
             "msg": "数据库连接失败！"
         }), 500
-    
+
     return jsonify({
         "code": 200,
         "msg": "服务健康！"
     }), 200
+
+
+from utils.log_reader import read_fetch_log
+
+CRAWLER_LOG_FILE = CONFIG['Crawler']['log_file']
+
+@app.route('/api/getFetchLog', methods=['GET'])
+def get_fetch_log():
+    '''
+    Get crawler fetch log content and status.
+    Returns sanitized log lines and whether crawler is running.
+
+    Response:
+    ```json
+    {
+        "code": 200,
+        "msg": "查询成功",
+        "data": {
+            "running": true,
+            "startTime": "2025-04-15T07:00:00",
+            "logs": ["07:00:01 开始删除旧记录...", "07:00:05 正在爬取学期 119"]
+        }
+    }
+    ```
+    '''
+    try:
+        log_data = read_fetch_log(CRAWLER_LOG_FILE)
+        return jsonify({
+            "code": 200,
+            "msg": "查询成功",
+            "data": log_data
+        }), 200
+
+    except Exception as e:
+        print(f"Error in get_fetch_log: {e}")
+        return jsonify({
+            "code": 500,
+            "msg": f"获取日志失败: {str(e)}",
+            "data": {
+                "running": False,
+                "startTime": None,
+                "logs": []
+            }
+        }), 500
