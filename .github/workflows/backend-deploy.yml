@@ -5,6 +5,7 @@ on:
     branches: [ master ]
     paths:
       - "backend/**"
+      - "docker-compose.yml"
   workflow_dispatch:
 
 jobs:
