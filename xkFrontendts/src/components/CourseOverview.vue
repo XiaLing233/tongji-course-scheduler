@@ -44,17 +44,17 @@
         </div>
         <div v-else-if="selectedType === 'optional'">
             <a-tabs v-model:activeKey="selectedOptionalType">
-                <a-tab-pane v-for="type in $store.state.commonLists.optionalTypes" :key="type.courseLabelId" :tab="type.courseLabelName">
+                <a-tab-pane v-for="type in mergedOptionalTypes" :key="type.courseLabelName" :tab="type.courseLabelName">
                     <div class="h-150 overflow-auto">
                         <a-table
                         :columns="columns.optional"
-                        :data-source="filteredCourses($store.state.commonLists.optionalCourses.find((item: any) => item.courseLabelId === type.courseLabelId)?.courses)"
+                        :data-source="filteredCourses(type.courses)"
                         :pagination="false"
                         :row-selection="{ 
-                            selectedRowKeys: localSelectedRowKeys.filter((key: string) => key.startsWith('选_' + type.courseLabelId + '_')), 
+                            selectedRowKeys: localSelectedRowKeys.filter((key: string) => key.startsWith('选_' + type.courseLabelName + '_')), 
                             onChange: (keys: string[]) => onOptionalSelectChange(keys) 
                         }"
-                        :row-key="(record: any) => '选_' + type.courseLabelId + '_' + record.courseCode"
+                        :row-key="(record: any) => '选_' + type.courseLabelName + '_' + record.courseCode"
                         :row-class-name="(_record: any, index: number) => index % 2 === 1 ? 'bg-gray-50' : ''"
                     >
                     </a-table>
@@ -157,6 +157,8 @@ export default {
             // console.log('localSelectedRowKeys changed: ', this.localSelectedRowKeys);
         },
         filteredCourses(courses: courseInfo[]) {
+            courses = courses || [];
+
             // 根据已选课程来过滤，德摩根律啊！思考一下为什么是 && 而不是 ||
             courses = courses.filter((course: courseInfo) => {
                 return !this.$store.state.commonLists.stagedCourses.some((stagedCourse: stagedCourse) => stagedCourse.courseCode === course.courseCode);
@@ -174,16 +176,71 @@ export default {
         }
     },
     mounted() {
-        // 设置默认选修课类型
-        if (this.$store.state.commonLists.optionalTypes.length > 0) {
-            this.selectedOptionalType = this.$store.state.commonLists.optionalTypes[0].courseLabelId;
+        if (this.mergedOptionalTypes.length > 0) {
+            this.selectedOptionalType = this.mergedOptionalTypes[0].courseLabelName;
         }
     },
     components: {
         SearchOutlined,
         AdvancedSearch: defineAsyncComponent(() => import('@/components/AdvancedSearch.vue'))
     },
+    watch: {
+        mergedOptionalTypes: {
+            handler(newTypes: any[]) {
+                if (!newTypes || newTypes.length === 0) {
+                    this.selectedOptionalType = '';
+                    return;
+                }
+
+                if (!newTypes.some((item: any) => item.courseLabelName === this.selectedOptionalType)) {
+                    this.selectedOptionalType = newTypes[0].courseLabelName;
+                }
+            },
+            immediate: true,
+            deep: true
+        }
+    },
     computed: {
+        mergedOptionalTypes() {
+            const rawOptionalCourses = this.$store.state.commonLists.optionalCourses || [];
+            const mergedMap: Record<string, Map<string, any>> = {};
+
+            for (const typeItem of rawOptionalCourses) {
+                const labelName = typeItem.courseLabelName;
+                if (!labelName) {
+                    continue;
+                }
+
+                if (!mergedMap[labelName]) {
+                    mergedMap[labelName] = new Map();
+                }
+
+                const courseMap = mergedMap[labelName];
+                const currentCourses = typeItem.courses || [];
+
+                for (const course of currentCourses) {
+                    const uniqueKey = `${course.courseCode}_${course.faculty}_${course.credit}`;
+                    if (!courseMap.has(uniqueKey)) {
+                        courseMap.set(uniqueKey, {
+                            ...course,
+                            campus: Array.isArray(course.campus) ? [...course.campus] : []
+                        });
+                        continue;
+                    }
+
+                    const existingCourse = courseMap.get(uniqueKey);
+                    const nextCampus = Array.isArray(course.campus) ? course.campus : [];
+                    existingCourse.campus = Array.from(new Set([...(existingCourse.campus || []), ...nextCampus]));
+                }
+            }
+
+            return Object.keys(mergedMap)
+                .sort((a, b) => a.localeCompare(b, 'zh-Hans-CN'))
+                .map((courseLabelName) => ({
+                    courseLabelName,
+                    courses: Array.from(mergedMap[courseLabelName].values()).sort((a, b) => String(a.courseCode).localeCompare(String(b.courseCode)))
+                }));
+        },
         localSelectedRowKeys: {
             get() {
                 // console.log("本地的！", this.selectedRowKeys);
