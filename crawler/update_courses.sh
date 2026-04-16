@@ -193,17 +193,23 @@ CRAWLER_EXIT_CODE=$?
 END_TIME=$(date '+%Y-%m-%dT%H:%M:%S')
 if [ $CRAWLER_EXIT_CODE -eq 0 ]; then
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] 数据更新完成" >> "$LOG_FILE"
-    write_status "completed" "数据更新完成" "$START_TIME" "$END_TIME"
 else
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] 数据更新失败 (退出码: $CRAWLER_EXIT_CODE)" >> "$LOG_FILE"
-    write_status "failed" "数据更新失败 (退出码: $CRAWLER_EXIT_CODE)" "$START_TIME" "$END_TIME"
 fi
 
-# Wait a moment so users can see the final status
+# Wait a moment so users can see the final status on the update page
 sleep 5
 
-# Restore original nginx configs (the trap will also call this, but we do it explicitly here)
+# Restore original nginx configs before marking as complete
+# This ensures users see the real site immediately after refresh
 restore_nginx
+
+# Now mark as completed - users will see the normal site on refresh
+if [ $CRAWLER_EXIT_CODE -eq 0 ]; then
+    write_status "completed" "数据更新完成" "$START_TIME" "$END_TIME"
+else
+    write_status "failed" "数据更新失败 (退出码: $CRAWLER_EXIT_CODE)" "$START_TIME" "$END_TIME"
+fi
 
 # Clean up trap since we've already restored
 trap - EXIT
