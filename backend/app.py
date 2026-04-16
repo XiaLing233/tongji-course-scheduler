@@ -11,11 +11,6 @@ CONFIG.read('config.ini', encoding='utf-8')
 
 IS_DEBUG = CONFIG['Switch']['debug'] # 1 / 0
 
-# 全局变量
-
-LABEL_LIST = [ "通识选修课", "人文经典与审美素养", "科学探索与生命关怀", "社会发展与国际视野", "工程能力与创新思维" ] # 选修课标签，写死
-INNER_LABEL_LIST = [811, 829, 830, 831, 832, 855, 940, 947, 955, 956, 957, 958]
-
 @app.route('/api/getAllCalendar', methods=['GET'])
 def getAllCalendar():
     '''
@@ -420,7 +415,7 @@ def findOptionalCourseType():
     payload = request.json
 
     with bckndSql.bckndSql() as sql:
-        result = sql.findOptionalCourseType(LABEL_LIST, payload['calendarId'])
+        result = sql.findOptionalCourseType(payload['calendarId'])
 
     return jsonify({
         "code": 200,
@@ -538,16 +533,14 @@ def findCourseByNatureId():
             "msg": "ids 不能为空",
         }), 400
 
-    # 字段合法性检验
-    for id in payload['ids']:
-        if id not in INNER_LABEL_LIST:
+    with bckndSql.bckndSql() as sql:
+        try:
+            result = sql.findCourseByNatureId(payload['ids'], payload['calendarId'])
+        except ValueError as e:
             return jsonify({
                 "code": 400,
-                "msg": "目前只支持查询选修课标签",
+                "msg": str(e),
             }), 400
-
-    with bckndSql.bckndSql() as sql:
-        result = sql.findCourseByNatureId(payload['ids'], payload['calendarId'])
 
     return jsonify({
         "code": 200,
@@ -813,7 +806,7 @@ def findCourseByTime():
         }), 400
 
     with bckndSql.bckndSql() as sql:
-        result = sql.findCourseByTime(queryStr, INNER_LABEL_LIST, payload['calendarId']) # 返回的是这一天的所有课程，需要再过滤一
+        result = sql.findCourseByTime(queryStr, payload['calendarId']) # 返回的是这一天的所有课程，需要再过滤一
         print(len(result))
 
     return jsonify({

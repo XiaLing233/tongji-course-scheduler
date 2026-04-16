@@ -14,6 +14,14 @@ DB_DATABASE = CONFIG['Sql']['database']
 DB_PORT = int(CONFIG['Sql']['port'])
 DB_CHARSET = CONFIG['Sql']['charset']
 
+OPTIONAL_LABEL_LIST = [
+    "通识选修课",
+    "人文经典与审美素养",
+    "科学探索与生命关怀",
+    "社会发展与国际视野",
+    "工程能力与创新思维"
+]
+
 class bckndSql:
     '''
     A class for handling MySQL database
@@ -194,7 +202,7 @@ class bckndSql:
         return result
 
         
-    def findOptionalCourseType(self, labelList, calendarId):
+    def findOptionalCourseType(self, calendarId):
         '''
         Find optional course type
         '''
@@ -205,11 +213,11 @@ class bckndSql:
             f" n.courseLabelName"
             f" FROM coursenature AS n"
             f" JOIN coursedetail AS c ON n.courseLabelId = c.courseLabelId"
-            f" WHERE n.courseLabelName IN ({','.join(['%s' for _ in labelList])})"
+            f" WHERE n.courseLabelName IN ({','.join(['%s' for _ in OPTIONAL_LABEL_LIST])})"
             f" AND c.calendarId = %s"
             f" ORDER BY n.courseLabelId DESC")
 
-        self.cursor.execute(query, tuple(labelList + [calendarId]))
+        self.cursor.execute(query, tuple(OPTIONAL_LABEL_LIST + [calendarId]))
         
         result = self.cursor.fetchall()
 
@@ -222,6 +230,31 @@ class bckndSql:
         '''
         Find course by natureId
         '''
+
+        if not natureIds:
+            raise ValueError("ids 不能为空")
+
+        # 先按当前学期和标签名范围，动态获取可查询的选修课标签 ID
+        valid_id_query = (
+            f"SELECT DISTINCT"
+            f" n.courseLabelId"
+            f" FROM coursenature AS n"
+            f" JOIN coursedetail AS c ON n.courseLabelId = c.courseLabelId"
+            f" WHERE n.courseLabelName IN ({','.join(['%s' for _ in OPTIONAL_LABEL_LIST])})"
+            f" AND c.calendarId = %s"
+        )
+
+        self.cursor.execute(valid_id_query, tuple(OPTIONAL_LABEL_LIST + [calendarId]))
+        valid_ids = {row[0] for row in self.cursor.fetchall()}
+
+        if not valid_ids:
+            raise ValueError("当前学期未找到可用选修课标签")
+
+        invalid_ids = [nid for nid in natureIds if nid not in valid_ids]
+        if invalid_ids:
+            raise ValueError(
+                f"存在不属于当前学期选修课范围的标签 id: {', '.join(map(str, invalid_ids))}"
+            )
 
         query = f"""
         SELECT
@@ -426,7 +459,7 @@ class bckndSql:
 
         return result
     
-    def findCourseByTime(self, strSet, labelList, calendarId):
+    def findCourseByTime(self, strSet, calendarId):
         '''
         Find course by time
         '''
@@ -447,14 +480,14 @@ class bckndSql:
         JOIN teacher as t ON t.teachingClassid = c.id
         WHERE c.calendarId = %s
         AND ({' OR '.join(['t.arrangeInfoText LIKE %s' for _ in strSet])})
-        AND n.courseLabelId IN ({','.join(['%s' for _ in labelList])})
+        AND n.courseLabelName IN ({','.join(['%s' for _ in OPTIONAL_LABEL_LIST])})
         GROUP BY c.courseCode, c.courseName, f.facultyI18n, n.courseLabelName, c.credit
         ORDER BY courseCode ASC
         """
 
         print(strSet)
 
-        self.cursor.execute(query, (calendarId, *strSet, *labelList))
+        self.cursor.execute(query, (calendarId, *strSet, *OPTIONAL_LABEL_LIST))
 
         result = self.cursor.fetchall()
 
@@ -629,5 +662,5 @@ if __name__ == '__main__':
         # print(db.findCourseBySearch(testObject)) ok
         # print(db.findCourseDetailByCode("124004", 119)) ok
         # print(db.findCourseByNatureId([955, 956, 957, 958, 947], 119))
-        # print(db.findOptionalCourseType([955, 956, 957, 958, 947], 119))
+        # print(db.findOptionalCourseType(119))
         print(len(db.tmp_findCourseByTime("星期五", [955, 956, 957, 958, 947], 119)))
