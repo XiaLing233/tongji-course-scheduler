@@ -175,11 +175,6 @@ export default {
             }
         }
     },
-    mounted() {
-        if (this.mergedOptionalTypes.length > 0) {
-            this.selectedOptionalType = this.mergedOptionalTypes[0].courseLabelName;
-        }
-    },
     components: {
         SearchOutlined,
         AdvancedSearch: defineAsyncComponent(() => import('@/components/AdvancedSearch.vue'))
