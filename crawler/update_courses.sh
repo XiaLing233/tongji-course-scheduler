@@ -197,19 +197,20 @@ else
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] 数据更新失败 (退出码: $CRAWLER_EXIT_CODE)" >> "$LOG_FILE"
 fi
 
-# Wait a moment so users can see the final status on the update page
-sleep 5
-
-# Restore original nginx configs before marking as complete
-# This ensures users see the real site immediately after refresh
-restore_nginx
-
-# Now mark as completed - users will see the normal site on refresh
+# Mark as completed first so frontend gets the status before nginx is restored
 if [ $CRAWLER_EXIT_CODE -eq 0 ]; then
     write_status "completed" "数据更新完成" "$START_TIME" "$END_TIME"
 else
     write_status "failed" "数据更新失败 (退出码: $CRAWLER_EXIT_CODE)" "$START_TIME" "$END_TIME"
 fi
+
+# Wait for frontend to fetch the completed status (poll interval is 3s)
+# 5s ensures at least one poll cycle completes after status is written
+sleep 5
+
+# Restore original nginx configs
+# Frontend stops polling once it sees "completed", so no 404s will occur
+restore_nginx
 
 # Clean up trap since we've already restored
 trap - EXIT

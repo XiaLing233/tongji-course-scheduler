@@ -473,6 +473,21 @@
         async function fetchLog() {
             try {
                 const response = await fetch('/api/getFetchLog?offset=' + lineOffset);
+
+                // If we get 404 after being in update mode, nginx has been restored
+                // This means the update is complete and we should refresh to see the real site
+                if (response.status === 404) {
+                    if (isComplete || (statusText && statusText.textContent === '正在更新...')) {
+                        console.log('API returned 404 after update - nginx restored, refreshing...');
+                        window.location.reload();
+                        return;
+                    }
+                }
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
                 const result = await response.json();
 
                 if (result.code === 200) {
@@ -497,6 +512,10 @@
                         refreshTimer = setTimeout(() => {
                             window.location.reload();
                         }, 10000); // Refresh after 10 seconds
+                        // Stop polling - status won't change anymore and nginx may be restored
+                        // Continuing to poll could cause 404s on tongji.xialing.icu
+                        clearInterval(pollInterval);
+                        return;
                     }
 
                     // Update status display
@@ -539,6 +558,13 @@
                 }
             } catch (error) {
                 console.error('Fetch error:', error);
+                // If we were previously running or complete and now get errors,
+                // likely nginx has been restored - refresh to see the real site
+                if (isComplete || lineOffset > 0) {
+                    console.log('Connection failed after update progress - refreshing...');
+                    window.location.reload();
+                    return;
+                }
                 if (statusText) statusText.textContent = '连接失败';
                 if (statusIndicator) statusIndicator.style.background = '#dc3545';
                 if (metaStatusText) metaStatusText.textContent = '连接失败';
@@ -552,7 +578,7 @@
         fetchLog();
 
         // Poll every 3 seconds
-        setInterval(fetchLog, 3000);
+        const pollInterval = setInterval(fetchLog, 3000);
     </script>
 </body>
 </html>
