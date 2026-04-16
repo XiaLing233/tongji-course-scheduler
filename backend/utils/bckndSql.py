@@ -252,7 +252,9 @@ class bckndSql:
 
         invalid_ids = [nid for nid in natureIds if nid not in valid_ids]
         if invalid_ids:
-            raise ValueError("存在不属于当前学期选修课范围的标签 id")
+            raise ValueError(
+                f"存在不属于当前学期选修课范围的标签 id: {', '.join(map(str, invalid_ids))}"
+            )
 
         query = f"""
         SELECT
