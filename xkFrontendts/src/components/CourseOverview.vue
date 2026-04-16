@@ -196,8 +196,7 @@ export default {
                     this.selectedOptionalType = newTypes[0].courseLabelName;
                 }
             },
-            immediate: true,
-            deep: true
+            immediate: true
         }
     },
     computed: {
