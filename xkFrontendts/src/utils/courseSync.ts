@@ -1,13 +1,14 @@
 // 课程同步相关的工具函数
 
-import type { 
-    stagedCourse, 
-    CourseChangeInfo, 
+import type {
+    stagedCourse,
+    CourseChangeInfo,
     CourseSyncResult,
     occupyCell,
     courseDetaillet,
     arrangementInfolet,
-    teacherlet
+    teacherlet,
+    courseOnTable
 } from "./myInterface";
 import { CourseChangeType } from "./myInterface";
 import { canAddCourse, deleteOccupied, insertOccupied } from "./courseManipulate";
@@ -84,26 +85,31 @@ function areArrangementsSame(arr1: arrangementInfolet[], arr2: arrangementInfole
     const keys1 = arr1.map(makeKey).sort();
     const keys2 = arr2.map(makeKey).sort();
 
-    return JSON.stringify(keys1) === JSON.stringify(keys2);
+    if (JSON.stringify(keys1) !== JSON.stringify(keys2)) {
+        return false;
+    }
+
+    // 键集合相同，进一步比较同一 slot 的教师分配
+    const map1 = new Map<string, string>();
+    const map2 = new Map<string, string>();
+
+    arr1.forEach(a => map1.set(makeKey(a), a.teacherAndCode));
+    arr2.forEach(a => map2.set(makeKey(a), a.teacherAndCode));
+
+    for (const [key, tc1] of map1) {
+        if (map2.get(key) !== tc1) {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 // 生成排课变更的详细描述
 function describeArrangementChanges(oldArr: arrangementInfolet[], newArr: arrangementInfolet[]): string {
-    const changes: string[] = [];
-    
-    if (oldArr.length !== newArr.length) {
-        changes.push(`排课数量: ${oldArr.length} → ${newArr.length}`);
-    }
-    
-    // 简化描述，只说明有变更
-    const oldDesc = oldArr.map(a => `${getDayName(a.occupyDay)}第${a.occupyTime.join(',')}节`).join(', ');
-    const newDesc = newArr.map(a => `${getDayName(a.occupyDay)}第${a.occupyTime.join(',')}节`).join(', ');
-    
-    if (oldDesc !== newDesc) {
-        changes.push(`时间: ${oldDesc} → ${newDesc}`);
-    }
-    
-    return changes.join('; ') || '上课安排已变更';
+    const diffs = diffArrangements(oldArr, newArr);
+    if (diffs.length === 0) return '上课安排已变更';
+    return generateArrangementDiffText(diffs).join('\n');
 }
 
 // 获取星期名称
@@ -112,48 +118,169 @@ function getDayName(day: number): string {
     return days[day] || `周${day}`;
 }
 
-// 生成课程变更的详细描述
+// 排课差异项
+interface ArrangementDiff {
+    type: 'added' | 'removed' | 'modified';
+    oldItem?: arrangementInfolet;
+    newItem?: arrangementInfolet;
+    fieldChanges?: { field: string; old: string; new: string }[];
+}
+
+// 计算两条排课的相似度（分数越高越可能是同一条记录的变更）
+function similarityScore(a: arrangementInfolet, b: arrangementInfolet): number {
+    let score = 0;
+    if (a.occupyDay === b.occupyDay) score += 3;
+    if (JSON.stringify(a.occupyTime) === JSON.stringify(b.occupyTime)) score += 3;
+    if (JSON.stringify(a.occupyWeek) === JSON.stringify(b.occupyWeek)) score += 2;
+    if (a.occupyRoom === b.occupyRoom) score += 2;
+    if (a.teacherAndCode === b.teacherAndCode) score += 1;
+    return score;
+}
+
+// 计算两条排课的字段级差异
+function computeFieldChanges(oldItem: arrangementInfolet, newItem: arrangementInfolet): { field: string; old: string; new: string }[] {
+    const changes: { field: string; old: string; new: string }[] = [];
+    if (oldItem.occupyDay !== newItem.occupyDay) {
+        changes.push({ field: '星期', old: getDayName(oldItem.occupyDay), new: getDayName(newItem.occupyDay) });
+    }
+    if (JSON.stringify(oldItem.occupyTime) !== JSON.stringify(newItem.occupyTime)) {
+        changes.push({ field: '节次', old: oldItem.occupyTime.join('-') + '节', new: newItem.occupyTime.join('-') + '节' });
+    }
+    if (oldItem.occupyRoom !== newItem.occupyRoom) {
+        changes.push({ field: '教室', old: oldItem.occupyRoom, new: newItem.occupyRoom });
+    }
+    if (JSON.stringify(oldItem.occupyWeek) !== JSON.stringify(newItem.occupyWeek)) {
+        changes.push({ field: '周次', old: oldItem.occupyWeek.join(', '), new: newItem.occupyWeek.join(', ') });
+    }
+    if (oldItem.teacherAndCode !== newItem.teacherAndCode) {
+        changes.push({ field: '教师', old: oldItem.teacherAndCode, new: newItem.teacherAndCode });
+    }
+    return changes;
+}
+
+// 计算两组排课的结构化差异
+// 策略：先过滤完全相同的，再对剩余记录做贪心相似度匹配
+function diffArrangements(oldArr: arrangementInfolet[], newArr: arrangementInfolet[]): ArrangementDiff[] {
+    // 1. 过滤完全相同的记录
+    const usedNewExact = new Set<number>();
+    const oldRemaining: arrangementInfolet[] = [];
+
+    for (const oldItem of oldArr) {
+        const exactIndex = newArr.findIndex((newItem, i) =>
+            !usedNewExact.has(i) &&
+            oldItem.occupyDay === newItem.occupyDay &&
+            JSON.stringify(oldItem.occupyTime) === JSON.stringify(newItem.occupyTime) &&
+            JSON.stringify(oldItem.occupyWeek) === JSON.stringify(newItem.occupyWeek) &&
+            oldItem.occupyRoom === newItem.occupyRoom &&
+            oldItem.teacherAndCode === newItem.teacherAndCode
+        );
+        if (exactIndex !== -1) {
+            usedNewExact.add(exactIndex);
+        } else {
+            oldRemaining.push(oldItem);
+        }
+    }
+
+    const newRemaining = newArr.filter((_, i) => !usedNewExact.has(i));
+    const diffs: ArrangementDiff[] = [];
+    const usedNew = new Set<number>();
+
+    // 2. 贪心匹配：为每条 old 找最相似的 new
+    for (const oldItem of oldRemaining) {
+        let bestIndex = -1;
+        let bestScore = -1;
+
+        for (let i = 0; i < newRemaining.length; i++) {
+            if (usedNew.has(i)) continue;
+            const score = similarityScore(oldItem, newRemaining[i]);
+            if (score > bestScore) {
+                bestScore = score;
+                bestIndex = i;
+            }
+        }
+
+        // 只要有任何相似点（score > 0），就视为 modify
+        if (bestIndex !== -1 && bestScore > 0) {
+            usedNew.add(bestIndex);
+            const fieldChanges = computeFieldChanges(oldItem, newRemaining[bestIndex]);
+            diffs.push({ type: 'modified', oldItem, newItem: newRemaining[bestIndex], fieldChanges });
+        } else {
+            diffs.push({ type: 'removed', oldItem });
+        }
+    }
+
+    // 3. 剩余未匹配的 new 为 added
+    for (let i = 0; i < newRemaining.length; i++) {
+        if (!usedNew.has(i)) {
+            diffs.push({ type: 'added', newItem: newRemaining[i] });
+        }
+    }
+
+    return diffs;
+}
+
+function formatArrangement(arr: arrangementInfolet): string {
+    return `${getDayName(arr.occupyDay)} ${arr.occupyTime.join('-')}节 [${arr.occupyWeek.join(', ')}] ${arr.occupyRoom}（${arr.teacherAndCode}）`;
+}
+
+// 生成人类可读的排课差异文本
+function generateArrangementDiffText(diffs: ArrangementDiff[]): string[] {
+    const lines: string[] = [];
+
+    for (const diff of diffs) {
+        if (diff.type === 'added' && diff.newItem) {
+            lines.push(`+ 新增：${formatArrangement(diff.newItem)}`);
+        } else if (diff.type === 'removed' && diff.oldItem) {
+            lines.push(`- 删除：${formatArrangement(diff.oldItem)}`);
+        } else if (diff.type === 'modified' && diff.oldItem && diff.newItem && diff.fieldChanges) {
+            lines.push(`~ 修改：${getDayName(diff.oldItem.occupyDay)} ${diff.oldItem.occupyTime.join('-')}节 ${diff.oldItem.occupyRoom}`);
+            for (const fc of diff.fieldChanges) {
+                lines.push(`    ${fc.field}：${fc.old} → ${fc.new}`);
+            }
+        }
+    }
+
+    return lines;
+}
+
+// 生成课程变更的详细描述（未选课场景）
 function generateChangeDetails(oldCourse: stagedCourse, newCourse: stagedCourse): string {
     const changes: string[] = [];
 
     if (oldCourse.courseName !== newCourse.courseName) {
-        changes.push(`课程名称: ${oldCourse.courseName} → ${newCourse.courseName}`);
+        changes.push(`课程名称：${oldCourse.courseName} → ${newCourse.courseName}`);
     }
 
     if (oldCourse.credit !== newCourse.credit) {
-        changes.push(`学分: ${oldCourse.credit} → ${newCourse.credit}`);
+        changes.push(`学分：${oldCourse.credit} → ${newCourse.credit}`);
     }
 
     if (oldCourse.courseType !== newCourse.courseType) {
-        changes.push(`课程类型: ${oldCourse.courseType} → ${newCourse.courseType}`);
+        changes.push(`课程类型：${oldCourse.courseType} → ${newCourse.courseType}`);
     }
 
     // 检查教师变更
     const oldTeachers = oldCourse.teacher.map(t => t.teacherName).sort().join(', ');
     const newTeachers = newCourse.teacher.map(t => t.teacherName).sort().join(', ');
     if (oldTeachers !== newTeachers) {
-        changes.push(`授课教师: ${oldTeachers} → ${newTeachers}`);
+        changes.push(`授课教师：${oldTeachers} → ${newTeachers}`);
     }
 
-    // 检查排课信息变更（简化检查）
+    // 检查排课信息变更（逐班级结构化 diff）
     if (oldCourse.courseDetail.length !== newCourse.courseDetail.length) {
         changes.push('可选班级数量已变更');
     } else {
-        // 简单检查是否有任何班级的排课信息变化
-        let hasArrangementChange = false;
         for (const oldDetail of oldCourse.courseDetail) {
             const newDetail = newCourse.courseDetail.find(d => d.code === oldDetail.code);
             if (newDetail && !areArrangementsSame(oldDetail.arrangementInfo, newDetail.arrangementInfo)) {
-                hasArrangementChange = true;
-                break;
+                changes.push(`班级 ${oldDetail.code} 排课变更：`);
+                const diffs = diffArrangements(oldDetail.arrangementInfo, newDetail.arrangementInfo);
+                changes.push(...generateArrangementDiffText(diffs));
             }
-        }
-        if (hasArrangementChange) {
-            changes.push('上课时间或地点已变更');
         }
     }
 
-    return changes.join('; ');
+    return changes.join('\n');
 }
 
 // 专业信息接口
@@ -326,10 +453,10 @@ function compareClassDetails(
         classDetails.push(`校区: ${oldClassDetail.campus} → ${newClassDetail.campus}`);
     }
     
-    // 比较排课信息
-    if (!areArrangementsSame(oldClassDetail.arrangementInfo, newClassDetail.arrangementInfo)) {
-        const changeDesc = describeArrangementChanges(oldClassDetail.arrangementInfo, newClassDetail.arrangementInfo);
-        classDetails.push(changeDesc);
+    // 比较排课信息（结构化 diff，平铺到 details 中）
+    const diffs = diffArrangements(oldClassDetail.arrangementInfo, newClassDetail.arrangementInfo);
+    if (diffs.length > 0) {
+        classDetails.push(...generateArrangementDiffText(diffs));
         hasArrangementChange = true;
         newArrangementInfo = newClassDetail.arrangementInfo;
     }
@@ -444,14 +571,15 @@ export function detectCourseChanges(
                 } else if (oldClassDetail) {
                     // 比较班级详细信息
                     const comparison = compareClassDetails(oldCourse, oldClassDetail, newClassDetail);
-                    
+
                     if (comparison.details.length > 0) {
-                        // 有变更
+                        // 有变更，带上具体班级代码
+                        const details = [`班级 ${selectedClass}：`, ...comparison.details].join('\n');
                         changes.push({
                             courseCode: oldCourse.courseCode,
                             courseName: oldCourse.courseName,
                             changeType: CourseChangeType.InfoChanged,
-                            details: comparison.details.join('; ')
+                            details
                         });
                         
                         // 如果有时间变更，记录下来
@@ -623,7 +751,11 @@ export function generateSyncMessage(changes: CourseChangeInfo[]): string {
         messages.push(`\n【已关课】(${closedCourses.length}门)`);
         closedCourses.forEach(c => {
             messages.push(`• ${c.courseName}`);
-            if (c.details) messages.push(`  ${c.details}`);
+            if (c.details) {
+                c.details.split('\n').forEach(line => {
+                    if (line.trim()) messages.push(`  ${line.trim()}`);
+                });
+            }
         });
     }
 
@@ -632,9 +764,7 @@ export function generateSyncMessage(changes: CourseChangeInfo[]): string {
         conflictCourses.forEach(c => {
             messages.push(`• ${c.courseName}`);
             if (c.details) {
-                // details 可能包含多行，逐行展示
-                const detailLines = c.details.split('\n');
-                detailLines.forEach(line => {
+                c.details.split('\n').forEach(line => {
                     if (line.trim()) messages.push(`  ${line.trim()}`);
                 });
             }
@@ -648,7 +778,11 @@ export function generateSyncMessage(changes: CourseChangeInfo[]): string {
         messages.push(`\n【信息已变更】(${changedCourses.length}门)`);
         changedCourses.forEach(c => {
             messages.push(`• ${c.courseName}`);
-            if (c.details) messages.push(`  ${c.details}`);
+            if (c.details) {
+                c.details.split('\n').forEach(line => {
+                    if (line.trim()) messages.push(`  ${line.trim()}`);
+                });
+            }
         });
     }
 
@@ -659,4 +793,39 @@ export function generateSyncMessage(changes: CourseChangeInfo[]): string {
     messages.push('• 信息变更的课程将自动更新');
 
     return messages.join('\n');
+}
+
+// 根据已选课程重建 occupied 和 timeTableData
+export function rebuildOccupiedAndTimeTable(
+    selectedCodes: string[],
+    stagedCourses: stagedCourse[]
+): { occupied: occupyCell[][][], timeTableData: courseOnTable[] } {
+    const occupied: occupyCell[][][] = Array(12).fill(null).map(() =>
+        Array(7).fill(undefined).map(() => [])
+    );
+    const timeTableData: courseOnTable[] = [];
+
+    selectedCodes.forEach(selectedCode => {
+        const courseCode = selectedCode.substring(0, selectedCode.length - 2);
+        const course = stagedCourses.find(c => c.courseCode === courseCode);
+
+        if (course) {
+            const detail = course.courseDetail.find(d => d.code === selectedCode);
+            if (detail) {
+                insertOccupied(occupied, detail.arrangementInfo, detail.code, course.courseNameReserved);
+
+                detail.arrangementInfo.forEach(arrangement => {
+                    timeTableData.push({
+                        showText: `${arrangement.teacherAndCode} ${course.courseNameReserved}(${detail.code}) ${arrangement.arrangementText.split(' ').slice(1).join(' ')}`,
+                        courseName: course.courseNameReserved,
+                        code: detail.code,
+                        occupyTime: arrangement.occupyTime,
+                        occupyDay: arrangement.occupyDay
+                    });
+                });
+            }
+        }
+    });
+
+    return { occupied, timeTableData };
 }

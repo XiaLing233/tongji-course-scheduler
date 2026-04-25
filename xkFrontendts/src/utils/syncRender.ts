@@ -4,6 +4,30 @@ import type { CourseChangeInfo } from './myInterface';
 import { CourseChangeType } from './myInterface';
 
 /**
+ * 渲染 diff 详情行，支持 git 风格着色
+ */
+function renderDetailLines(details: string) {
+    return details.split('\n').map(line => {
+        const trimmed = line.trim();
+        if (!trimmed) return null;
+        const baseStyle = { fontFamily: 'monospace', whiteSpace: 'pre-wrap' as const, wordBreak: 'break-word' as const };
+        if (trimmed.startsWith('+')) {
+            return h('div', { style: { ...baseStyle, color: '#52c41a' } }, trimmed);
+        }
+        if (trimmed.startsWith('-')) {
+            return h('div', { style: { ...baseStyle, color: '#ff4d4f' } }, trimmed);
+        }
+        if (trimmed.startsWith('~')) {
+            return h('div', { style: { ...baseStyle, color: '#faad14' } }, trimmed);
+        }
+        if (trimmed.startsWith('    ')) {
+            return h('div', { style: { ...baseStyle, color: '#8c8c8c', paddingLeft: '16px' } }, trimmed);
+        }
+        return h('div', { style: { ...baseStyle, color: '#666' } }, trimmed);
+    }).filter(Boolean);
+}
+
+/**
  * 渲染课程同步变更列表
  * @param changes 课程变更信息列表
  * @returns VNode数组
@@ -23,25 +47,24 @@ export function renderSyncChanges(changes: CourseChangeInfo[]) {
                     h('span', { style: { color: '#ff4d4f' } }, '■ '),
                     `已关课 (${closedCourses.length}门)`
                 ]),
-                ...closedCourses.map(c => 
-                    h('div', { 
-                        style: { 
+                ...closedCourses.map(c =>
+                    h('div', {
+                        style: {
                             padding: '8px 12px',
                             marginBottom: '6px',
                             marginLeft: '12px',
                             border: '1px solid #f0f0f0',
                             borderRadius: '4px',
                             backgroundColor: '#fafafa'
-                        } 
+                        }
                     }, [
                         h('div', { style: { fontSize: '13px', fontWeight: 500 } }, c.courseName),
-                        c.details ? h('div', { 
-                            style: { 
-                                fontSize: '12px', 
-                                color: '#666',
+                        c.details ? h('div', {
+                            style: {
+                                fontSize: '12px',
                                 marginTop: '4px'
-                            } 
-                        }, c.details) : null
+                            }
+                        }, renderDetailLines(c.details)) : null
                     ])
                 )
             ])
@@ -56,33 +79,31 @@ export function renderSyncChanges(changes: CourseChangeInfo[]) {
                     h('span', { style: { color: '#fa8c16' } }, '■ '),
                     `更新后发生冲突 (${conflictCourses.length}门)`
                 ]),
-                ...conflictCourses.map(c => 
-                    h('div', { 
-                        style: { 
+                ...conflictCourses.map(c =>
+                    h('div', {
+                        style: {
                             padding: '8px 12px',
                             marginBottom: '6px',
                             marginLeft: '12px',
                             border: '1px solid #f0f0f0',
                             borderRadius: '4px',
                             backgroundColor: '#fafafa'
-                        } 
+                        }
                     }, [
                         h('div', { style: { fontSize: '13px', fontWeight: 500 } }, c.courseName),
-                        c.details ? h('div', { 
-                            style: { 
-                                fontSize: '12px', 
-                                color: '#666',
-                                marginTop: '4px',
-                                whiteSpace: 'pre-line'
-                            } 
-                        }, c.details) : null,
-                        c.conflictWith && !c.details?.includes('与同样变更的课程') ? 
-                            h('div', { 
-                                style: { 
-                                    fontSize: '12px', 
+                        c.details ? h('div', {
+                            style: {
+                                fontSize: '12px',
+                                marginTop: '4px'
+                            }
+                        }, renderDetailLines(c.details)) : null,
+                        c.conflictWith && !c.details?.includes('与同样变更的课程') ?
+                            h('div', {
+                                style: {
+                                    fontSize: '12px',
                                     color: '#fa8c16',
                                     marginTop: '4px'
-                                } 
+                                }
                             }, `→ 与 ${c.conflictWith} 冲突`) : null
                     ])
                 )
@@ -98,25 +119,24 @@ export function renderSyncChanges(changes: CourseChangeInfo[]) {
                     h('span', { style: { color: '#1890ff' } }, '■ '),
                     `信息已变更 (${changedCourses.length}门)`
                 ]),
-                ...changedCourses.map(c => 
-                    h('div', { 
-                        style: { 
+                ...changedCourses.map(c =>
+                    h('div', {
+                        style: {
                             padding: '8px 12px',
                             marginBottom: '6px',
                             marginLeft: '12px',
                             border: '1px solid #f0f0f0',
                             borderRadius: '4px',
                             backgroundColor: '#fafafa'
-                        } 
+                        }
                     }, [
                         h('div', { style: { fontSize: '13px', fontWeight: 500 } }, c.courseName),
-                        c.details ? h('div', { 
-                            style: { 
-                                fontSize: '12px', 
-                                color: '#666',
+                        c.details ? h('div', {
+                            style: {
+                                fontSize: '12px',
                                 marginTop: '4px'
-                            } 
-                        }, c.details) : null
+                            }
+                        }, renderDetailLines(c.details)) : null
                     ])
                 )
             ])
@@ -125,14 +145,14 @@ export function renderSyncChanges(changes: CourseChangeInfo[]) {
 
     // 底部提示
     sections.push(
-        h('div', { 
-            style: { 
+        h('div', {
+            style: {
                 marginTop: '20px',
                 paddingTop: '16px',
                 borderTop: '1px solid #e8e8e8',
                 fontSize: '12px',
                 color: '#666'
-            } 
+            }
         }, [
             h('div', { style: { marginBottom: '4px', fontWeight: 500, color: '#333' } }, '同步说明：'),
             h('div', '• 已关课的课程将被删除'),
