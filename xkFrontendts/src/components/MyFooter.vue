@@ -17,10 +17,11 @@ import axios from 'axios';
 import { Modal } from 'ant-design-vue';
 import { ExclamationCircleOutlined } from '@ant-design/icons-vue';
 import { createVNode } from 'vue';
-import { 
-    fetchLatestCourseInfo, 
-    detectCourseChanges, 
-    applyCourseSync
+import {
+    fetchLatestCourseInfo,
+    detectCourseChanges,
+    applyCourseSync,
+    rebuildOccupiedAndTimeTable
 } from '@/utils/courseSync';
 import { renderSyncChanges } from '@/utils/syncRender';
 import { insertOccupied } from '@/utils/courseManipulate';
@@ -36,6 +37,20 @@ export default {
         this.getUpdateTime();
     },
     methods: {
+        waitForSpinEnd(): Promise<void> {
+            return new Promise((resolve) => {
+                if (!this.$store.state.isSpin) {
+                    resolve();
+                    return;
+                }
+                const unwatch = this.$watch(() => this.$store.state.isSpin, (newVal) => {
+                    if (!newVal) {
+                        unwatch();
+                        resolve();
+                    }
+                });
+            });
+        },
         async getUpdateTime() {
             try {
                 const res = await axios({
@@ -57,7 +72,7 @@ export default {
                 }
                 else {
                     // 数据过期，调用智能同步逻辑
-                    this.$store.commit("setDataOutdated", true);
+                    // 不在这里设置 isDataOutdated=true，由 handleSmartSync 根据用户选择决定
                     await this.handleSmartSync();
                 }
             }
@@ -115,89 +130,101 @@ export default {
                     return;
                 }
 
-                // 显示确认对话框 - 使用结构化内容
-                Modal.confirm({
-                    title: '检测到课程变更',
-                    icon: createVNode(ExclamationCircleOutlined),
-                    content: createVNode('div', { style: { maxHeight: '500px', overflow: 'auto' } }, 
-                        renderSyncChanges(syncResult.changes)
-                    ),
-                    width: 700,
-                    okText: '立即同步',
-                    okType: 'primary',
-                    cancelText: '稍后处理',
-                    onOk: async () => {
-                        try {
-                            // 应用课程同步
-                            const { newStagedCourses, newSelectedCodes } = applyCourseSync(
-                                syncResult.changes,
-                                stagedCourses,
-                                selectedCourses,
-                                latestCourses
-                            );
+                // 拆分为已选变更和仅待选变更
+                const selectedChanges = syncResult.changes.filter(c =>
+                    selectedCourses.some(code => code.startsWith(c.courseCode))
+                );
+                const stagedOnlyChanges = syncResult.changes.filter(c =>
+                    !selectedCourses.some(code => code.startsWith(c.courseCode))
+                );
 
-                            // 重新构建occupied和timeTableData
-                            const newOccupied: occupyCell[][][] = Array(12).fill(null).map(() => 
-                                Array(7).fill(undefined).map(() => [])
-                            );
-                            const newTimeTableData: courseOnTable[] = [];
+                // 1. 静默应用仅待选变更
+                if (stagedOnlyChanges.length > 0) {
+                    const { newStagedCourses, newSelectedCodes } = applyCourseSync(
+                        stagedOnlyChanges,
+                        stagedCourses,
+                        selectedCourses,
+                        latestCourses
+                    );
 
-                            // 重新添加已选课程到课程表
-                            newSelectedCodes.forEach(selectedCode => {
-                                const courseCode = selectedCode.substring(0, selectedCode.length - 2);
-                                const course = newStagedCourses.find(c => c.courseCode === courseCode);
-                                
-                                if (course) {
-                                    const detail = course.courseDetail.find(d => d.code === selectedCode);
-                                    if (detail) {
-                                        insertOccupied(newOccupied, detail.arrangementInfo, detail.code, course.courseNameReserved);
-                                        
-                                        detail.arrangementInfo.forEach(arrangement => {
-                                            newTimeTableData.push({
-                                                showText: `${arrangement.teacherAndCode} ${course.courseNameReserved}(${detail.code}) ${arrangement.arrangementText.split(' ').slice(1).join(' ')}`,
-                                                courseName: course.courseNameReserved,
-                                                code: detail.code,
-                                                occupyTime: arrangement.occupyTime,
-                                                occupyDay: arrangement.occupyDay
-                                            });
-                                        });
-                                    }
-                                }
-                            });
+                    const { occupied: newOccupied, timeTableData: newTimeTableData } = rebuildOccupiedAndTimeTable(
+                        newSelectedCodes,
+                        newStagedCourses
+                    );
 
-                            // 提交到store
-                            this.$store.commit("smartSyncCourses", {
-                                newStagedCourses,
-                                newSelectedCodes,
-                                newOccupied,
-                                newTimeTableData
-                            });
+                    this.$store.commit("smartSyncCourses", {
+                        newStagedCourses,
+                        newSelectedCodes,
+                        newOccupied,
+                        newTimeTableData
+                    });
 
-                            // 生成成功消息
-                            // const closedCount = syncResult.changes.filter(c => c.changeType === 'closed').length;
-                            // const conflictCount = syncResult.changes.filter(c => c.changeType === 'conflictAfterUpdate').length;
-                            // const changedCount = syncResult.changes.filter(c => c.changeType === 'infoChanged').length;
+                    await this.waitForSpinEnd();
+                    successNotify(`已自动更新 ${stagedOnlyChanges.length} 门备选课程信息`);
+                }
 
-                            const successMsg = '同步成功！';
-                            // if (closedCount > 0) successMsg += ` ${closedCount}门课程已删除，`;
-                            // if (conflictCount > 0) successMsg += ` ${conflictCount}门课程已移至备选，`;
-                            // if (changedCount > 0) successMsg += ` ${changedCount}门课程已更新`;
-                            
-                            successNotify(successMsg);
-                        } catch (error) {
-                            console.error('同步失败:', error);
-                            errorNotify('同步失败，请稍后重试');
+                // 2. 如果有已选变更，弹窗确认
+                if (selectedChanges.length > 0) {
+                    await this.waitForSpinEnd();
+                    Modal.confirm({
+                        title: '检测到课程变更',
+                        icon: createVNode(ExclamationCircleOutlined),
+                        content: createVNode('div', { style: { maxHeight: '500px', overflow: 'auto' } },
+                            renderSyncChanges(selectedChanges)
+                        ),
+                        width: 700,
+                        okText: '立即同步',
+                        okType: 'primary',
+                        cancelText: '稍后处理',
+                        onOk: async () => {
+                            try {
+                                // 使用最新的 store 状态（可能已被 stagedOnly 更新过）
+                                const currentStaged = this.$store.state.commonLists.stagedCourses;
+                                const currentSelected = this.$store.state.commonLists.selectedCourses;
+
+                                const { newStagedCourses, newSelectedCodes } = applyCourseSync(
+                                    selectedChanges,
+                                    currentStaged,
+                                    currentSelected,
+                                    latestCourses
+                                );
+
+                                const { occupied: newOccupied, timeTableData: newTimeTableData } = rebuildOccupiedAndTimeTable(
+                                    newSelectedCodes,
+                                    newStagedCourses
+                                );
+
+                                this.$store.commit("smartSyncCourses", {
+                                    newStagedCourses,
+                                    newSelectedCodes,
+                                    newOccupied,
+                                    newTimeTableData
+                                });
+
+                                await this.waitForSpinEnd();
+                                successNotify('同步成功！');
+                            } catch (error) {
+                                console.error('同步失败:', error);
+                                await this.waitForSpinEnd();
+                                errorNotify('同步失败，请稍后重试');
+                            }
+                        },
+                        onCancel: () => {
+                            // 用户拒绝同步，显示底部红色同步按钮作为降级入口
+                            this.$store.commit("setDataOutdated", true);
+                            console.log("用户选择稍后处理课程同步");
                         }
-                    },
-                    onCancel: () => {
-                        console.log("用户选择稍后处理课程同步");
-                    }
-                });
+                    });
+                } else {
+                    // 没有需要用户确认的已选变更（可能已静默更新待选），标记为已同步
+                    this.$store.commit("setDataOutdated", false);
+                }
 
             } catch (error) {
                 console.error('智能同步失败:', error);
-                
+
                 // 降级方案：提供清除缓存选项
+                await this.waitForSpinEnd();
                 Modal.confirm({
                     title: '数据过期提示',
                     icon: createVNode(ExclamationCircleOutlined),
@@ -205,8 +232,9 @@ export default {
                     okText: '清除缓存',
                     okType: 'danger',
                     cancelText: '稍后处理',
-                    onOk: () => {
+                    onOk: async () => {
                         this.$store.commit("syncLatestData");
+                        await this.waitForSpinEnd();
                         successNotify("缓存已清除，请重新选择课程");
                     }
                 });
