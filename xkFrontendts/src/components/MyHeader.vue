@@ -172,10 +172,10 @@ export default {
 
                 // 拆分为已选变更和仅待选变更
                 const selectedChanges = syncResult.changes.filter(c =>
-                    selectedCourses.some(code => code.startsWith(c.courseCode))
+                    selectedCourses.some((code: string) => code.startsWith(c.courseCode))
                 );
                 const stagedOnlyChanges = syncResult.changes.filter(c =>
-                    !selectedCourses.some(code => code.startsWith(c.courseCode))
+                    !selectedCourses.some((code: string) => code.startsWith(c.courseCode))
                 );
 
                 // 1. 静默应用仅待选变更
