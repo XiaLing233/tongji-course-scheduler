@@ -37,6 +37,20 @@ export default {
         this.getUpdateTime();
     },
     methods: {
+        waitForSpinEnd(): Promise<void> {
+            return new Promise((resolve) => {
+                if (!this.$store.state.isSpin) {
+                    resolve();
+                    return;
+                }
+                const unwatch = this.$watch(() => this.$store.state.isSpin, (newVal) => {
+                    if (!newVal) {
+                        unwatch();
+                        resolve();
+                    }
+                });
+            });
+        },
         async getUpdateTime() {
             try {
                 const res = await axios({
@@ -145,11 +159,13 @@ export default {
                         newTimeTableData
                     });
 
+                    await this.waitForSpinEnd();
                     successNotify(`已自动更新 ${stagedOnlyChanges.length} 门备选课程信息`);
                 }
 
                 // 2. 如果有已选变更，弹窗确认
                 if (selectedChanges.length > 0) {
+                    await this.waitForSpinEnd();
                     Modal.confirm({
                         title: '检测到课程变更',
                         icon: createVNode(ExclamationCircleOutlined),
@@ -185,9 +201,11 @@ export default {
                                     newTimeTableData
                                 });
 
+                                await this.waitForSpinEnd();
                                 successNotify('同步成功！');
                             } catch (error) {
                                 console.error('同步失败:', error);
+                                await this.waitForSpinEnd();
                                 errorNotify('同步失败，请稍后重试');
                             }
                         },
@@ -204,8 +222,9 @@ export default {
 
             } catch (error) {
                 console.error('智能同步失败:', error);
-                
+
                 // 降级方案：提供清除缓存选项
+                await this.waitForSpinEnd();
                 Modal.confirm({
                     title: '数据过期提示',
                     icon: createVNode(ExclamationCircleOutlined),
@@ -213,8 +232,9 @@ export default {
                     okText: '清除缓存',
                     okType: 'danger',
                     cancelText: '稍后处理',
-                    onOk: () => {
+                    onOk: async () => {
                         this.$store.commit("syncLatestData");
+                        await this.waitForSpinEnd();
                         successNotify("缓存已清除，请重新选择课程");
                     }
                 });
