@@ -69,34 +69,22 @@ function isCourseSame(oldCourse: stagedCourse, newCourse: stagedCourse): boolean
     return true;
 }
 
-// 比较两个排课信息数组是否相同
+// 比较两个排课信息数组是否相同（集合语义，顺序无关）
 function areArrangementsSame(arr1: arrangementInfolet[], arr2: arrangementInfolet[]): boolean {
     if (arr1.length !== arr2.length) return false;
-    
-    // 创建排序后的数组进行比较
-    const sort = (arr: arrangementInfolet[]) => arr.slice().sort((a, b) => {
-        if (a.occupyDay !== b.occupyDay) return a.occupyDay - b.occupyDay;
-        if (a.occupyTime[0] !== b.occupyTime[0]) return a.occupyTime[0] - b.occupyTime[0];
-        return 0;
-    });
-    
-    const sorted1 = sort(arr1);
-    const sorted2 = sort(arr2);
-    
-    // 逐个比较排课项
-    for (let i = 0; i < sorted1.length; i++) {
-        const a = sorted1[i];
-        const b = sorted2[i];
-        
-        if (a.occupyDay !== b.occupyDay ||
-            a.occupyRoom !== b.occupyRoom ||
-            JSON.stringify(a.occupyTime) !== JSON.stringify(b.occupyTime) ||
-            JSON.stringify(a.occupyWeek) !== JSON.stringify(b.occupyWeek)) {
-            return false;
-        }
-    }
-    
-    return true;
+
+    // 将每条排课转化为规范键，比较键集合
+    const makeKey = (a: arrangementInfolet) => JSON.stringify([
+        a.occupyDay,
+        a.occupyTime,
+        a.occupyWeek,
+        a.occupyRoom
+    ]);
+
+    const keys1 = arr1.map(makeKey).sort();
+    const keys2 = arr2.map(makeKey).sort();
+
+    return JSON.stringify(keys1) === JSON.stringify(keys2);
 }
 
 // 生成排课变更的详细描述
@@ -276,15 +264,8 @@ export async function fetchLatestCourseInfo(
                         arrangementInfo?: arrangementInfolet[];
                         isExclusive?: boolean | number;
                     }) => {
-                        // 为每个 arrangement 添加 teacherAndCode
-                        const teacherAndCode = (detail.teachers || [])
-                            .map((t: teacherlet) => `${t.teacherName}(${t.teacherCode})`)
-                            .join(', ');
-                        
-                        const arrangementInfo = (detail.arrangementInfo || []).map((arr: arrangementInfolet) => ({
-                            ...arr,
-                            teacherAndCode
-                        }));
+                        // 直接使用 API 返回的 arrangementInfo（已包含正确的 teacherAndCode）
+                        const arrangementInfo = (detail.arrangementInfo || []) as arrangementInfolet[];
 
                         const result: courseDetaillet & { isExclusive?: boolean | number } = {
                             code: detail.code,
