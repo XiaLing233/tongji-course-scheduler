@@ -685,6 +685,7 @@ export function applyCourseSync(
                 // 如果是冲突课程，需要将状态改为未选（status=0）
                 if (change.changeType === CourseChangeType.ConflictAfterUpdate) {
                     newCourse.status = 0;
+                    newCourse.teacher = []; // 清除已选教师
                     // 找到对应的 courseDetail 并设置为未选状态
                     const selectedCode = oldSelectedCodes.find(code => code.startsWith(oldCourse.courseCode));
                     if (selectedCode) {
