@@ -58,7 +58,7 @@ export default {
                 }
                 else {
                     // 数据过期，调用智能同步逻辑
-                    this.$store.commit("setDataOutdated", true);
+                    // 不在这里设置 isDataOutdated=true，由 handleSmartSync 根据用户选择决定
                     await this.handleSmartSync();
                 }
             }
@@ -192,9 +192,14 @@ export default {
                             }
                         },
                         onCancel: () => {
+                            // 用户拒绝同步，显示底部红色同步按钮作为降级入口
+                            this.$store.commit("setDataOutdated", true);
                             console.log("用户选择稍后处理课程同步");
                         }
                     });
+                } else {
+                    // 没有需要用户确认的已选变更（可能已静默更新待选），标记为已同步
+                    this.$store.commit("setDataOutdated", false);
                 }
 
             } catch (error) {

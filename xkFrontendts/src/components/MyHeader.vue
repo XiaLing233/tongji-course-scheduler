@@ -245,6 +245,8 @@ export default {
                             }
                         },
                         onCancel: () => {
+                            // 用户拒绝同步，保持底部红色按钮显示
+                            this.$store.commit("setDataOutdated", true);
                             console.log("User cancelled smart sync");
                         }
                     });
