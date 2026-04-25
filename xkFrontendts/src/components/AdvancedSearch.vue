@@ -114,7 +114,7 @@ export default {
 
             try {
                 const res = await axios.get('/api/getAllCampus');
-                this.rawList.campus = res.data.data;
+                this.rawList.campus = res.data.data.filter((campus: rawCampus) => campus.campusName !== '');
             }
             catch (error: unknown) {
                 const err = error as { response?: { data?: { msg?: string } } };
@@ -130,7 +130,7 @@ export default {
 
             try {
                 const res = await axios.get('/api/getAllFaculty');
-                this.rawList.faculty = res.data.data;
+                this.rawList.faculty = res.data.data.filter((faculty: rawFaculty) => faculty.facultyName !== '');
             }
             catch (error: unknown) {
                 const err = error as { response?: { data?: { msg?: string } } };
