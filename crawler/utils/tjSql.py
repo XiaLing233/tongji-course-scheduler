@@ -184,13 +184,16 @@ class tjSql:
             }
 
             # Check if exists, if exists, keep the existing calendarId (earliest one)
-            sql = "SELECT * FROM major WHERE code = %s AND grade = %s"
+            sql = "SELECT id, name FROM major WHERE code = %s AND grade = %s"
+            self.cursor.execute(sql, (processedMajor['code'], processedMajor['grade']))
+            row = self.cursor.fetchone()
 
-            val = (processedMajor['code'], processedMajor['grade'])
-
-            self.cursor.execute(sql, val)
-
-            if self.cursor.fetchone() is not None:
+            if row is not None:
+                # If name changed (e.g. major renamed by school), update to latest name
+                if row[1] != processedMajor['name']:
+                    print(f"专业更名: {row[1]} -> {processedMajor['name']}")
+                    sql = "UPDATE major SET name = %s WHERE id = %s"
+                    self.cursor.execute(sql, (processedMajor['name'], row[0]))
                 continue
 
             # Insert with calendarId
@@ -376,13 +379,20 @@ class tjSql:
                 # input()
 
             try:
-                self.insertTeachers(course['teacherList'], course['arrangeInfo']) # Insert teachers
-                self.insertMajorAndCourse(course['majorList'], course['id']) # Insert major and course
+                self.insertTeachers(course['teacherList'], course['arrangeInfo'])
             except Exception as e:
-                print(course)
-                print(e)
-                print("\n\n\n插入教师数据发生异常\n\n\n")
-                # input()
+                print(f"插入教师数据失败: 课程 {course.get('code', '?')} {course.get('courseName', '?')}({course.get('name', '?')})")
+                print(f"错误: {e}")
+                print(f"完整数据: {course}")
+                print()
+
+            try:
+                self.insertMajorAndCourse(course['majorList'], course['id'])
+            except Exception as e:
+                print(f"插入专业课表关联失败: 课程 {course.get('code', '?')} {course.get('courseName', '?')}({course.get('name', '?')})")
+                print(f"错误: {e}")
+                print(f"完整数据: {course}")
+                print()
 
     def deleteOldRecordsInRange(self, currentCalendarId, depth):
         '''
