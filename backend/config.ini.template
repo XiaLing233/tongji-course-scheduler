@@ -1,5 +1,5 @@
 [Sql]
-host = mysql
+host = host.docker.internal
 r_user =
 r_password =
 database =
@@ -11,7 +11,7 @@ charset = utf8mb4
 debug = 1
 
 [Redis]
-host = redis
+host = host.docker.internal
 port = 6379
 db = 0
 stream_key = crawler:log
