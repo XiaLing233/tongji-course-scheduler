@@ -2,6 +2,7 @@ from utils import loginout
 from utils import tjSql
 from utils.smtp_email import SMTPEmailClient
 import configparser
+import sys
 import time
 from datetime import datetime
 from tqdm import tqdm
@@ -51,14 +52,15 @@ def safeFetch(session, headers, payload):
 
             tqdm.write(
                 f"[重试 {attempt}/{MAX_RETRIES}] "
-                f"请求失败: {exc}"
+                f"请求失败: {exc}",
+                file=sys.stderr,
             )
-            tqdm.write(f"  {delay}s 后重试...")
+            tqdm.write(f"  {delay}s 后重试...", file=sys.stderr)
 
             if attempt < MAX_RETRIES:
                 time.sleep(delay)
             else:
-                tqdm.write(f"已达最大重试次数 {MAX_RETRIES}，放弃。")
+                tqdm.write(f"已达最大重试次数 {MAX_RETRIES}，放弃。", file=sys.stderr)
                 raise last_exc
 
 
@@ -98,10 +100,18 @@ def fetchCourseList(session, calendar=120, depth=1):
     with tjSql.tjSql() as sql:
         sql.insertCourseList(data['data']['list'])
 
-    tqdm.write(f"学期 {CALENDAR}  —  {total} 条课程, {total_pages} 页")
+    tqdm.write(f"学期 {CALENDAR}  —  {total} 条课程, {total_pages} 页", file=sys.stderr)
 
     # 逐页抓取（带进度条）
-    for i in tqdm(range(2, total_pages + 1), desc=f"学期 {CALENDAR}", unit="页", ncols=80):
+    # disable=False 确保管道 / 非 TTY 环境下也能正常输出，逐行写入 Redis Stream
+    for i in tqdm(
+        range(2, total_pages + 1),
+        desc=f"学期 {CALENDAR}",
+        unit="页",
+        file=sys.stdout,
+        disable=False,
+        miniters=1,
+    ):
         payload['pageNum_'] = i
         data = safeFetch(session, headers, payload)
 
@@ -110,7 +120,7 @@ def fetchCourseList(session, calendar=120, depth=1):
 
         time.sleep(3)
 
-    tqdm.write(f"学期 {CALENDAR}  [OK] 完成")
+    tqdm.write(f"学期 {CALENDAR}  [OK] 完成", file=sys.stderr)
 
 
 if __name__ == "__main__":
@@ -125,14 +135,14 @@ if __name__ == "__main__":
     depth = config.getint("Spider", "depth")
 
     # 删除旧记录
-    tqdm.write(f"开始删除旧记录  |  学期 {latest_calendar}, 深度 {depth}")
+    tqdm.write(f"开始删除旧记录  |  学期 {latest_calendar}, 深度 {depth}", file=sys.stderr)
     with tjSql.tjSql() as sql:
         sql.deleteOldRecordsInRange(latest_calendar, depth)
 
     # 逐学期抓取
     semesters = list(range(latest_calendar - depth + 1, latest_calendar + 1))
     for idx, cal in enumerate(semesters, 1):
-        tqdm.write(f"[{idx}/{len(semesters)}] 正在爬取学期 {cal}")
+        tqdm.write(f"[{idx}/{len(semesters)}] 正在爬取学期 {cal}", file=sys.stderr)
         fetchCourseList(session, calendar=cal, depth=depth)
 
     # 记录日志
@@ -154,6 +164,6 @@ if __name__ == "__main__":
 
     success = email_client.send_email(me, subject, body)
     if success:
-        tqdm.write("[OK] 邮件通知已发送")
+        tqdm.write("[OK] 邮件通知已发送", file=sys.stderr)
     else:
-        tqdm.write("[FAIL] 邮件通知发送失败")
+        tqdm.write("[FAIL] 邮件通知发送失败", file=sys.stderr)

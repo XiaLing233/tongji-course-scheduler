@@ -12,6 +12,7 @@ state = {
     'r': None,
     'stream_key': None,
     'status_key': None,
+    'progress_key': None,
 }
 
 
@@ -25,6 +26,7 @@ def init_redis(redis_cfg):
     )
     state['stream_key'] = redis_cfg['stream_key']
     state['status_key'] = redis_cfg['status_key']
+    state['progress_key'] = redis_cfg['progress_key']
 
 
 def format_sse_event(event_type, msg_id, data):
