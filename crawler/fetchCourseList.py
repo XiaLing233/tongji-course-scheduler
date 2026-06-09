@@ -101,7 +101,6 @@ def fetchCourseList(session, calendar=120, depth=1):
     tqdm.write(f"学期 {CALENDAR}  —  {total} 条课程, {total_pages} 页")
 
     # 逐页抓取（带进度条）
-    # disable=False 确保管道 / 非 TTY 环境下也能正常输出，逐行写入 Redis Stream
     for i in tqdm(
         range(2, total_pages + 1),
         desc=f"学期 {CALENDAR}",
@@ -109,12 +108,15 @@ def fetchCourseList(session, calendar=120, depth=1):
         file=sys.stdout,
         disable=False,
         miniters=1,
+        mininterval=0,
     ):
         payload['pageNum_'] = i
         data = safeFetch(session, headers, payload)
 
         with tjSql.tjSql() as sql:
             sql.insertCourseList(data['data']['list'])
+
+        tqdm.write(f"  学期 {CALENDAR}  [{i}/{total_pages}] 页")
 
         time.sleep(3)
 
