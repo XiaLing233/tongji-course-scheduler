@@ -1,8 +1,8 @@
 [Sql]
-host = host.docker.internal
-r_user = 
-r_password = 
-database = 
+host = mysql
+r_user =
+r_password =
+database =
 port = 3306
 charset = utf8mb4
 
@@ -10,6 +10,10 @@ charset = utf8mb4
 [Switch]
 debug = 1
 
-[Crawler]
-log_file = /tmp/crawler_fetch.log
-status_file = /tmp/crawler_status.json
+[Redis]
+host = redis
+port = 6379
+db = 0
+stream_key = crawler:log
+status_key = crawler:status
+maxlen = 5000
