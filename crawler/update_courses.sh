@@ -180,37 +180,22 @@ if [ -f "$VENV_DIR/bin/pip" ]; then
     "$VENV_DIR/bin/pip" install -r requirements.txt --quiet
 fi
 
-# Run crawler, split output:
-#   fd 1 (stdout — tqdm progress bar) → SET crawler:progress  (overwrite, single key)
-#   fd 2 (stderr — log messages)       → XADD crawler:log      (append, stream)
-_EXIT_FILE=$(mktemp)
-
-_run_crawler() {
-    local python_bin="$1"
-    {
-        "$python_bin" -u fetchCourseList.py 2>&3 3>&- \
-        | while IFS= read -r line; do
-            redis-cli -p 6380 SET crawler:progress "$line" > /dev/null 2>&1 || true
-        done
-        echo ${PIPESTATUS[0]} > "$_EXIT_FILE"
-    } 3>&1 | while IFS= read -r line; do
+# Run crawler — all output (stdout + stderr) piped to log stream
+if [ -f "$VENV_DIR/bin/python3" ]; then
+    "$VENV_DIR/bin/python3" -u fetchCourseList.py 2>&1 | while IFS= read -r line; do
         report_log "$line"
     done
-}
-
-if [ -f "$VENV_DIR/bin/python3" ]; then
-    _run_crawler "$VENV_DIR/bin/python3"
 elif [ -f "$VENV_DIR/bin/python" ]; then
-    _run_crawler "$VENV_DIR/bin/python"
+    "$VENV_DIR/bin/python" -u fetchCourseList.py 2>&1 | while IFS= read -r line; do
+        report_log "$line"
+    done
 else
-    _run_crawler python3
+    python3 -u fetchCourseList.py 2>&1 | while IFS= read -r line; do
+        report_log "$line"
+    done
 fi
 
-CRAWLER_EXIT_CODE=$(cat "$_EXIT_FILE")
-rm -f "$_EXIT_FILE"
-
-# Clear progress key when done
-redis-cli -p 6380 DEL crawler:progress > /dev/null 2>&1 || true
+CRAWLER_EXIT_CODE=${PIPESTATUS[0]}
 
 # Check exit status
 END_TIME=$(date '+%Y-%m-%dT%H:%M:%S')

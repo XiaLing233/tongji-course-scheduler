@@ -479,11 +479,8 @@
             if (lineCount === 1) {
                 updateStatus(true, false);
             }
-        });
-
-        es.addEventListener('progress', (e) => {
-            if (metaProgress && e.data) {
-                metaProgress.textContent = e.data;
+            if (metaProgress) {
+                metaProgress.textContent = `${lineCount} 行`;
             }
         });
 
@@ -505,7 +502,7 @@
         es.addEventListener('completed', (e) => {
             isComplete = true;
             updateStatus(false, true);
-            if (metaProgress) metaProgress.textContent = '已完成';
+            if (metaProgress) metaProgress.textContent = `${lineCount} 行`;
             if (refreshBanner) refreshBanner.classList.add('show');
             setTimeout(() => {
                 window.location.reload();

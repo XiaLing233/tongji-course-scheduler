@@ -38,7 +38,6 @@ def get_fetch_log():
 
     SSE Events:
         log:       A new log line (data = plain text)
-        progress:  Live page progress (data = tqdm bar line, overwritten in-place)
         meta:      Status info update (data = JSON)
         completed: Crawler finished successfully
         failed:    Crawler exited with error
@@ -50,7 +49,6 @@ def get_fetch_log():
         r = state['r']
         stream_key = state['stream_key']
         status_key = state['status_key']
-        progress_key = state['progress_key']
 
         # Phase 1: catch up missed messages
         try:
@@ -63,13 +61,10 @@ def get_fetch_log():
                 yield format_sse_event('log', msg_id, fields.get('msg', ''))
                 last_id = msg_id
 
-            # Push current status & progress
+            # Push current status
             status_data = r.get(status_key)
             if status_data:
                 yield format_sse_event('meta', last_id, status_data)
-            progress_data = r.get(progress_key)
-            if progress_data:
-                yield format_sse_event('progress', last_id, progress_data)
         except redis.ConnectionError:
             yield format_sse_event('log', '0', '[系统] Redis 连接失败，重试中...')
 
@@ -86,11 +81,6 @@ def get_fetch_log():
                     for msg_id, fields in messages:
                         yield format_sse_event('log', msg_id, fields.get('msg', ''))
                         last_id = msg_id
-
-            # Push live progress (single key, overwritten by tqdm)
-            progress = r.get(progress_key)
-            if progress:
-                yield format_sse_event('progress', last_id, progress)
 
             # Check completion
             status_str = r.get(status_key)

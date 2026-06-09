@@ -16,5 +16,4 @@ port = 6379
 db = 0
 stream_key = crawler:log
 status_key = crawler:status
-progress_key = crawler:progress
 maxlen = 5000
