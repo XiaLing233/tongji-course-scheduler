@@ -181,16 +181,20 @@ if [ -f "$VENV_DIR/bin/pip" ]; then
 fi
 
 # Run crawler — all output (stdout + stderr) piped to log stream
+# Strip \r because SSE protocol treats it as a line separator
 if [ -f "$VENV_DIR/bin/python3" ]; then
     "$VENV_DIR/bin/python3" -u fetchCourseList.py 2>&1 | while IFS= read -r line; do
+        line="${line//$'\r'/}"
         report_log "$line"
     done
 elif [ -f "$VENV_DIR/bin/python" ]; then
     "$VENV_DIR/bin/python" -u fetchCourseList.py 2>&1 | while IFS= read -r line; do
+        line="${line//$'\r'/}"
         report_log "$line"
     done
 else
     python3 -u fetchCourseList.py 2>&1 | while IFS= read -r line; do
+        line="${line//$'\r'/}"
         report_log "$line"
     done
 fi
