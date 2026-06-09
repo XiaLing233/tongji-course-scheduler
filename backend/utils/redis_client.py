@@ -11,7 +11,7 @@ import redis
 state = {
     'r': None,
     'stream_key': None,
-    'status_key': None,
+    'status_key': None
 }
 
 

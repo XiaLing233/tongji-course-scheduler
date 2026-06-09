@@ -476,7 +476,6 @@
 
         es.addEventListener('log', (e) => {
             addLogLine(e.data);
-            // First log line means the crawler is running
             if (lineCount === 1) {
                 updateStatus(true, false);
             }
@@ -501,12 +500,9 @@
         });
 
         es.addEventListener('completed', (e) => {
-            isComplete = true;            // set before close — onerror checks this
+            isComplete = true;
             updateStatus(false, true);
-            try {
-                const status = JSON.parse(e.data);
-                if (metaProgress) metaProgress.textContent = `${lineCount} 行`;
-            } catch (err) {}
+            if (metaProgress) metaProgress.textContent = `${lineCount} 行`;
             if (refreshBanner) refreshBanner.classList.add('show');
             setTimeout(() => {
                 window.location.reload();
