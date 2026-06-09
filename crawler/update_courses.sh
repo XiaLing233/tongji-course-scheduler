@@ -16,7 +16,7 @@ STATIC_PAGE_DIR="/var/www/shared_pages"
 # Function to push log line to Redis Stream
 report_log() {
     echo "$1"
-    redis-cli XADD crawler:log MAXLEN '~' 5000 '*' msg "$1" > /dev/null 2>&1 || true
+    redis-cli -p 6380 XADD crawler:log MAXLEN '~' 5000 '*' msg "$1" > /dev/null 2>&1 || true
 }
 
 # Function to write status atomically via Redis SET
@@ -27,7 +27,7 @@ write_status() {
     local end_time="${4:-}"
     printf '{"status":"%s","message":"%s","startTime":"%s","endTime":"%s"}' \
         "$status" "$message" "$start_time" "$end_time" \
-        | redis-cli -x SET crawler:status > /dev/null 2>&1 || true
+        | redis-cli -p 6380 -x SET crawler:status > /dev/null 2>&1 || true
 }
 
 # Function to restore original nginx configs on exit
@@ -45,7 +45,7 @@ restore_nginx() {
 trap 'restore_nginx' EXIT
 
 # Start fresh — clear old Redis stream data
-redis-cli DEL crawler:log crawler:status > /dev/null 2>&1 || true
+redis-cli -p 6380 DEL crawler:log crawler:status > /dev/null 2>&1 || true
 START_TIME=$(date '+%Y-%m-%dT%H:%M:%S')
 report_log "[$(date '+%Y-%m-%d %H:%M:%S')] 开始数据更新任务"
 
