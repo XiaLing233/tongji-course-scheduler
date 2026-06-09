@@ -4,7 +4,7 @@ import redis
 from flask import Blueprint, request, jsonify, Response
 
 from utils import bckndSql
-from utils.redis_client import r, STREAM_KEY, STATUS_KEY, format_sse_event
+from utils.redis_client import state, format_sse_event
 
 status_bp = Blueprint('status', __name__)
 
@@ -46,20 +46,23 @@ def get_fetch_log():
     last_id = request.headers.get('Last-Event-ID', '0')
 
     def event_generator(last_id):
+        r = state['r']
+        stream_key = state['stream_key']
+        status_key = state['status_key']
 
         # Phase 1: catch up missed messages
         try:
             if last_id == '0':
-                history = r.xrange(STREAM_KEY, min='-', max='+')
+                history = r.xrange(stream_key, min='-', max='+')
             else:
-                history = r.xrange(STREAM_KEY, min=f'({last_id}', max='+')
+                history = r.xrange(stream_key, min=f'({last_id}', max='+')
 
             for msg_id, fields in history:
                 yield format_sse_event('log', msg_id, fields.get('msg', ''))
                 last_id = msg_id
 
             # Push current status
-            status_data = r.get(STATUS_KEY)
+            status_data = r.get(status_key)
             if status_data:
                 yield format_sse_event('meta', last_id, status_data)
         except redis.ConnectionError:
@@ -68,7 +71,7 @@ def get_fetch_log():
         # Phase 2: block on new messages
         while True:
             try:
-                result = r.xread({STREAM_KEY: last_id}, block=1000, count=50)
+                result = r.xread({stream_key: last_id}, block=1000, count=50)
             except redis.ConnectionError:
                 yield format_sse_event('log', '0', '[系统] Redis 连接失败，重试中...')
                 continue
@@ -80,7 +83,7 @@ def get_fetch_log():
                         last_id = msg_id
 
             # Check completion
-            status_str = r.get(STATUS_KEY)
+            status_str = r.get(status_key)
             if status_str:
                 try:
                     status = json.loads(status_str)
