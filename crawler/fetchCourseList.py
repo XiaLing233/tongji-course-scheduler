@@ -2,10 +2,18 @@ from utils import loginout
 from utils import tjSql
 from utils.smtp_email import SMTPEmailClient
 import configparser
-import sys
 import time
 from datetime import datetime
 from tqdm import tqdm
+
+
+class PipeTqdm(tqdm):
+    """tqdm 在非 TTY 下可能用 \r 结尾而非 \n，导致 bash read 不返回行。
+    这里在每个 display 后补一个 \n，确保管道里每行都以 \n 结束。"""
+    def display(self, msg=None, pos=None):
+        super().display(msg, pos)
+        self.fp.write('\n')
+        self.fp.flush()
 
 # 1 系统的 URL
 URL = "https://1.tongji.edu.cn/api/arrangementservice/manualArrange/page?profile"
@@ -101,11 +109,10 @@ def fetchCourseList(session, calendar=120, depth=1):
     tqdm.write(f"学期 {CALENDAR}  —  {total} 条课程, {total_pages} 页")
 
     # 逐页抓取（带进度条）
-    for i in tqdm(
+    for i in PipeTqdm(
         range(2, total_pages + 1),
         desc=f"学期 {CALENDAR}",
         unit="页",
-        file=sys.stdout,
         disable=False,
         miniters=1,
         mininterval=0,
@@ -115,8 +122,6 @@ def fetchCourseList(session, calendar=120, depth=1):
 
         with tjSql.tjSql() as sql:
             sql.insertCourseList(data['data']['list'])
-
-        tqdm.write(f"  学期 {CALENDAR}  [{i}/{total_pages}] 页")
 
         time.sleep(3)
 
