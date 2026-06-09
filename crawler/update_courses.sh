@@ -207,11 +207,9 @@ else
     write_status "failed" "数据更新失败 (退出码: $CRAWLER_EXIT_CODE)" "$START_TIME" "$END_TIME"
 fi
 
-# Wait for SSE clients to receive the completed/failed event before restoring nginx
-sleep 5
-
-# Restore original nginx configs
-# Frontend stops polling once it sees "completed", so no 404s will occur
+# Restore original nginx configs immediately — SSE connection is persistent,
+# nginx reload preserves existing connections, and frontend es.close() prevents
+# reconnection after the completed/failed event.
 restore_nginx
 
 # Clean up trap since we've already restored
