@@ -42,8 +42,10 @@ def get_fetch_log():
         completed: Crawler finished successfully
         failed:    Crawler exited with error
     '''
-    def event_generator():
-        last_id = request.headers.get('Last-Event-ID', '0')
+    # Read headers outside the generator — gevent may lose request context on switch
+    last_id = request.headers.get('Last-Event-ID', '0')
+
+    def event_generator(last_id):
 
         # Phase 1: catch up missed messages
         try:
@@ -90,7 +92,7 @@ def get_fetch_log():
                     pass
 
     return Response(
-        event_generator(),
+        event_generator(last_id),
         mimetype='text/event-stream',
         headers={
             'Cache-Control': 'no-cache',
