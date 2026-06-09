@@ -6,38 +6,34 @@
 # It also manages nginx configuration to show the smart static page during updates
 
 # Configuration
-LOG_FILE="/tmp/crawler_fetch.log"
 CRAWLER_DIR="/home/deploy/xkB/crawler"
 VENV_DIR="/home/deploy/xkB/venv"
 NGINX_CONF_XK="/etc/nginx/sites-available/xk"
 NGINX_CONF_TONGJI="/etc/nginx/sites-available/flask_vue_app"
 NGINX_BACKUP_DIR="/tmp/nginx_backup_$(date +%s)"
 STATIC_PAGE_DIR="/var/www/shared_pages"
-STATUS_FILE="/tmp/crawler_status.json"
 
-# Function to write status to JSON file
+# Function to push log line to Redis Stream
+report_log() {
+    echo "$1"
+    redis-cli XADD crawler:log MAXLEN '~' 5000 '*' msg "$1" > /dev/null 2>&1 || true
+}
+
+# Function to write status atomically via Redis SET
 write_status() {
     local status="$1"
     local message="${2:-}"
     local start_time="${3:-}"
     local end_time="${4:-}"
-    cat > "$STATUS_FILE" << EOF
-{
-    "status": "$status",
-    "message": "$message",
-    "startTime": "$start_time",
-    "endTime": "$end_time",
-    "logFile": "$LOG_FILE"
-}
-EOF
+    printf '{"status":"%s","message":"%s","startTime":"%s","endTime":"%s"}' \
+        "$status" "$message" "$start_time" "$end_time" \
+        | redis-cli -x SET crawler:status > /dev/null 2>&1 || true
 }
 
 # Function to restore original nginx configs on exit
 restore_nginx() {
-    local timestamp
-    timestamp=$(date '+%Y-%m-%d %H:%M:%S')
     if [ -d "$NGINX_BACKUP_DIR" ]; then
-        echo "[$timestamp] 恢复 nginx 配置..." >> "$LOG_FILE"
+        report_log "[$(date '+%Y-%m-%d %H:%M:%S')] 恢复 nginx 配置..."
         sudo cp "$NGINX_BACKUP_DIR/xk" "$NGINX_CONF_XK"
         sudo cp "$NGINX_BACKUP_DIR/flask_vue_app" "$NGINX_CONF_TONGJI"
         sudo nginx -s reload
@@ -48,10 +44,10 @@ restore_nginx() {
 # Trap to ensure nginx is restored on script exit (even on error)
 trap 'restore_nginx' EXIT
 
-# Clear old log and start fresh
-> "$LOG_FILE"
+# Start fresh — clear old Redis stream data
+redis-cli DEL crawler:log crawler:status > /dev/null 2>&1 || true
 START_TIME=$(date '+%Y-%m-%dT%H:%M:%S')
-echo "[$(date '+%Y-%m-%d %H:%M:%S')] 开始数据更新任务" >> "$LOG_FILE"
+report_log "[$(date '+%Y-%m-%d %H:%M:%S')] 开始数据更新任务"
 
 # Write initial status
 write_status "running" "正在更新数据..." "$START_TIME" ""
@@ -63,7 +59,7 @@ mkdir -p "$NGINX_BACKUP_DIR"
 cp "$NGINX_CONF_XK" "$NGINX_BACKUP_DIR/xk"
 cp "$NGINX_CONF_TONGJI" "$NGINX_BACKUP_DIR/flask_vue_app"
 
-echo "[$(date '+%Y-%m-%d %H:%M:%S')] 切换到更新模式页面..." >> "$LOG_FILE"
+report_log "[$(date '+%Y-%m-%d %H:%M:%S')] 切换到更新模式页面..."
 
 # Create update mode nginx config for xk.xialing.icu
 cat > /tmp/nginx_xk_update.conf << 'EOF'
@@ -88,6 +84,7 @@ server {
     # Proxy /api/ to xk backend so the smart page can fetch logs
     location /api/ {
         proxy_pass http://127.0.0.1:1239;
+        proxy_buffering off;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -131,6 +128,7 @@ server {
     # Proxy /api/ to xk backend (port 1239) since that's where getFetchLog is implemented
     location /api/ {
         proxy_pass http://127.0.0.1:1239;
+        proxy_buffering off;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -165,36 +163,41 @@ sudo cp /tmp/nginx_tongji_update.conf "$NGINX_CONF_TONGJI"
 
 # Test nginx config before reloading
 if ! sudo nginx -t 2>/dev/null; then
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 错误: nginx 配置测试失败，恢复原配置" >> "$LOG_FILE"
+    report_log "[$(date '+%Y-%m-%d %H:%M:%S')] 错误: nginx 配置测试失败，恢复原配置"
     restore_nginx
     exit 1
 fi
 
 # Reload nginx to apply update mode
 sudo nginx -s reload
-echo "[$(date '+%Y-%m-%d %H:%M:%S')] 已切换到更新模式，用户将看到实时进度页面" >> "$LOG_FILE"
+report_log "[$(date '+%Y-%m-%d %H:%M:%S')] 已切换到更新模式，用户将看到实时进度页面"
 
 # Change to crawler directory
 cd "$CRAWLER_DIR" || exit 1
 
-# Run crawler using venv python directly with unbuffered output for real-time logging
+# Run crawler using venv python — pipe stdout/stderr to report_log for SSE streaming
 if [ -f "$VENV_DIR/bin/python3" ]; then
-    "$VENV_DIR/bin/python3" -u fetchCourseList.py >> "$LOG_FILE" 2>&1
+    "$VENV_DIR/bin/python3" -u fetchCourseList.py 2>&1 | while IFS= read -r line; do
+        report_log "$line"
+    done
 elif [ -f "$VENV_DIR/bin/python" ]; then
-    "$VENV_DIR/bin/python" -u fetchCourseList.py >> "$LOG_FILE" 2>&1
+    "$VENV_DIR/bin/python" -u fetchCourseList.py 2>&1 | while IFS= read -r line; do
+        report_log "$line"
+    done
 else
-    # Fallback to system python3
-    python3 -u fetchCourseList.py >> "$LOG_FILE" 2>&1
+    python3 -u fetchCourseList.py 2>&1 | while IFS= read -r line; do
+        report_log "$line"
+    done
 fi
 
-CRAWLER_EXIT_CODE=$?
+CRAWLER_EXIT_CODE=${PIPESTATUS[0]}
 
 # Check exit status
 END_TIME=$(date '+%Y-%m-%dT%H:%M:%S')
 if [ $CRAWLER_EXIT_CODE -eq 0 ]; then
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 数据更新完成" >> "$LOG_FILE"
+    report_log "[$(date '+%Y-%m-%d %H:%M:%S')] 数据更新完成"
 else
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 数据更新失败 (退出码: $CRAWLER_EXIT_CODE)" >> "$LOG_FILE"
+    report_log "[$(date '+%Y-%m-%d %H:%M:%S')] 数据更新失败 (退出码: $CRAWLER_EXIT_CODE)"
 fi
 
 # Mark as completed first so frontend gets the status before nginx is restored
@@ -204,8 +207,7 @@ else
     write_status "failed" "数据更新失败 (退出码: $CRAWLER_EXIT_CODE)" "$START_TIME" "$END_TIME"
 fi
 
-# Wait for frontend to fetch the completed status (poll interval is 3s)
-# 5s ensures at least one poll cycle completes after status is written
+# Wait for SSE clients to receive the completed/failed event before restoring nginx
 sleep 5
 
 # Restore original nginx configs

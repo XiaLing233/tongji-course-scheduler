@@ -401,7 +401,6 @@
 
     <script>
         const terminal = document.getElementById('terminal');
-        const statusText = document.getElementById('statusText');
         const statusIndicator = document.getElementById('statusIndicator');
         const metaStatusText = document.getElementById('metaStatusText');
         const metaStartTime = document.getElementById('metaStartTime');
@@ -409,11 +408,9 @@
         const metaProgress = document.getElementById('metaProgress');
         const refreshBanner = document.getElementById('refreshBanner');
 
-        let lineOffset = 0;
+        let lineCount = 0;
         let startTime = null;
-        let elapsedSeconds = 0;
         let isComplete = false;
-        let refreshTimer = null;
 
         function formatDuration(seconds) {
             const hours = Math.floor(seconds / 3600);
@@ -438,17 +435,6 @@
             });
         }
 
-        function updateDuration() {
-            if (startTime && !isComplete) {
-                const now = new Date();
-                const start = new Date(startTime);
-                elapsedSeconds = Math.floor((now - start) / 1000);
-            }
-            if (metaDuration) {
-                metaDuration.textContent = formatDuration(elapsedSeconds);
-            }
-        }
-
         function addLogLine(text) {
             const line = document.createElement('div');
             line.className = 'terminal-line';
@@ -463,6 +449,7 @@
 
             line.textContent = text;
             terminal.appendChild(line);
+            lineCount++;
             // Only auto-scroll if user is already near the bottom
             const isNearBottom = terminal.scrollHeight - terminal.scrollTop - terminal.clientHeight < 50;
             if (isNearBottom) {
@@ -470,115 +457,87 @@
             }
         }
 
-        async function fetchLog() {
-            try {
-                const response = await fetch('/api/getFetchLog?offset=' + lineOffset);
-
-                // If we get 404 after being in update mode, nginx has been restored
-                // This means the update is complete and we should refresh to see the real site
-                if (response.status === 404) {
-                    if (isComplete || (statusText && statusText.textContent === '正在更新...')) {
-                        console.log('API returned 404 after update - nginx restored, refreshing...');
-                        window.location.reload();
-                        return;
-                    }
-                }
-
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-
-                const result = await response.json();
-
-                if (result.code === 200) {
-                    const data = result.data;
-
-                    // Update start time from backend
-                    if (data.startTime && !startTime) {
-                        startTime = data.startTime;
-                        if (metaStartTime) metaStartTime.textContent = formatDateTime(startTime);
-                    }
-
-                    // Update elapsed time from backend
-                    if (data.elapsedSeconds !== undefined) {
-                        elapsedSeconds = data.elapsedSeconds;
-                    }
-
-                    // Check completion status
-                    if (data.isComplete && !isComplete) {
-                        isComplete = true;
-                        // Show refresh banner and schedule page reload
-                        if (refreshBanner) refreshBanner.classList.add('show');
-                        refreshTimer = setTimeout(() => {
-                            window.location.reload();
-                        }, 10000); // Refresh after 10 seconds
-                        // Stop polling - status won't change anymore and nginx may be restored
-                        // Continuing to poll could cause 404s on tongji.xialing.icu
-                        clearInterval(pollInterval);
-                        return;
-                    }
-
-                    // Update status display
-                    if (data.running) {
-                        if (statusText) statusText.textContent = '正在更新...';
-                        if (statusIndicator) {
-                            statusIndicator.style.background = '#28a745';
-                            statusIndicator.style.animation = 'pulse 1.8s infinite';
-                        }
-                        if (metaStatusText) metaStatusText.textContent = '运行中';
-                    } else if (data.isComplete) {
-                        if (statusText) statusText.textContent = '完成';
-                        if (statusIndicator) {
-                            statusIndicator.style.background = '#0969da';
-                            statusIndicator.style.animation = 'none';
-                        }
-                        if (metaStatusText) metaStatusText.textContent = '已完成';
-                    } else {
-                        if (statusText) statusText.textContent = '等待中';
-                        if (statusIndicator) {
-                            statusIndicator.style.background = '#6c757d';
-                            statusIndicator.style.animation = 'none';
-                        }
-                        if (metaStatusText) metaStatusText.textContent = '等待中';
-                    }
-
-                    // Update progress
-                    if (metaProgress) {
-                        metaProgress.textContent = `${data.totalLines} 行`;
-                    }
-
-                    // Add new log lines
-                    const logs = data.logs || [];
-                    if (logs.length > 0) {
-                        logs.forEach(line => addLogLine(line));
-                        lineOffset = data.totalLines;
-                    }
-                } else {
-                    console.error('API error:', result.msg);
-                }
-            } catch (error) {
-                console.error('Fetch error:', error);
-                // If we were previously running or complete and now get errors,
-                // likely nginx has been restored - refresh to see the real site
-                if (isComplete || lineOffset > 0) {
-                    console.log('Connection failed after update progress - refreshing...');
-                    window.location.reload();
-                    return;
-                }
-                if (statusText) statusText.textContent = '连接失败';
-                if (statusIndicator) statusIndicator.style.background = '#dc3545';
-                if (metaStatusText) metaStatusText.textContent = '连接失败';
+        function updateStatus(running, isCompleteState) {
+            if (running) {
+                statusIndicator.style.background = '#28a745';
+                statusIndicator.style.animation = 'pulse 1.8s infinite';
+                metaStatusText.textContent = '运行中';
+            } else if (isCompleteState) {
+                statusIndicator.style.background = '#0969da';
+                statusIndicator.style.animation = 'none';
+                metaStatusText.textContent = '已完成';
+            } else {
+                statusIndicator.style.background = '#6c757d';
+                statusIndicator.style.animation = 'none';
+                metaStatusText.textContent = '等待中';
             }
         }
 
-        // Update duration display every second
-        setInterval(updateDuration, 1000);
+        // SSE connection
+        const es = new EventSource('/api/getFetchLog');
 
-        // Initial load
-        fetchLog();
+        es.addEventListener('log', (e) => {
+            addLogLine(e.data);
+        });
 
-        // Poll every 3 seconds
-        const pollInterval = setInterval(fetchLog, 3000);
+        es.addEventListener('meta', (e) => {
+            try {
+                const status = JSON.parse(e.data);
+                if (status.startTime && !startTime) {
+                    startTime = status.startTime;
+                    if (metaStartTime) metaStartTime.textContent = formatDateTime(startTime);
+                }
+                if (status.status === 'running') {
+                    updateStatus(true, false);
+                }
+                if (metaProgress) {
+                    metaProgress.textContent = `${lineCount} 行`;
+                }
+            } catch (err) {
+                console.error('Failed to parse meta:', err);
+            }
+        });
+
+        es.addEventListener('completed', (e) => {
+            es.close();
+            isComplete = true;
+            updateStatus(false, true);
+            try {
+                const status = JSON.parse(e.data);
+                if (metaProgress) metaProgress.textContent = `${lineCount} 行`;
+            } catch (err) {}
+            if (refreshBanner) refreshBanner.classList.add('show');
+            setTimeout(() => {
+                window.location.reload();
+            }, 10000);
+        });
+
+        es.addEventListener('failed', (e) => {
+            es.close();
+            isComplete = true;
+            statusIndicator.style.background = '#dc3545';
+            statusIndicator.style.animation = 'none';
+            metaStatusText.textContent = '失败';
+            if (refreshBanner) refreshBanner.classList.add('show');
+            setTimeout(() => {
+                window.location.reload();
+            }, 10000);
+        });
+
+        es.onerror = () => {
+            // EventSource auto-reconnects. If already complete, reload.
+            if (isComplete) {
+                window.location.reload();
+            }
+        };
+
+        // Duration ticker — updates every second while running
+        setInterval(() => {
+            if (startTime && !isComplete) {
+                const elapsed = Math.floor((new Date() - new Date(startTime)) / 1000);
+                if (metaDuration) metaDuration.textContent = formatDuration(elapsed);
+            }
+        }, 1000);
     </script>
 </body>
 </html>
