@@ -350,6 +350,7 @@
         <header class="header">
             <div class="header-left">
                  <div class="title">数据更新中...</div>
+                 <div class="status-indicator" id="statusIndicator"></div>
             </div>
             <div class="header-right">
                 <a href="https://github.com/XiaLing233/tongji-course-scheduler" target="_blank">同济排课助手</a>
@@ -458,19 +459,16 @@
         }
 
         function updateStatus(running, isCompleteState) {
-            if (running) {
-                statusIndicator.style.background = '#28a745';
-                statusIndicator.style.animation = 'pulse 1.8s infinite';
-                metaStatusText.textContent = '运行中';
-            } else if (isCompleteState) {
-                statusIndicator.style.background = '#0969da';
-                statusIndicator.style.animation = 'none';
-                metaStatusText.textContent = '已完成';
-            } else {
-                statusIndicator.style.background = '#6c757d';
-                statusIndicator.style.animation = 'none';
-                metaStatusText.textContent = '等待中';
+            const bg   = running ? '#28a745' : (isCompleteState ? '#0969da' : '#6c757d');
+            const anim = running ? 'pulse 1.8s infinite' : 'none';
+            const txt  = running ? '正在更新...'   : (isCompleteState ? '完成'   : '等待中');
+            const mTxt = running ? '运行中'         : (isCompleteState ? '已完成' : '等待中');
+
+            if (statusIndicator) {
+                statusIndicator.style.background = bg;
+                statusIndicator.style.animation = anim;
             }
+            if (metaStatusText) metaStatusText.textContent = mTxt;
         }
 
         // SSE connection
@@ -478,6 +476,13 @@
 
         es.addEventListener('log', (e) => {
             addLogLine(e.data);
+            // First log line means the crawler is running
+            if (lineCount === 1) {
+                updateStatus(true, false);
+            }
+            if (metaProgress) {
+                metaProgress.textContent = `${lineCount} 行`;
+            }
         });
 
         es.addEventListener('meta', (e) => {
@@ -490,17 +495,13 @@
                 if (status.status === 'running') {
                     updateStatus(true, false);
                 }
-                if (metaProgress) {
-                    metaProgress.textContent = `${lineCount} 行`;
-                }
             } catch (err) {
                 console.error('Failed to parse meta:', err);
             }
         });
 
         es.addEventListener('completed', (e) => {
-            es.close();
-            isComplete = true;
+            isComplete = true;            // set before close — onerror checks this
             updateStatus(false, true);
             try {
                 const status = JSON.parse(e.data);
@@ -509,26 +510,28 @@
             if (refreshBanner) refreshBanner.classList.add('show');
             setTimeout(() => {
                 window.location.reload();
-            }, 10000);
+            }, 3000);
+            es.close();                   // stops reconnect loop
         });
 
         es.addEventListener('failed', (e) => {
-            es.close();
             isComplete = true;
-            statusIndicator.style.background = '#dc3545';
-            statusIndicator.style.animation = 'none';
-            metaStatusText.textContent = '失败';
-            if (refreshBanner) refreshBanner.classList.add('show');
+            if (statusIndicator) {
+                statusIndicator.style.background = '#dc3545';
+                statusIndicator.style.animation = 'none';
+            }
+            if (metaStatusText) metaStatusText.textContent = '失败';
+            if (refreshBanner)  refreshBanner.classList.add('show');
             setTimeout(() => {
                 window.location.reload();
-            }, 10000);
+            }, 3000);
+            es.close();
         });
 
         es.onerror = () => {
-            // EventSource auto-reconnects. If already complete, reload.
-            if (isComplete) {
-                window.location.reload();
-            }
+            // EventSource auto-reconnects on network loss.
+            // If already complete (es.close() triggers onerror), reload is
+            // handled by the setTimeout above — don't double-reload here.
         };
 
         // Duration ticker — updates every second while running

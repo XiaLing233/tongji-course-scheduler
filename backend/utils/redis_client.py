@@ -1,26 +1,30 @@
 """
 Shared Redis client for SSE streaming.
 Initialized once from app.py, imported by routes that need it.
+
+Uses a mutable dict as container so that ``from redis_client import state``
+always sees the live values set by init_redis() across all Gunicorn workers.
 """
 
 import redis
 
-r = None
-STREAM_KEY = None
-STATUS_KEY = None
+state = {
+    'r': None,
+    'stream_key': None,
+    'status_key': None,
+}
 
 
 def init_redis(redis_cfg):
     """Initialize Redis connection from config. Must be called before first request."""
-    global r, STREAM_KEY, STATUS_KEY
-    r = redis.Redis(
+    state['r'] = redis.Redis(
         host=redis_cfg['host'],
         port=redis_cfg.getint('port'),
         db=redis_cfg.getint('db'),
         decode_responses=True,
     )
-    STREAM_KEY = redis_cfg['stream_key']
-    STATUS_KEY = redis_cfg['status_key']
+    state['stream_key'] = redis_cfg['stream_key']
+    state['status_key'] = redis_cfg['status_key']
 
 
 def format_sse_event(event_type, msg_id, data):
