@@ -2,6 +2,7 @@ from utils import loginout
 from utils import tjSql
 from utils.smtp_email import SMTPEmailClient
 import configparser
+import sys
 import time
 from datetime import datetime
 from tqdm import tqdm
@@ -105,6 +106,7 @@ def fetchCourseList(session, calendar=120, depth=1):
         range(2, total_pages + 1),
         desc=f"学期 {CALENDAR}",
         unit="页",
+        file=sys.stdout,
         disable=False,
         miniters=1,
     ):
