@@ -46,19 +46,22 @@ def get_fetch_log():
         last_id = request.headers.get('Last-Event-ID', '0')
 
         # Phase 1: catch up missed messages
-        if last_id == '0':
-            history = r.xrange(STREAM_KEY, min='-', max='+')
-        else:
-            history = r.xrange(STREAM_KEY, min=f'({last_id}', max='+')
+        try:
+            if last_id == '0':
+                history = r.xrange(STREAM_KEY, min='-', max='+')
+            else:
+                history = r.xrange(STREAM_KEY, min=f'({last_id}', max='+')
 
-        for msg_id, fields in history:
-            yield format_sse_event('log', msg_id, fields.get('msg', ''))
-            last_id = msg_id
+            for msg_id, fields in history:
+                yield format_sse_event('log', msg_id, fields.get('msg', ''))
+                last_id = msg_id
 
-        # Push current status
-        status_data = r.get(STATUS_KEY)
-        if status_data:
-            yield format_sse_event('meta', last_id, status_data)
+            # Push current status
+            status_data = r.get(STATUS_KEY)
+            if status_data:
+                yield format_sse_event('meta', last_id, status_data)
+        except redis.ConnectionError:
+            yield format_sse_event('log', '0', '[系统] Redis 连接失败，重试中...')
 
         # Phase 2: block on new messages
         while True:

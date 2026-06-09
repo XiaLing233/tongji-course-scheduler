@@ -1,9 +1,18 @@
 services:
+  redis:
+    image: redis:8.4-alpine
+    container_name: xk-redis
+    ports:
+      - "6380:6379"
+    restart: always
+
   backend:
     build: ./backend
     container_name: xk-backend
     ports:
       - "1239:1239"
+    depends_on:
+      - redis
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:1239/api/health"]
       interval: 30s
