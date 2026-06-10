@@ -42,127 +42,124 @@ class tjSql:
         '''
         Insert calendar into database
         '''
-        # if exists, return
-        sql = "SELECT * FROM calendar WHERE calendarId = %s"
-
+        sql = "SELECT calendarIdI18n FROM calendar WHERE calendarId = %s"
         val = (course['calendarId'], )
-
         self.cursor.execute(sql, val)
+        row = self.cursor.fetchone()
 
-        if self.cursor.fetchone() is not None:
+        if row is not None:
+            if row[0] != course['calendarIdI18n']:
+                print(f"学期名变更: {row[0]} -> {course['calendarIdI18n']}")
+                sql = "UPDATE calendar SET calendarIdI18n = %s WHERE calendarId = %s"
+                self.cursor.execute(sql, (course['calendarIdI18n'], course['calendarId']))
+                self.db.commit()
             return
-        
+
         # Insert
         sql = "INSERT INTO calendar (calendarId, calendarIdI18n) VALUES (%s, %s)"
-
         val = (course['calendarId'], course['calendarIdI18n'])
-
         self.cursor.execute(sql, val)
-
         self.db.commit()
 
     def insertCourseLabel(self, course):
         '''
         Insert courseLabel into database
         '''
-        # if none, return
         if course['courseLabelId'] is None:
             return
-        
-        # if exists, return
-        sql = "SELECT * FROM coursenature WHERE courseLabelId = %s"
 
+        sql = "SELECT courseLabelName FROM coursenature WHERE courseLabelId = %s"
         val = (course['courseLabelId'], )
-
         self.cursor.execute(sql, val)
+        row = self.cursor.fetchone()
 
-        if self.cursor.fetchone() is not None:
+        if row is not None:
+            if row[0] != course['courseLabelName']:
+                print(f"课程性质更名: {row[0]} -> {course['courseLabelName']}")
+                sql = "UPDATE coursenature SET courseLabelName = %s WHERE courseLabelId = %s"
+                self.cursor.execute(sql, (course['courseLabelName'], course['courseLabelId']))
+                self.db.commit()
             return
-        
+
         # Insert
         sql = "INSERT INTO coursenature (courseLabelId, courseLabelName, calendarId) VALUES (%s, %s, %s)"
-
         val = (course['courseLabelId'], course['courseLabelName'], course['calendarId'])
-
         self.cursor.execute(sql, val)
-
         self.db.commit()
 
     def insertAssessmentMode(self, course):
         '''
         Insert assessmentMode into database
         '''
-        # if none, return
         if course['assessmentMode'] is None:
             return
-        
-        # if exists, return
-        sql = "SELECT * FROM assessment WHERE assessmentMode = %s"
 
+        sql = "SELECT assessmentModeI18n FROM assessment WHERE assessmentMode = %s"
         val = (course['assessmentMode'], )
-
         self.cursor.execute(sql, val)
+        row = self.cursor.fetchone()
 
-        if self.cursor.fetchone() is not None:
+        if row is not None:
+            if row[0] != course['assessmentModeI18n']:
+                print(f"考核方式更名: {row[0]} -> {course['assessmentModeI18n']}")
+                sql = "UPDATE assessment SET assessmentModeI18n = %s WHERE assessmentMode = %s"
+                self.cursor.execute(sql, (course['assessmentModeI18n'], course['assessmentMode']))
+                self.db.commit()
             return
-        
+
         # Insert
         sql = "INSERT INTO assessment (assessmentMode, assessmentModeI18n, calendarId) VALUES (%s, %s, %s)"
-
         val = (course['assessmentMode'], course['assessmentModeI18n'], course['calendarId'])
-
         self.cursor.execute(sql, val)
-
         self.db.commit()
 
     def insertCampus(self, course):
         '''
         Insert campus into database
         '''
-        # if none, return
         if course['campus'] is None:
             return
-        
-        # if exists, return
-        sql = "SELECT * FROM campus WHERE campus = %s"
 
+        sql = "SELECT campusI18n FROM campus WHERE campus = %s"
         val = (course['campus'], )
-
         self.cursor.execute(sql, val)
+        row = self.cursor.fetchone()
 
-        if self.cursor.fetchone() is not None:
+        if row is not None:
+            if row[0] != course['campusI18n']:
+                print(f"校区更名: {row[0]} -> {course['campusI18n']}")
+                sql = "UPDATE campus SET campusI18n = %s WHERE campus = %s"
+                self.cursor.execute(sql, (course['campusI18n'], course['campus']))
+                self.db.commit()
             return
-        
+
         # Insert
         sql = "INSERT INTO campus (campus, campusI18n, calendarId) VALUES (%s, %s, %s)"
-
         val = (course['campus'], course['campusI18n'], course['calendarId'])
-
         self.cursor.execute(sql, val)
-
         self.db.commit()
 
     def insertFaculty(self, course):
         '''
         Insert faculty into database
         '''
-        # if exists, return
-        sql = "SELECT * FROM faculty WHERE faculty = %s"
-
+        sql = "SELECT facultyI18n FROM faculty WHERE faculty = %s"
         val = (course['faculty'], )
-
         self.cursor.execute(sql, val)
+        row = self.cursor.fetchone()
 
-        if self.cursor.fetchone() is not None:
+        if row is not None:
+            if row[0] != course['facultyI18n']:
+                print(f"学院更名: {row[0]} -> {course['facultyI18n']}")
+                sql = "UPDATE faculty SET facultyI18n = %s WHERE faculty = %s"
+                self.cursor.execute(sql, (course['facultyI18n'], course['faculty']))
+                self.db.commit()
             return
-        
+
         # Insert
         sql = "INSERT INTO faculty (faculty, facultyI18n, calendarId) VALUES (%s, %s, %s)"
-
         val = (course['faculty'], course['facultyI18n'], course['calendarId'])
-
         self.cursor.execute(sql, val)
-
         self.db.commit()
 
     def insertMajors(self, majors, calendarId):
@@ -265,33 +262,32 @@ class tjSql:
         '''
         Insert language into database
         '''
-        # if exists, return
-        sql = "SELECT * FROM language WHERE teachingLanguage = %s"
+        if course['teachingLanguage'] is None:
+            return
 
+        sql = "SELECT teachingLanguageI18n FROM language WHERE teachingLanguage = %s"
         val = (course['teachingLanguage'], )
-
-        if val is None:
-            return
-
         self.cursor.execute(sql, val)
+        row = self.cursor.fetchone()
 
-        if self.cursor.fetchone() is not None:
+        if row is not None:
+            if row[0] != course['teachingLanguageI18n']:
+                print(f"教学语言更名: {row[0]} -> {course['teachingLanguageI18n']}")
+                sql = "UPDATE language SET teachingLanguageI18n = %s WHERE teachingLanguage = %s"
+                self.cursor.execute(sql, (course['teachingLanguageI18n'], course['teachingLanguage']))
+                self.db.commit()
             return
-        
+
         try:
             # Insert
             sql = "INSERT INTO language (teachingLanguage, teachingLanguageI18n, calendarId) VALUES (%s, %s, %s)"
-
             val = (course['teachingLanguage'], course['teachingLanguageI18n'], course['calendarId'])
-
             self.cursor.execute(sql, val)
-
             self.db.commit()
         except Exception as e:
             print(e)
             print(course)
             print("\n\n\n插入语言数据发生异常\n\n\n")
-            # input()
 
     def insertCourseList(self, courses):
         '''
