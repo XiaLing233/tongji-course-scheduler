@@ -142,13 +142,18 @@ if __name__ == "__main__":
     # 删除旧记录
     tqdm.write(f"开始删除旧记录  |  学期 {latest_calendar}, 深度 {depth}")
     with tjSql.tjSql() as sql:
-        sql.deleteOldRecordsInRange(latest_calendar, depth)
+        deleted_terms = sql.deleteOldRecordsInRange(latest_calendar, depth)
 
     # 逐学期抓取
-    semesters = list(range(latest_calendar - depth + 1, latest_calendar + 1))
-    for idx, cal in enumerate(semesters, 1):
-        tqdm.write(f"[{idx}/{len(semesters)}] 正在爬取学期 {cal}")
+    for idx, cal in enumerate(deleted_terms, 1):
+        tqdm.write(f"[{idx}/{len(deleted_terms)}] 正在爬取学期 {cal}")
         fetchCourseList(session, calendar=cal, depth=depth)
+
+    # 清理/修正维度记录（DELETE 无引用 + UPDATE 修正 calendarId 语义）
+    if deleted_terms:
+        tqdm.write(f"清理维度记录  |  范围 {deleted_terms[0]} — {deleted_terms[-1]}")
+        with tjSql.tjSql() as sql:
+            sql.cleanupOrphanedDimensions(deleted_terms[0], deleted_terms[-1])
 
     # 记录日志
     with tjSql.tjSql() as sql:
