@@ -70,7 +70,7 @@ CREATE TABLE `major` (
 CREATE TABLE `coursedetail` (
   `id` bigint NOT NULL,
   `code` varchar(200) DEFAULT NULL,
-  `name` varchar(200) DEFAULT NULL,
+  `name` TEXT DEFAULT NULL,
   `courseLabelId` int DEFAULT NULL,
   `assessmentMode` varchar(200) DEFAULT NULL,
   `period` int DEFAULT NULL,

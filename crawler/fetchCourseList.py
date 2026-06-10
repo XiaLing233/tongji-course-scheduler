@@ -98,19 +98,16 @@ def fetchCourseList(session, calendar=120, depth=1):
         "Referer": "https://1.tongji.edu.cn/taskResultQuery"
     }
 
-    # 第一页：获取总数并入库
+    # 获取总数
     data = safeFetch(session, headers, payload)
     total = data['data']['total_']
     total_pages = total // PAGESIZE + 1
 
-    with tjSql.tjSql() as sql:
-        sql.insertCourseList(data['data']['list'])
-
     tqdm.write(f"学期 {CALENDAR}  —  {total} 条课程, {total_pages} 页")
 
-    # 逐页抓取（带进度条）
+    # 逐页抓取
     for i in PipeTqdm(
-        range(2, total_pages + 1),
+        range(1, total_pages + 1),
         desc=f"学期 {CALENDAR}",
         unit="页",
         disable=False,
@@ -142,13 +139,18 @@ if __name__ == "__main__":
     # 删除旧记录
     tqdm.write(f"开始删除旧记录  |  学期 {latest_calendar}, 深度 {depth}")
     with tjSql.tjSql() as sql:
-        sql.deleteOldRecordsInRange(latest_calendar, depth)
+        deleted_terms = sql.deleteOldRecordsInRange(latest_calendar, depth)
 
     # 逐学期抓取
-    semesters = list(range(latest_calendar - depth + 1, latest_calendar + 1))
-    for idx, cal in enumerate(semesters, 1):
-        tqdm.write(f"[{idx}/{len(semesters)}] 正在爬取学期 {cal}")
+    for idx, cal in enumerate(deleted_terms, 1):
+        tqdm.write(f"[{idx}/{len(deleted_terms)}] 正在爬取学期 {cal}")
         fetchCourseList(session, calendar=cal, depth=depth)
+
+    # 清理/修正维度记录（DELETE 无引用 + UPDATE 修正 calendarId 语义）
+    if deleted_terms:
+        tqdm.write(f"清理维度记录  |  范围 {deleted_terms[0]} — {deleted_terms[-1]}")
+        with tjSql.tjSql() as sql:
+            sql.cleanupOrphanedDimensions(deleted_terms[0], deleted_terms[-1])
 
     # 记录日志
     with tjSql.tjSql() as sql:
@@ -156,19 +158,23 @@ if __name__ == "__main__":
     time.sleep(5)
 
     # 邮件通知
-    email_client = SMTPEmailClient("config.ini")
-    me = config.get("SMTP", "me")
-    now = datetime.now()
+    send_email = config.getboolean("Spider", "send_email", fallback=True)
+    if send_email:
+        email_client = SMTPEmailClient("config.ini")
+        me = config.get("SMTP", "me")
+        now = datetime.now()
 
-    with tjSql.tjSql() as sql:
-        start_term = sql.calendarIdToText(latest_calendar - depth + 1)
-        end_term = sql.calendarIdToText(latest_calendar)
+        with tjSql.tjSql() as sql:
+            start_term = sql.calendarIdToText(latest_calendar - depth + 1)
+            end_term = sql.calendarIdToText(latest_calendar)
 
-    subject = f"课程数据更新完成通知 - {now.strftime('%Y-%m-%d')}"
-    body = f"夏凌！\n\n课程数据已成功更新。\n\n更新学期范围（闭区间）：{start_term} 至 {end_term}（学期代码 {latest_calendar - depth + 1} 至 {latest_calendar}）\n更新完成时间：{now.strftime('%Y-%m-%d %H:%M:%S')}\n\n祝好！\n琪露诺bot"
+        subject = f"课程数据更新完成通知 - {now.strftime('%Y-%m-%d')}"
+        body = f"夏凌！\n\n课程数据已成功更新。\n\n更新学期范围（闭区间）：{start_term} 至 {end_term}（学期代码 {latest_calendar - depth + 1} 至 {latest_calendar}）\n更新完成时间：{now.strftime('%Y-%m-%d %H:%M:%S')}\n\n祝好！\n琪露诺bot"
 
-    success = email_client.send_email(me, subject, body)
-    if success:
-        tqdm.write("[OK] 邮件通知已发送")
+        success = email_client.send_email(me, subject, body)
+        if success:
+            tqdm.write("[OK] 邮件通知已发送")
+        else:
+            tqdm.write("[FAIL] 邮件通知发送失败")
     else:
-        tqdm.write("[FAIL] 邮件通知发送失败")
+        tqdm.write("[INFO] 邮件通知已关闭 (send_email = false)")

@@ -42,127 +42,124 @@ class tjSql:
         '''
         Insert calendar into database
         '''
-        # if exists, return
-        sql = "SELECT * FROM calendar WHERE calendarId = %s"
-
+        sql = "SELECT calendarIdI18n FROM calendar WHERE calendarId = %s"
         val = (course['calendarId'], )
-
         self.cursor.execute(sql, val)
+        row = self.cursor.fetchone()
 
-        if self.cursor.fetchone() is not None:
+        if row is not None:
+            if row[0] != course['calendarIdI18n']:
+                print(f"学期名变更: {row[0]} -> {course['calendarIdI18n']}")
+                sql = "UPDATE calendar SET calendarIdI18n = %s WHERE calendarId = %s"
+                self.cursor.execute(sql, (course['calendarIdI18n'], course['calendarId']))
+                self.db.commit()
             return
-        
+
         # Insert
         sql = "INSERT INTO calendar (calendarId, calendarIdI18n) VALUES (%s, %s)"
-
         val = (course['calendarId'], course['calendarIdI18n'])
-
         self.cursor.execute(sql, val)
-
         self.db.commit()
 
     def insertCourseLabel(self, course):
         '''
         Insert courseLabel into database
         '''
-        # if none, return
         if course['courseLabelId'] is None:
             return
-        
-        # if exists, return
-        sql = "SELECT * FROM coursenature WHERE courseLabelId = %s"
 
+        sql = "SELECT courseLabelName FROM coursenature WHERE courseLabelId = %s"
         val = (course['courseLabelId'], )
-
         self.cursor.execute(sql, val)
+        row = self.cursor.fetchone()
 
-        if self.cursor.fetchone() is not None:
+        if row is not None:
+            if row[0] != course['courseLabelName']:
+                print(f"课程性质更名: {row[0]} -> {course['courseLabelName']}")
+                sql = "UPDATE coursenature SET courseLabelName = %s WHERE courseLabelId = %s"
+                self.cursor.execute(sql, (course['courseLabelName'], course['courseLabelId']))
+                self.db.commit()
             return
-        
+
         # Insert
         sql = "INSERT INTO coursenature (courseLabelId, courseLabelName, calendarId) VALUES (%s, %s, %s)"
-
         val = (course['courseLabelId'], course['courseLabelName'], course['calendarId'])
-
         self.cursor.execute(sql, val)
-
         self.db.commit()
 
     def insertAssessmentMode(self, course):
         '''
         Insert assessmentMode into database
         '''
-        # if none, return
         if course['assessmentMode'] is None:
             return
-        
-        # if exists, return
-        sql = "SELECT * FROM assessment WHERE assessmentMode = %s"
 
+        sql = "SELECT assessmentModeI18n FROM assessment WHERE assessmentMode = %s"
         val = (course['assessmentMode'], )
-
         self.cursor.execute(sql, val)
+        row = self.cursor.fetchone()
 
-        if self.cursor.fetchone() is not None:
+        if row is not None:
+            if row[0] != course['assessmentModeI18n']:
+                print(f"考核方式更名: {row[0]} -> {course['assessmentModeI18n']}")
+                sql = "UPDATE assessment SET assessmentModeI18n = %s WHERE assessmentMode = %s"
+                self.cursor.execute(sql, (course['assessmentModeI18n'], course['assessmentMode']))
+                self.db.commit()
             return
-        
+
         # Insert
         sql = "INSERT INTO assessment (assessmentMode, assessmentModeI18n, calendarId) VALUES (%s, %s, %s)"
-
         val = (course['assessmentMode'], course['assessmentModeI18n'], course['calendarId'])
-
         self.cursor.execute(sql, val)
-
         self.db.commit()
 
     def insertCampus(self, course):
         '''
         Insert campus into database
         '''
-        # if none, return
         if course['campus'] is None:
             return
-        
-        # if exists, return
-        sql = "SELECT * FROM campus WHERE campus = %s"
 
+        sql = "SELECT campusI18n FROM campus WHERE campus = %s"
         val = (course['campus'], )
-
         self.cursor.execute(sql, val)
+        row = self.cursor.fetchone()
 
-        if self.cursor.fetchone() is not None:
+        if row is not None:
+            if row[0] != course['campusI18n']:
+                print(f"校区更名: {row[0]} -> {course['campusI18n']}")
+                sql = "UPDATE campus SET campusI18n = %s WHERE campus = %s"
+                self.cursor.execute(sql, (course['campusI18n'], course['campus']))
+                self.db.commit()
             return
-        
+
         # Insert
         sql = "INSERT INTO campus (campus, campusI18n, calendarId) VALUES (%s, %s, %s)"
-
         val = (course['campus'], course['campusI18n'], course['calendarId'])
-
         self.cursor.execute(sql, val)
-
         self.db.commit()
 
     def insertFaculty(self, course):
         '''
         Insert faculty into database
         '''
-        # if exists, return
-        sql = "SELECT * FROM faculty WHERE faculty = %s"
-
+        sql = "SELECT facultyI18n FROM faculty WHERE faculty = %s"
         val = (course['faculty'], )
-
         self.cursor.execute(sql, val)
+        row = self.cursor.fetchone()
 
-        if self.cursor.fetchone() is not None:
+        if row is not None:
+            if row[0] != course['facultyI18n']:
+                print(f"学院更名: {row[0]} -> {course['facultyI18n']}")
+                sql = "UPDATE faculty SET facultyI18n = %s WHERE faculty = %s"
+                self.cursor.execute(sql, (course['facultyI18n'], course['faculty']))
+                self.db.commit()
             return
-        
+
         # Insert
         sql = "INSERT INTO faculty (faculty, facultyI18n, calendarId) VALUES (%s, %s, %s)"
-
         val = (course['faculty'], course['facultyI18n'], course['calendarId'])
-
         self.cursor.execute(sql, val)
-
         self.db.commit()
 
     def insertMajors(self, majors, calendarId):
@@ -265,33 +262,32 @@ class tjSql:
         '''
         Insert language into database
         '''
-        # if exists, return
-        sql = "SELECT * FROM language WHERE teachingLanguage = %s"
+        if course['teachingLanguage'] is None:
+            return
 
+        sql = "SELECT teachingLanguageI18n FROM language WHERE teachingLanguage = %s"
         val = (course['teachingLanguage'], )
-
-        if val is None:
-            return
-
         self.cursor.execute(sql, val)
+        row = self.cursor.fetchone()
 
-        if self.cursor.fetchone() is not None:
+        if row is not None:
+            if row[0] != course['teachingLanguageI18n']:
+                print(f"教学语言更名: {row[0]} -> {course['teachingLanguageI18n']}")
+                sql = "UPDATE language SET teachingLanguageI18n = %s WHERE teachingLanguage = %s"
+                self.cursor.execute(sql, (course['teachingLanguageI18n'], course['teachingLanguage']))
+                self.db.commit()
             return
-        
+
         try:
             # Insert
             sql = "INSERT INTO language (teachingLanguage, teachingLanguageI18n, calendarId) VALUES (%s, %s, %s)"
-
             val = (course['teachingLanguage'], course['teachingLanguageI18n'], course['calendarId'])
-
             self.cursor.execute(sql, val)
-
             self.db.commit()
         except Exception as e:
             print(e)
             print(course)
             print("\n\n\n插入语言数据发生异常\n\n\n")
-            # input()
 
     def insertCourseList(self, courses):
         '''
@@ -396,35 +392,118 @@ class tjSql:
 
     def deleteOldRecordsInRange(self, currentCalendarId, depth):
         '''
-        Delete records in the range of [currentCalendarId - depth + 1, currentCalendarId]
-        Returns the list of calendarIds that will be deleted
-        If depth is 0, no records will be deleted
+        Delete course records in the range of [currentCalendarId - depth + 1, currentCalendarId]
+        Deletes from coursedetail directly to avoid cascading through shared dimension tables
+        (faculty/campus/assessment/language/coursenature), which would affect other semesters.
+        Returns the list of calendarIds that were deleted (empty if depth is 0).
         '''
-        # If depth is 0, don't delete anything
         if depth <= 0:
             print("深度为 0，不删除任何记录")
             return []
-        
-        # Calculate the range of calendarIds to delete
+
         startCalendarId = currentCalendarId - depth + 1
         endCalendarId = currentCalendarId
-        
+
         calendarIdsToDelete = list(range(startCalendarId, endCalendarId + 1))
-        
+
         print(f"准备删除 calendarId 范围: {calendarIdsToDelete}")
-        
-        # Delete records from all tables
-        # The foreign key constraints will automatically cascade delete
-        for calendarId in calendarIdsToDelete:
-            # Delete from calendar table (will cascade to other tables)
-            sql = "DELETE FROM calendar WHERE calendarId = %s"
-            self.cursor.execute(sql, (calendarId,))
-        
+
+        # Delete directly from coursedetail — cascades only to teacher and majorandcourse,
+        # leaving dimension tables (faculty, campus, assessment, language, coursenature) untouched
+        sql = "DELETE FROM coursedetail WHERE calendarId BETWEEN %s AND %s"
+        self.cursor.execute(sql, (startCalendarId, endCalendarId))
         self.db.commit()
-        
-        print(f"已删除 {len(calendarIdsToDelete)} 个学期的记录")
-        
+
+        print(f"已删除 {len(calendarIdsToDelete)} 个学期的课程记录")
+
         return calendarIdsToDelete
+
+    def cleanupOrphanedDimensions(self, startCalendarId, endCalendarId):
+        '''
+        Clean up dimension records whose calendarId falls in the update range:
+        - DELETE records that have zero course references in the entire database
+        - UPDATE records whose actual earliest referenced calendarId differs
+          (handles "current not have, future have" scenario)
+        Must be called AFTER all semesters in range have been re-fetched.
+        '''
+        # === 5 directly-referenced dimension tables ===
+        direct_tables = [
+            ('faculty',       'faculty'),
+            ('campus',         'campus'),
+            ('assessment',     'assessmentMode'),
+            ('language',       'teachingLanguage'),
+            ('coursenature',   'courseLabelId'),
+        ]
+
+        for table, pk_col in direct_tables:
+            # Step A: DELETE — truly orphaned (no course references at all)
+            sql_delete = f"""
+                DELETE FROM {table}
+                WHERE calendarId BETWEEN %s AND %s
+                  AND {pk_col} NOT IN (
+                      SELECT DISTINCT {pk_col} FROM coursedetail
+                      WHERE {pk_col} IS NOT NULL
+                  )
+            """
+            self.cursor.execute(sql_delete, (startCalendarId, endCalendarId))
+            deleted = self.cursor.rowcount
+            if deleted > 0:
+                print(f"  [DELETE] {table}: {deleted} 条无引用记录已删除")
+
+            # Step B: UPDATE — fix calendarId to the actual earliest referenced semester
+            sql_update = f"""
+                UPDATE {table} t
+                JOIN (
+                    SELECT {pk_col}, MIN(calendarId) AS min_cal
+                    FROM coursedetail
+                    WHERE {pk_col} IS NOT NULL
+                    GROUP BY {pk_col}
+                ) c ON t.{pk_col} = c.{pk_col}
+                SET t.calendarId = c.min_cal
+                WHERE t.calendarId BETWEEN %s AND %s
+                  AND t.calendarId <> c.min_cal
+            """
+            self.cursor.execute(sql_update, (startCalendarId, endCalendarId))
+            updated = self.cursor.rowcount
+            if updated > 0:
+                print(f"  [UPDATE] {table}: {updated} 条 calendarId 已修正")
+
+        # === major table (indirect reference via majorandcourse) ===
+        # Step A: DELETE
+        sql_major_delete = """
+            DELETE FROM major
+            WHERE calendarId BETWEEN %s AND %s
+              AND id NOT IN (
+                  SELECT DISTINCT mac.majorId
+                  FROM majorandcourse mac
+                  JOIN coursedetail cd ON mac.courseId = cd.id
+              )
+        """
+        self.cursor.execute(sql_major_delete, (startCalendarId, endCalendarId))
+        deleted = self.cursor.rowcount
+        if deleted > 0:
+            print(f"  [DELETE] major: {deleted} 条无引用记录已删除")
+
+        # Step B: UPDATE
+        sql_major_update = """
+            UPDATE major m
+            JOIN (
+                SELECT mac.majorId, MIN(cd.calendarId) AS min_cal
+                FROM majorandcourse mac
+                JOIN coursedetail cd ON mac.courseId = cd.id
+                GROUP BY mac.majorId
+            ) c ON m.id = c.majorId
+            SET m.calendarId = c.min_cal
+            WHERE m.calendarId BETWEEN %s AND %s
+              AND m.calendarId <> c.min_cal
+        """
+        self.cursor.execute(sql_major_update, (startCalendarId, endCalendarId))
+        updated = self.cursor.rowcount
+        if updated > 0:
+            print(f"  [UPDATE] major: {updated} 条 calendarId 已修正")
+
+        self.db.commit()
+        print("维度记录清理/修正完成")
 
     def insertFetchLog(self, latestCalendar, depth):
         '''
