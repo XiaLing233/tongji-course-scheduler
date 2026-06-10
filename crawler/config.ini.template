@@ -30,3 +30,4 @@ me =
 [Spider]
 latest_term = 121
 depth = 8
+send_email = true
