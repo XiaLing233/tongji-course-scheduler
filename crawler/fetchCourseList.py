@@ -98,19 +98,16 @@ def fetchCourseList(session, calendar=120, depth=1):
         "Referer": "https://1.tongji.edu.cn/taskResultQuery"
     }
 
-    # 第一页：获取总数并入库
+    # 获取总数
     data = safeFetch(session, headers, payload)
     total = data['data']['total_']
     total_pages = total // PAGESIZE + 1
 
-    with tjSql.tjSql() as sql:
-        sql.insertCourseList(data['data']['list'])
-
     tqdm.write(f"学期 {CALENDAR}  —  {total} 条课程, {total_pages} 页")
 
-    # 逐页抓取（带进度条）
+    # 逐页抓取
     for i in PipeTqdm(
-        range(2, total_pages + 1),
+        range(1, total_pages + 1),
         desc=f"学期 {CALENDAR}",
         unit="页",
         disable=False,
