@@ -1,4 +1,4 @@
-import configparser
+import os
 import json
 import time
 import xml.etree.ElementTree as ET
@@ -10,15 +10,6 @@ import requests
 
 from . import imap_email
 from . import myEncrypt
-
-
-CONFIG = configparser.ConfigParser()
-CONFIG.read("config.ini")
-
-IMAP_SERVER = CONFIG["IMAP"]["server_domain"]
-IMAP_PORT = CONFIG["IMAP"]["server_port"]
-IMAP_USERNAME = CONFIG["IMAP"]["qq_emailaddr"]
-IMAP_PASSWORD = CONFIG["IMAP"]["qq_grantcode"]
 
 
 class LoginState(Enum):
@@ -141,7 +132,7 @@ class SSOLoginStateMachine:
     def _submit_password(self) -> None:
         data = urlencode(
             {
-                "j_username": myEncrypt.STU_NO,
+                "j_username": os.getenv('TJ_SNO', ''),
                 "j_password": myEncrypt.encryptPassword(self.ctx.rsa_url),
                 "j_checkcode": "请输入验证码",
                 "op": "login",
@@ -187,7 +178,7 @@ class SSOLoginStateMachine:
             self.ctx.state = LoginState.AUTHN_ENGINE
 
     def _request_enhance_code(self) -> None:
-        data = urlencode({"j_username": myEncrypt.STU_NO, "type": "email"})
+        data = urlencode({"j_username": os.getenv('TJ_SNO', ''), "type": "email"})
 
         session = self.ctx.session
         session.headers.clear()
@@ -205,7 +196,10 @@ class SSOLoginStateMachine:
         time.sleep(self.ctx.wait_seconds)
 
         with imap_email.EmailVerifier(
-            IMAP_USERNAME, IMAP_PASSWORD, IMAP_SERVER, IMAP_PORT
+            os.getenv('IMAP_EMAIL', ''),
+            os.getenv('IMAP_GRANTCODE', ''),
+            os.getenv('IMAP_SERVER', 'imap.qq.com'),
+            os.getenv('IMAP_PORT', '993'),
         ) as verifier:
             code = verifier.get_latest_verification_code()
 
@@ -214,7 +208,7 @@ class SSOLoginStateMachine:
 
         data = urlencode(
             {
-                "j_username": myEncrypt.STU_NO,
+                "j_username": os.getenv('TJ_SNO', ''),
                 "type": "email",
                 "sms_checkcode": code,
                 "popViewException": "Pop2",
@@ -351,7 +345,7 @@ def login() -> requests.Session | None:
 def logout(session: requests.Session) -> None:
     logout_data = {
         "sessionid": session.cookies.get_dict().get("sessionid", ""),
-        "uid": myEncrypt.STU_NO,
+        "uid": os.getenv('TJ_SNO', ''),
     }
 
     payload = json.dumps(logout_data, separators=(",", ":"))

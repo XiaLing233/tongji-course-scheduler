@@ -1,21 +1,11 @@
 # 加密部分
 
-import configparser # 读取配置文件
-import requests # 网络请求
-from Crypto.PublicKey import RSA # RSA 加密
-from Crypto.Cipher import PKCS1_v1_5 # RSA 加密
-# from Crypto.Cipher import AES # AES 加密
-import base64 # base64 编码
-# from urllib.parse import quote_plus
+import os
 
-# 读取配置文件
-
-CONFIG = configparser.ConfigParser()
-CONFIG.read('config.ini')
-
-# 账号密码认证部分
-STU_NO = CONFIG['Account']['sno']
-STU_PWD = CONFIG['Account']['passwd']
+import requests
+from Crypto.PublicKey import RSA
+from Crypto.Cipher import PKCS1_v1_5
+import base64
 
 # ----- 登录部分 ----- #
 
@@ -51,7 +41,7 @@ def encryptPassword(js_url):
 
     cipher = PKCS1_v1_5.new(public_key)
 
-    crypto = cipher.encrypt(STU_PWD.encode())
+    crypto = cipher.encrypt(os.getenv('TJ_PASSWD', '').encode())
 
     crypto = base64.b64encode(crypto)
     

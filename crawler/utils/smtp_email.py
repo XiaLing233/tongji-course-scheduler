@@ -1,20 +1,17 @@
-import configparser
+import os
 from smtplib import SMTP_SSL, SMTPException
 from email.mime.text import MIMEText
 from email.utils import formataddr
 
 class SMTPEmailClient:
-    def __init__(self, config_path: str):
+    def __init__(self):
         """
-        Initialize SMTP email client with configuration.
+        Initialize SMTP email client from environment variables.
         """
-        config = configparser.ConfigParser()
-        config.read(config_path)
-
-        self.smtp_server = config.get("SMTP", "smtp_server")
-        self.smtp_port = config.getint("SMTP", "smtp_port")
-        self.email_addr = config.get("SMTP", "smtp_username")
-        self.password = config.get("SMTP", "smtp_password")
+        self.smtp_server = os.getenv('SMTP_SERVER', '')
+        self.smtp_port = int(os.getenv('SMTP_PORT', '465'))
+        self.email_addr = os.getenv('SMTP_USERNAME', '')
+        self.password = os.getenv('SMTP_PASSWORD', '')
 
     def send_email(self, to_addr: str, subject: str, body: str) -> bool:
         """
@@ -36,10 +33,10 @@ class SMTPEmailClient:
 
 # Example usage:
 if __name__ == "__main__":
-    email_client = SMTPEmailClient("config.ini")
-    config = configparser.ConfigParser()
-    config.read("config.ini")
-    me = config.get("SMTP", "me")
+    from dotenv import load_dotenv
+    load_dotenv()
+    email_client = SMTPEmailClient()
+    me = os.getenv('SMTP_SENDER', '')
     success = email_client.send_email(me, "Test Subject", "This is a test email body.")
 
     if success:

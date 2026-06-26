@@ -1,18 +1,7 @@
+import os
+
 import mysql.connector
-import configparser
 import json
-
-# 读取配置文件
-CONFIG = configparser.ConfigParser()
-CONFIG.read('config.ini', encoding='utf-8')
-
-# 设置数据库连接
-DB_HOST = CONFIG['Sql']['host']
-DB_USER = CONFIG['Sql']['r_user'] # 只读用户
-DB_PASSWORD = CONFIG['Sql']['r_password'] # 只读用户密码
-DB_DATABASE = CONFIG['Sql']['database']
-DB_PORT = int(CONFIG['Sql']['port'])
-DB_CHARSET = CONFIG['Sql']['charset']
 
 OPTIONAL_LABEL_LIST = [
     "通识选修课",
@@ -26,17 +15,19 @@ class bckndSql:
     '''
     A class for handling MySQL database
     '''
-    def __init__(self):
+    def __init__(self, database=None):
         '''
-        Initialize the database connection
+        Initialize the database connection.
+        database: 指定数据库名，默认用 DB_META 环境变量。
+        US-1.4 后将由 DbRouter 接管此逻辑。
         '''
         self.db = mysql.connector.connect(
-            host=DB_HOST,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            database=DB_DATABASE,
-            port=DB_PORT,
-            charset=DB_CHARSET  
+            host=os.getenv('DB_HOST', 'localhost'),
+            user=os.getenv('DB_R_USER', 'readonly'),
+            password=os.getenv('DB_R_PASSWORD', ''),
+            database=database or os.getenv('DB_META', 'course_scheduler_meta'),
+            port=int(os.getenv('DB_PORT', '3306')),
+            charset='utf8mb4',
         )
         self.cursor = self.db.cursor()
 

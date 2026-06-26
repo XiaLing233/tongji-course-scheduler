@@ -100,25 +100,3 @@ class EmailVerifier:
         if self.mailbox:
             self.mailbox.logout()
             self.mailbox = None
-
-
-# Unit test
-if __name__ == "__main__":
-    import configparser
-
-    # Read config
-    CONFIG = configparser.ConfigParser()
-    CONFIG.read('../config.ini')
-
-    # 加强认证
-    IMAP_SERVER = CONFIG["IMAP"]["server_domain"]
-    IMAP_PORT = CONFIG["IMAP"]["server_port"]
-    IMAP_USERNAME =  CONFIG["IMAP"]["qq_emailaddr"]
-    IMAP_PASSWORD =  CONFIG["IMAP"]["qq_grantcode"]
-
-    with EmailVerifier(IMAP_USERNAME, IMAP_PASSWORD, IMAP_SERVER, IMAP_PORT) as verifier:
-        code = verifier.get_latest_verification_code()
-        if code:
-            print("验证码获取成功")
-        else:
-            print("未找到验证码")

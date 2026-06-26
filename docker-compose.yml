@@ -1,18 +1,34 @@
 services:
+  mysql:
+    image: mysql:8.4
+    container_name: xk-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_HOST: "%"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./crawler/meta_template.sql:/docker-entrypoint-initdb.d/01_meta.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+
   redis:
     image: redis:8.4-alpine
     container_name: xk-redis
-    ports:
-      - "6380:6379"
     restart: always
 
   backend:
     build: ./backend
     container_name: xk-backend
-    ports:
-      - "1239:1239"
+    env_file: .env
     depends_on:
-      - redis
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:1239/api/health"]
       interval: 30s
@@ -20,5 +36,27 @@ services:
       retries: 3
       start_period: 20s
     restart: always
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+
+  frontend:
+    build: ./xkFrontendts
+    container_name: xk-frontend
+    ports:
+      - "1239:80"
+    depends_on:
+      - backend
+    restart: always
+
+  crawler:
+    build: ./crawler
+    env_file: .env
+    profiles: ["crawler"]
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    entrypoint: ["python3", "-u", "fetchCourseList.py"]
+    restart: "no"
+
+volumes:
+  mysql_data:

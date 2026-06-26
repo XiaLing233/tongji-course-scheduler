@@ -1,4 +1,6 @@
-import configparser
+import os
+
+from dotenv import load_dotenv
 from flask import Flask
 
 from utils.redis_client import init_redis
@@ -6,15 +8,14 @@ from routes.basic import basic_bp
 from routes.course import course_bp
 from routes.status import status_bp
 
+load_dotenv()
+
 app = Flask(__name__)
 
-CONFIG = configparser.ConfigParser()
-CONFIG.read('config.ini', encoding='utf-8')
+app.config['DEBUG'] = os.getenv('APP_DEBUG', 'false').lower() == 'true'
 
-IS_DEBUG = CONFIG['Switch']['debug']  # 1 / 0
-
-# Redis connection for SSE streaming — all values required in config.ini [Redis] section
-init_redis(CONFIG['Redis'])
+# Redis SSE — init from env vars
+init_redis()
 
 # Register route blueprints
 app.register_blueprint(basic_bp)

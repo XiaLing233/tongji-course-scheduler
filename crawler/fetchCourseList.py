@@ -1,10 +1,15 @@
+import os
+import time
+from datetime import datetime
+
+from dotenv import load_dotenv
+from tqdm import tqdm
+
 from utils import loginout
 from utils import tjSql
 from utils.smtp_email import SMTPEmailClient
-import configparser
-import time
-from datetime import datetime
-from tqdm import tqdm
+
+load_dotenv()
 
 
 class PipeTqdm(tqdm):
@@ -70,111 +75,99 @@ def safeFetch(session, headers, payload):
                 raise last_exc
 
 
-def fetchCourseList(session, calendar=120, depth=1):
-    """
-    Fetch course list from url, receive the authenticated session as parameter
-    depth: the number of semesters to fetch, starting from current calendar
-    """
+PAGESIZE = 200
 
-    PAGESIZE = 200
-    CALENDAR = calendar
+
+def fetchCourseList(session, calendar, target_db):
+    """爬取一个学期的课程，写入 target_db。返回 (totalCourses, totalPages)。"""
 
     payload = {
         "condition": {
             "trainingLevel": "",
             "campus": "",
-            "calendar": CALENDAR,
+            "calendar": calendar,
             "college": "",
             "course": "",
             "ids": [],
             "isChineseTeaching": None,
         },
         "pageNum_": 1,
-        "pageSize_": PAGESIZE
+        "pageSize_": 20,  # 小请求先拿 total，减少首包体积
     }
-
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
-        "Referer": "https://1.tongji.edu.cn/taskResultQuery"
+        "Referer": "https://1.tongji.edu.cn/taskResultQuery",
     }
 
-    # 获取总数
     data = safeFetch(session, headers, payload)
     total = data['data']['total_']
     total_pages = total // PAGESIZE + 1
+    payload['pageSize_'] = PAGESIZE  # 后续请求用全量
 
-    tqdm.write(f"学期 {CALENDAR}  —  {total} 条课程, {total_pages} 页")
+    tqdm.write(f"学期 {calendar}  —  {total} 条课程, {total_pages} 页  →  {target_db}")
 
-    # 逐页抓取
-    for i in PipeTqdm(
-        range(1, total_pages + 1),
-        desc=f"学期 {CALENDAR}",
-        unit="页",
-        disable=False,
-        miniters=1,
-        mininterval=0,
-    ):
+    for i in PipeTqdm(range(1, total_pages + 1), desc=f"学期 {calendar}", unit="页"):
         payload['pageNum_'] = i
         data = safeFetch(session, headers, payload)
-
-        with tjSql.tjSql() as sql:
+        with tjSql.tjSql(target_db) as sql:
             sql.insertCourseList(data['data']['list'])
-
         time.sleep(3)
 
-    tqdm.write(f"学期 {CALENDAR}  [OK] 完成")
+    tqdm.write(f"学期 {calendar}  [OK] 完成")
+    return total, total_pages
+
+
+def sync_one(session, calendar_id, name=None):
+    """蓝绿同步单个学期：建库 → 日志(running) → 爬取 → 切换 → 日志(completed)。"""
+    with tjSql.tjSql() as sql:
+        target_db = sql.ensureCalendarDb(calendar_id, name)
+        log_id = sql.startFetchLog(calendar_id)
+
+    try:
+        total_courses, total_pages = fetchCourseList(session, calendar_id, target_db)
+    except Exception as e:
+        tqdm.write(f"[FAIL] 学期 {calendar_id} 同步失败: {e}")
+        with tjSql.tjSql() as sql:
+            sql.finishFetchLog(log_id, status='failed', errorMessage=str(e))
+        return
+
+    with tjSql.tjSql() as sql:
+        sql.switchActiveDb(calendar_id)
+        sql.finishFetchLog(log_id, status='completed',
+                           totalCourses=total_courses, totalPages=total_pages)
+
+    tqdm.write(f"学期 {calendar_id}  已切换到 {target_db}")
 
 
 if __name__ == "__main__":
+    # TODO: US-1.3 argparse 替换
+    latest_calendar = int(os.getenv('CRAWLER_LATEST_TERM', '0'))
+    depth = int(os.getenv('CRAWLER_DEPTH', '1'))
+    if not latest_calendar:
+        tqdm.write("请使用 --calendar 参数或设置 CRAWLER_LATEST_TERM 环境变量")
+        exit(-1)
+
     session = loginout.login()
     if session is None:
         exit(-1)
 
-    config = configparser.ConfigParser()
-    config.read("config.ini")
-
-    latest_calendar = config.getint("Spider", "latest_term")
-    depth = config.getint("Spider", "depth")
-
-    # 删除旧记录
-    tqdm.write(f"开始删除旧记录  |  学期 {latest_calendar}, 深度 {depth}")
-    with tjSql.tjSql() as sql:
-        deleted_terms = sql.deleteOldRecordsInRange(latest_calendar, depth)
-
-    # 逐学期抓取
-    for idx, cal in enumerate(deleted_terms, 1):
-        tqdm.write(f"[{idx}/{len(deleted_terms)}] 正在爬取学期 {cal}")
-        fetchCourseList(session, calendar=cal, depth=depth)
-
-    # 清理/修正维度记录（DELETE 无引用 + UPDATE 修正 calendarId 语义）
-    if deleted_terms:
-        tqdm.write(f"清理维度记录  |  范围 {deleted_terms[0]} — {deleted_terms[-1]}")
-        with tjSql.tjSql() as sql:
-            sql.cleanupOrphanedDimensions(deleted_terms[0], deleted_terms[-1])
-
-    # 记录日志
-    with tjSql.tjSql() as sql:
-        sql.insertFetchLog(cal, depth)
-    time.sleep(5)
+    semesters = list(range(latest_calendar - depth + 1, latest_calendar + 1))
+    for idx, cal in enumerate(semesters, 1):
+        tqdm.write(f"[{idx}/{len(semesters)}] 正在同步学期 {cal}")
+        sync_one(session, cal)
 
     # 邮件通知
-    send_email = config.getboolean("Spider", "send_email", fallback=True)
-    if send_email:
-        email_client = SMTPEmailClient("config.ini")
-        me = config.get("SMTP", "me")
+    if os.getenv('CRAWLER_SEND_EMAIL', 'false').lower() == 'true':
+        email_client = SMTPEmailClient()
         now = datetime.now()
-
         with tjSql.tjSql() as sql:
-            start_term = sql.calendarIdToText(latest_calendar - depth + 1)
-            end_term = sql.calendarIdToText(latest_calendar)
-
+            start_term = sql.calendarIdToText(semesters[0])
+            end_term = sql.calendarIdToText(semesters[-1])
         subject = f"课程数据更新完成通知 - {now.strftime('%Y-%m-%d')}"
-        body = f"夏凌！\n\n课程数据已成功更新。\n\n更新学期范围（闭区间）：{start_term} 至 {end_term}（学期代码 {latest_calendar - depth + 1} 至 {latest_calendar}）\n更新完成时间：{now.strftime('%Y-%m-%d %H:%M:%S')}\n\n祝好！\n琪露诺bot"
-
-        success = email_client.send_email(me, subject, body)
-        if success:
+        body = (f"夏凌！\n\n课程数据已成功更新。\n"
+                f"更新学期范围：{start_term} 至 {end_term}\n"
+                f"更新完成时间：{now.strftime('%Y-%m-%d %H:%M:%S')}\n\n祝好！\n琪露诺bot")
+        if email_client.send_email(os.getenv('SMTP_SENDER', ''), subject, body):
             tqdm.write("[OK] 邮件通知已发送")
         else:
             tqdm.write("[FAIL] 邮件通知发送失败")
-    else:
-        tqdm.write("[INFO] 邮件通知已关闭 (send_email = false)")
