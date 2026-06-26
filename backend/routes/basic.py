@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from utils import bckndSql
+from bckndSql import bckndSql
 
 basic_bp = Blueprint('basic', __name__)
 
@@ -30,7 +30,7 @@ def getAllCalendar():
     }
     ```
     '''
-    with bckndSql.bckndSql() as sql:
+    with bckndSql() as sql:
         result = sql.getAllCalendar(limit=8)
     return jsonify({"code": 200, "msg": "查询成功", "data": result}), 200
 
@@ -58,7 +58,7 @@ def getAllCampus():
     ```
     '''
     payload = request.json
-    with bckndSql.bckndSql(calendar_id=payload['calendarId']) as sql:
+    with bckndSql(calendar_id=payload['calendarId']) as sql:
         result = sql.getAllCampus()
     return jsonify({"code": 200, "msg": "查询成功", "data": result}), 200
 
@@ -99,7 +99,7 @@ def getAllFaculty():
     ```
     '''
     payload = request.json
-    with bckndSql.bckndSql(calendar_id=payload['calendarId']) as sql:
+    with bckndSql(calendar_id=payload['calendarId']) as sql:
         result = sql.getAllFaculty()
     return jsonify({"code": 200, "msg": "查询成功", "data": result}), 200
 
@@ -126,7 +126,7 @@ def findGradeByCalendarId():
     ```
     '''
     payload = request.json
-    with bckndSql.bckndSql(calendar_id=payload['calendarId']) as sql:
+    with bckndSql(calendar_id=payload['calendarId']) as sql:
         result = sql.findGrades()
     return jsonify({"code": 200, "msg": "查询成功", "data": {"gradeList": result}}), 200
 
@@ -163,6 +163,6 @@ def findMajorByGrade():
         ```
     '''
     payload = request.json
-    with bckndSql.bckndSql(calendar_id=payload['calendarId']) as sql:
+    with bckndSql(calendar_id=payload['calendarId']) as sql:
         result = sql.findMajorByGrade(payload['grade'])
     return jsonify({"code": 200, "msg": "查询成功", "data": result}), 200

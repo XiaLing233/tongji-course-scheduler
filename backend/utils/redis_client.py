@@ -13,20 +13,18 @@ import redis
 state = {
     'r': None,
     'stream_key': None,
-    'status_key': None
 }
 
 
 def init_redis():
     """Initialize Redis connection from env vars. Must be called before first request."""
     state['r'] = redis.Redis(
-        host=os.getenv('REDIS_HOST', 'localhost'),
-        port=int(os.getenv('REDIS_PORT', '6379')),
-        db=int(os.getenv('REDIS_DB', '0')),
+        host=os.getenv('REDIS_HOST'),
+        port=int(os.getenv('REDIS_PORT')),
+        db=int(os.getenv('REDIS_DB')),
         decode_responses=True,
     )
-    state['stream_key'] = os.getenv('REDIS_STREAM_KEY', 'crawler:log')
-    state['status_key'] = os.getenv('REDIS_STATUS_KEY', 'crawler:status')
+    state['stream_key'] = os.getenv('REDIS_STREAM_KEY')
 
 
 def format_sse_event(event_type, msg_id, data):

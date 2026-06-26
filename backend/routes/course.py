@@ -2,7 +2,7 @@ from datetime import datetime
 
 from flask import Blueprint, request, jsonify
 
-from utils import bckndSql
+from bckndSql import bckndSql
 from utils.bckndTools import arrangementTextToObj, splitEndline, optCourseQueryListGenerator
 
 course_bp = Blueprint('course', __name__)
@@ -127,7 +127,7 @@ def findCourseByMajor():
 
     payload = request.json
 
-    with bckndSql.bckndSql(calendar_id=payload['calendarId']) as sql:
+    with bckndSql(calendar_id=payload['calendarId']) as sql:
         result = sql.findCourseByMajor(payload['grade'], payload['code'])
 
     # 处理 result 中的 locations 字段
@@ -227,7 +227,7 @@ def findOptionalCourseType():
 
     payload = request.json
 
-    with bckndSql.bckndSql(calendar_id=payload['calendarId']) as sql:
+    with bckndSql(calendar_id=payload['calendarId']) as sql:
         result = sql.findOptionalCourseType()
 
     return jsonify({
@@ -346,7 +346,7 @@ def findCourseByNatureId():
             "msg": "ids 不能为空",
         }), 400
 
-    with bckndSql.bckndSql(calendar_id=payload['calendarId']) as sql:
+    with bckndSql(calendar_id=payload['calendarId']) as sql:
         try:
             result = sql.findCourseByNatureId(payload['ids'])
         except ValueError as e:
@@ -423,7 +423,7 @@ def findCourseDetailByCode():
         codes = payload['courseCode']
         is_batch = False
 
-    with bckndSql.bckndSql(calendar_id=payload['calendarId']) as sql:
+    with bckndSql(calendar_id=payload['calendarId']) as sql:
         result = sql.findCourseDetailByCode(codes)
 
     def process_course_list(course_list):
@@ -540,7 +540,7 @@ def findCourseBySearch():
 
 
     sizeLimit = 100
-    with bckndSql.bckndSql(calendar_id=payload['calendarId']) as sql:
+    with bckndSql(calendar_id=payload['calendarId']) as sql:
         result = sql.findCourseBySearch(payload, sizeLimit)
 
     return jsonify({
@@ -605,7 +605,7 @@ def findCourseByTime():
             "data": []
         }), 400
 
-    with bckndSql.bckndSql(calendar_id=payload['calendarId']) as sql:
+    with bckndSql(calendar_id=payload['calendarId']) as sql:
         result = sql.findCourseByTime(queryStr)
 
     return jsonify({
@@ -632,7 +632,7 @@ def getLatestUpdateTime():
     '''
 
     calendar_id = request.args.get('calendarId', type=int)
-    with bckndSql.bckndSql() as sql:
+    with bckndSql() as sql:
         result = sql.getLatestUpdateTime(calendar_id)
 
     if result is None:
@@ -695,7 +695,7 @@ def getLatestCourseInfo():
             "data": {}
         }), 400
 
-    with bckndSql.bckndSql() as sql:
+    with bckndSql() as sql:
         result_dict = sql.getLatestCourseInfo(majorCourseCodes, otherCourseCodes, calendarId, majorInfo)
 
         # Process arrangement info for each course code

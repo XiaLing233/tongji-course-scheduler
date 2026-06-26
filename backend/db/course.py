@@ -1,11 +1,8 @@
-"""Backend 只读查询。bckndSql() → 元数据库, bckndSql(calendar_id=N) → 学期库。"""
+"""学期库只读查询 Mixin。"""
 
 import json
-import os
 
-import mysql.connector
-
-from .db_router import router
+from .connection import ReadConnection
 
 OPTIONAL_LABEL_LIST = [
     "通识选修课",
@@ -16,63 +13,8 @@ OPTIONAL_LABEL_LIST = [
 ]
 
 
-class bckndSql:
-    """只读数据库连接。calendar_id 模式走 DbRouter，否则直连元数据库。"""
-
-    def __init__(self, calendar_id=None):
-        if calendar_id is not None:
-            self.db = router.get_connection(calendar_id)
-        else:
-            self.db = mysql.connector.connect(
-                host=os.getenv('DB_HOST'),
-                user=os.getenv('DB_R_USER'),
-                password=os.getenv('DB_R_PASSWORD'),
-                database=os.getenv('DB_META'),
-                port=int(os.getenv('DB_PORT')),
-                charset='utf8mb4',
-            )
-        self.cursor = self.db.cursor()
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        self.cursor.close()
-        self.db.close()
-
-    # ================================================================
-    #  元数据库查询
-    # ================================================================
-
-    def getAllCalendar(self, limit=8):
-        self.cursor.execute(
-            'SELECT JSON_OBJECT("calendarId", calendarId, "calendarName", calendarIdI18n) '
-            'FROM calendar_registry '
-            'WHERE calendarIdI18n != \'数据同步中…\' '
-            'ORDER BY calendarId DESC LIMIT %s', (limit,)
-        )
-        return [json.loads(row[0]) for row in self.cursor.fetchall()]
-
-    def getLatestUpdateTime(self, calendarId=None):
-        if calendarId is not None:
-            self.cursor.execute(
-                'SELECT startTime FROM fetchlog WHERE calendarId = %s '
-                'ORDER BY startTime DESC LIMIT 1', (calendarId,)
-            )
-        else:
-            self.cursor.execute(
-                'SELECT startTime FROM fetchlog ORDER BY startTime DESC LIMIT 1'
-            )
-        rows = self.cursor.fetchall()
-        return rows[0][0] if rows else None
-
-    def getHealth(self):
-        self.cursor.execute('SELECT 1')
-        return self.cursor.fetchone()
-
-    # ================================================================
-    #  学期库查询 — 必须通过 calendar_id 连接
-    # ================================================================
+class CourseQueries(ReadConnection):
+    """学期库查询方法。"""
 
     def getAllCampus(self):
         self.cursor.execute(
@@ -124,7 +66,7 @@ class bckndSql:
                 'campus', ca.campusI18n,
                 'locations', locations.locations,
                 'teachingLanguage', l.teachingLanguageI18n,
-                'isExclusive', IF(mac_exclusive.majorId IS NOT NULL, TRUE, FALSE) -- 判断是否存在关联的专业课程记录
+                'isExclusive', IF(mac_exclusive.majorId IS NOT NULL, TRUE, FALSE)
             ))
         )
         FROM coursedetail as c
@@ -132,7 +74,6 @@ class bckndSql:
         JOIN coursenature as n ON n.courseLabelId = c.courseLabelId
         JOIN campus as ca ON c.campus = ca.campus
         JOIN language as l ON l.teachingLanguage = c.teachingLanguage
-        -- 获取教师信息
         JOIN (
             SELECT t.teachingClassid,
                    JSON_ARRAYAGG(JSON_OBJECT(
@@ -141,23 +82,20 @@ class bckndSql:
                    )) AS teachers
             FROM teacher AS t GROUP BY t.teachingClassid
         ) AS teachers ON c.id = teachers.teachingClassid
-        -- 获取地点信息
         JOIN (
             SELECT t.teachingClassid, t.arrangeInfoText AS locations
             FROM teacher AS t
         ) AS locations ON c.id = locations.teachingClassid
-        -- 获取筛选条件和grade，并关联专业课程关系
         JOIN (
-            SELECT DISTINCT c.courseCode as myCode, m.grade, m.id as targetMajorId  -- 新增：获取目标专业 ID
+            SELECT DISTINCT c.courseCode as myCode, m.grade, m.id as targetMajorId
             FROM major AS m
             JOIN majorandcourse AS mac ON m.id = mac.majorId
             JOIN coursedetail as c ON mac.courseid = c.id
             WHERE m.grade <= %s AND m.code = %s
         ) AS codes ON c.courseCode = codes.myCode
-        -- 检查是否属于专属专业（新增 LEFT JOIN）
         LEFT JOIN majorandcourse AS mac_exclusive
             ON mac_exclusive.courseid = c.id
-            AND mac_exclusive.majorId = codes.targetMajorId  -- 关联目标专业 ID
+            AND mac_exclusive.majorId = codes.targetMajorId
         GROUP BY c.courseCode, c.courseName, f.facultyI18n, codes.grade, c.credit
         """
         self.cursor.execute(query, (grade, code))
@@ -178,7 +116,6 @@ class bckndSql:
         if not natureIds:
             raise ValueError("ids 不能为空")
 
-        # 先按当前学期和标签名范围，动态获取可查询的选修课标签 ID
         valid_query = (
             f"SELECT DISTINCT n.courseLabelId"
             f" FROM coursenature AS n JOIN coursedetail AS c ON n.courseLabelId = c.courseLabelId"
@@ -213,7 +150,7 @@ class bckndSql:
             JOIN coursenature as n ON n.courseLabelId = c.courseLabelId
             JOIN campus as ca ON c.campus = ca.campus
             WHERE c.courseLabelId IN ({','.join(['%s'] * len(natureIds))})
-            GROUP BY c.courseLabelId, c.courseCode, c.courseName, c.credit, f.facultyI18n    -- 按课程代码分组
+            GROUP BY c.courseLabelId, c.courseCode, c.courseName, c.credit, f.facultyI18n
         ) AS grouped_courses
         GROUP BY courseLabelId, courseLabelName
         ORDER BY courseLabelId DESC
@@ -240,7 +177,6 @@ class bckndSql:
         FROM coursedetail as c
         JOIN campus as ca ON c.campus = ca.campus
         JOIN language as l ON l.teachingLanguage = c.teachingLanguage
-        -- 获取教师信息
         JOIN (
             SELECT t.teachingClassid,
                    JSON_ARRAYAGG(JSON_OBJECT(
@@ -249,7 +185,6 @@ class bckndSql:
                    )) AS teachers
             FROM teacher AS t GROUP BY t.teachingClassid
         ) AS teachers ON c.id = teachers.teachingClassid
-        -- 获取地点信息
         JOIN (
             SELECT t.teachingClassid, t.arrangeInfoText AS locations
             FROM teacher AS t
