@@ -7,7 +7,7 @@ basic_bp = Blueprint('basic', __name__)
 @basic_bp.route('/api/getAllCalendar', methods=['GET'])
 def getAllCalendar():
     '''
-    Get all calendar.
+    Get all calendars from calendar_registry.
 
     Response:
     ```json
@@ -32,18 +32,18 @@ def getAllCalendar():
     '''
     with bckndSql.bckndSql() as sql:
         result = sql.getAllCalendar(limit=8)
-
-    return jsonify({
-        "code": 200,
-        "msg": "查询成功",
-        "data": result
-    }), 200
+    return jsonify({"code": 200, "msg": "查询成功", "data": result}), 200
 
 
-@basic_bp.route('/api/getAllCampus', methods=['GET'])
+@basic_bp.route('/api/getAllCampus', methods=['POST'])
 def getAllCampus():
     '''
-    Get all campus.
+    Get all campuses in a calendar.
+
+    Payload:
+    ```json
+    {"calendarId": 119}
+    ```
 
     Response:
     ```json
@@ -51,33 +51,27 @@ def getAllCampus():
         "code": 200,
         "msg": "查询成功",
         "data": [
-            {
-                "campusId": 3,
-                "campusName": "嘉定校区"
-            },
-            {
-                "campusId": 1,
-                "campusName": "四平路校区"
-            }
+            {"campusId": 3, "campusName": "嘉定校区"},
+            {"campusId": 1, "campusName": "四平路校区"}
         ]
     }
     ```
     '''
-
-    with bckndSql.bckndSql() as sql:
+    payload = request.json
+    with bckndSql.bckndSql(calendar_id=payload['calendarId']) as sql:
         result = sql.getAllCampus()
-
-    return jsonify({
-        "code": 200,
-        "msg": "查询成功",
-        "data": result
-    }), 200
+    return jsonify({"code": 200, "msg": "查询成功", "data": result}), 200
 
 
-@basic_bp.route('/api/getAllFaculty', methods=['GET'])
+@basic_bp.route('/api/getAllFaculty', methods=['POST'])
 def getAllFaculty():
     '''
-    Get all faculty.
+    Get all faculties in a calendar.
+
+    Payload:
+    ```json
+    {"calendarId": 119}
+    ```
 
     Response:
     ```json
@@ -104,27 +98,20 @@ def getAllFaculty():
     }
     ```
     '''
-
-    with bckndSql.bckndSql() as sql:
+    payload = request.json
+    with bckndSql.bckndSql(calendar_id=payload['calendarId']) as sql:
         result = sql.getAllFaculty()
-
-    return jsonify({
-        "code": 200,
-        "msg": "查询成功",
-        "data": result
-    }), 200
+    return jsonify({"code": 200, "msg": "查询成功", "data": result}), 200
 
 
 @basic_bp.route('/api/findGradeByCalendarId', methods=['POST'])
 def findGradeByCalendarId():
     '''
-    Find grade by calendarId.
+    Find grades that have courses in a calendar.
 
     Payload:
     ```json
-    {
-        "calendarId": 119
-    }
+    {"calendarId": 119}
     ```
 
     Response:
@@ -138,31 +125,20 @@ def findGradeByCalendarId():
     }
     ```
     '''
-
     payload = request.json
-
-    with bckndSql.bckndSql() as sql:
-        result = sql.findGradeByCalendarId(payload['calendarId'])
-
-    return jsonify({
-        "code": 200,
-        "msg": "查询成功",
-        "data": {
-            "gradeList": result
-        }
-    }), 200
+    with bckndSql.bckndSql(calendar_id=payload['calendarId']) as sql:
+        result = sql.findGrades()
+    return jsonify({"code": 200, "msg": "查询成功", "data": {"gradeList": result}}), 200
 
 
 @basic_bp.route('/api/findMajorByGrade', methods=['POST'])
 def findMajorByGrade():
     '''
-    Find major by grade.
+    Find majors by grade in a calendar.
 
     Payload:
     ```json
-    {
-        "grade": 2023
-    }
+    {"grade": 2023, "calendarId": 119}
     ```
 
     Response:
@@ -186,14 +162,7 @@ def findMajorByGrade():
         }
         ```
     '''
-
     payload = request.json
-
-    with bckndSql.bckndSql() as sql:
+    with bckndSql.bckndSql(calendar_id=payload['calendarId']) as sql:
         result = sql.findMajorByGrade(payload['grade'])
-
-    return jsonify({
-        "code": 200,
-        "msg": "查询成功",
-        "data": result
-    }), 200
+    return jsonify({"code": 200, "msg": "查询成功", "data": result}), 200

@@ -189,7 +189,8 @@ export default {
                     url: '/api/findMajorByGrade',
                     method: 'post',
                     data: {
-                        grade: this.$store.state.majorSelected.grade
+                        grade: this.$store.state.majorSelected.grade,
+                        calendarId: this.$store.state.majorSelected.calendarId
                     }
                 });
                 this.rawList.majors = res.data.data;
@@ -271,7 +272,8 @@ export default {
                     url: '/api/findMajorByGrade',
                     method: 'post',
                     data: {
-                        grade: this.$store.state.majorSelected.grade
+                        grade: this.$store.state.majorSelected.grade,
+                        calendarId: this.$store.state.majorSelected.calendarId
                     }
                 });
                 this.rawList.majors = res.data.data;

@@ -1,9 +1,16 @@
-from flask import Blueprint, request, jsonify
 from datetime import datetime
+
+from flask import Blueprint, request, jsonify
+
 from utils import bckndSql
 from utils.bckndTools import arrangementTextToObj, splitEndline, optCourseQueryListGenerator
 
 course_bp = Blueprint('course', __name__)
+
+
+# ================================================================
+#  课程查询 API
+# ================================================================
 
 
 @course_bp.route('/api/findCourseByMajor', methods=['POST'])
@@ -120,8 +127,8 @@ def findCourseByMajor():
 
     payload = request.json
 
-    with bckndSql.bckndSql() as sql:
-        result = sql.findCourseByMajor(payload['grade'], payload['code'], payload['calendarId'])
+    with bckndSql.bckndSql(calendar_id=payload['calendarId']) as sql:
+        result = sql.findCourseByMajor(payload['grade'], payload['code'])
 
     # 处理 result 中的 locations 字段
     # 由于 locations 字段是一个字符串，需要转换为数组
@@ -176,9 +183,9 @@ def findCourseByMajor():
 @course_bp.route('/api/findOptionalCourseType', methods=['POST'])
 def findOptionalCourseType():
     '''
-    Find optional course type.
+    Find optional course types in a calendar.
 
-    Payload
+    Payload:
 
     ```json
     {
@@ -220,8 +227,8 @@ def findOptionalCourseType():
 
     payload = request.json
 
-    with bckndSql.bckndSql() as sql:
-        result = sql.findOptionalCourseType(payload['calendarId'])
+    with bckndSql.bckndSql(calendar_id=payload['calendarId']) as sql:
+        result = sql.findOptionalCourseType()
 
     return jsonify({
         "code": 200,
@@ -333,16 +340,15 @@ def findCourseByNatureId():
     '''
 
     payload = request.json
-
-    if not payload['ids'] or len(payload['ids']) == 0:
+    if not payload.get('ids'):
         return jsonify({
             "code": 400,
             "msg": "ids 不能为空",
         }), 400
 
-    with bckndSql.bckndSql() as sql:
+    with bckndSql.bckndSql(calendar_id=payload['calendarId']) as sql:
         try:
-            result = sql.findCourseByNatureId(payload['ids'], payload['calendarId'])
+            result = sql.findCourseByNatureId(payload['ids'])
         except ValueError as e:
             return jsonify({
                 "code": 400,
@@ -417,8 +423,8 @@ def findCourseDetailByCode():
         codes = payload['courseCode']
         is_batch = False
 
-    with bckndSql.bckndSql() as sql:
-        result = sql.findCourseDetailByCode(codes, payload['calendarId'])
+    with bckndSql.bckndSql(calendar_id=payload['calendarId']) as sql:
+        result = sql.findCourseDetailByCode(codes)
 
     def process_course_list(course_list):
         """处理单个课程列表的通用函数"""
@@ -532,22 +538,9 @@ def findCourseBySearch():
             "msg": "请指定 calendarId",
         }), 400
 
-    # 至少有 2 个字段不为空
-    # filledCnt = 0
-    # for key in payload:
-    #     if payload[key]:
-    #         filledCnt += 1
-
-    # if filledCnt < 2 + 1:
-    #     return jsonify({
-    #         "code": 400,
-    #         "msg": "请至少指定两个查询条件",
-    #     }), 400
-
 
     sizeLimit = 100
-
-    with bckndSql.bckndSql() as sql:
+    with bckndSql.bckndSql(calendar_id=payload['calendarId']) as sql:
         result = sql.findCourseBySearch(payload, sizeLimit)
 
     return jsonify({
@@ -600,23 +593,20 @@ def findCourseByTime():
         message: "查询成功"
     }
     ```
-    接口太慢了，一天 100 门课的数据量，需要 40s 左右，需要优化
     '''
-
     payload = request.json
-
-    queryStr = optCourseQueryListGenerator(payload['day'], payload['section'], payload.get('calendarId', 0))
-
-    if queryStr == None:
+    queryStr = optCourseQueryListGenerator(
+        payload['day'], payload['section'], payload.get('calendarId', 0)
+    )
+    if queryStr is None:
         return jsonify({
             "code": 400,
             "msg": "输入参数有误",
             "data": []
         }), 400
 
-    with bckndSql.bckndSql() as sql:
-        result = sql.findCourseByTime(queryStr, payload['calendarId']) # 返回的是这一天的所有课程，需要再过滤一
-        print(len(result))
+    with bckndSql.bckndSql(calendar_id=payload['calendarId']) as sql:
+        result = sql.findCourseByTime(queryStr)
 
     return jsonify({
         "code": 200,
@@ -641,9 +631,12 @@ def getLatestUpdateTime():
     ```
     '''
 
+    calendar_id = request.args.get('calendarId', type=int)
     with bckndSql.bckndSql() as sql:
-        result = sql.getLatestUpdateTime()
+        result = sql.getLatestUpdateTime(calendar_id)
 
+    if result is None:
+        return jsonify({"code": 200, "msg": "查询成功", "data": None}), 200
     return jsonify({
         "code": 200,
         "msg": "查询成功",

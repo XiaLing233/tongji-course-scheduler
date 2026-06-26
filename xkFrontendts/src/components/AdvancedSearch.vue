@@ -113,7 +113,9 @@ export default {
             this.$store.commit('setSpin', true);
 
             try {
-                const res = await axios.get('/api/getAllCampus');
+                const res = await axios.post('/api/getAllCampus', {
+                    calendarId: this.$store.state.majorSelected.calendarId
+                });
                 this.rawList.campus = res.data.data.filter((campus: rawCampus) => campus.campusName !== '');
             }
             catch (error: unknown) {
@@ -129,7 +131,9 @@ export default {
             this.$store.commit('setSpin', true);
 
             try {
-                const res = await axios.get('/api/getAllFaculty');
+                const res = await axios.post('/api/getAllFaculty', {
+                    calendarId: this.$store.state.majorSelected.calendarId
+                });
                 this.rawList.faculty = res.data.data.filter((faculty: rawFaculty) => faculty.facultyName !== '');
             }
             catch (error: unknown) {

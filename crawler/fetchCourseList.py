@@ -106,7 +106,10 @@ def fetchCourseList(session, calendar, target_db):
     total_pages = total // PAGESIZE + 1
     payload['pageSize_'] = PAGESIZE  # 后续请求用全量
 
-    tqdm.write(f"学期 {calendar}  —  {total} 条课程, {total_pages} 页  →  {target_db}")
+    # 从第一页第一条课程提取学期中文名（如 "2025-2026学年第1学期"）
+    calendar_name = data['data']['list'][0]['calendarIdI18n']
+
+    tqdm.write(f"学期 {calendar_name}  —  {total} 条课程, {total_pages} 页  →  {target_db}")
 
     for i in PipeTqdm(range(1, total_pages + 1), desc=f"学期 {calendar}", unit="页"):
         payload['pageNum_'] = i
@@ -116,17 +119,17 @@ def fetchCourseList(session, calendar, target_db):
         time.sleep(3)
 
     tqdm.write(f"学期 {calendar}  [OK] 完成")
-    return total, total_pages
+    return total, total_pages, calendar_name
 
 
-def sync_one(session, calendar_id, name=None):
-    """蓝绿同步单个学期：建库 → 日志(running) → 爬取 → 切换 → 日志(completed)。"""
+def sync_one(session, calendar_id):
+    """蓝绿同步单个学期：建库 → 日志(running) → 爬取 → 命名 → 切换 → 日志(completed)。"""
     with tjSql() as sql:
-        target_db = sql.ensureCalendarDb(calendar_id, name)
+        target_db = sql.ensureCalendarDb(calendar_id)
         log_id = sql.startFetchLog(calendar_id)
 
     try:
-        total_courses, total_pages = fetchCourseList(session, calendar_id, target_db)
+        total_courses, total_pages, calendar_name = fetchCourseList(session, calendar_id, target_db)
     except Exception as e:
         tqdm.write(f"[FAIL] 学期 {calendar_id} 同步失败: {e}")
         with tjSql() as sql:
@@ -134,6 +137,7 @@ def sync_one(session, calendar_id, name=None):
         return
 
     with tjSql() as sql:
+        sql.setCalendarName(calendar_id, calendar_name)
         sql.switchActiveDb(calendar_id)
         sql.finishFetchLog(log_id, status='completed',
                            totalCourses=total_courses, totalPages=total_pages)

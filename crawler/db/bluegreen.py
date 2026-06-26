@@ -59,7 +59,7 @@ class BlueGreen(Connection):
 
     # ---- 蓝绿操作 ----
 
-    def ensureCalendarDb(self, calendarId, calendarName=None):
+    def ensureCalendarDb(self, calendarId):
         """注册 → TRUNCATE 非活跃库 → 返回目标数据库名。"""
         row = self._query_active_view(calendarId)
 
@@ -67,8 +67,8 @@ class BlueGreen(Connection):
             self._createCalendarDbs(calendarId)
             self._use_meta()
             self.cursor.execute(
-                "INSERT INTO calendar_registry (calendarId, calendarIdI18n) VALUES (%s, %s)",
-                (calendarId, calendarName or f"Calendar {calendarId}")
+                "INSERT INTO calendar_registry (calendarId, calendarIdI18n) VALUES (%s, '数据同步中…')",
+                (calendarId,)
             )
             self.db.commit()
             active = 'a'
@@ -79,6 +79,15 @@ class BlueGreen(Connection):
         target_db = f"calendar_{calendarId}_{inactive}"
         self._resetDb(target_db)
         return target_db
+
+    def setCalendarName(self, calendarId, name):
+        """更新学期中文名称（从课程数据中提取）。"""
+        self._use_meta()
+        self.cursor.execute(
+            "UPDATE calendar_registry SET calendarIdI18n = %s WHERE calendarId = %s",
+            (name, calendarId)
+        )
+        self.db.commit()
 
     def switchActiveDb(self, calendarId):
         """蓝绿切换：翻转 active_suffix。"""

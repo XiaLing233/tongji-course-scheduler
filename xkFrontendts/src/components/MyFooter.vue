@@ -36,6 +36,11 @@ export default {
     mounted() {
         this.getUpdateTime();
     },
+    watch: {
+        '$store.state.majorSelected.calendarId'() {
+            this.getUpdateTime();
+        }
+    },
     methods: {
         waitForSpinEnd(): Promise<void> {
             return new Promise((resolve) => {
@@ -55,7 +60,8 @@ export default {
             try {
                 const res = await axios({
                     method: 'get',
-                    url: '/api/getLatestUpdateTime'
+                    url: '/api/getLatestUpdateTime',
+                    params: { calendarId: this.$store.state.majorSelected.calendarId }
                 });
 
                 this.$store.commit("loadSolidifyTime");
