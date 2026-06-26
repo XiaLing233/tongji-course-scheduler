@@ -1,4 +1,6 @@
+import argparse
 import os
+import sys
 import time
 from datetime import datetime
 
@@ -139,35 +141,56 @@ def sync_one(session, calendar_id, name=None):
     tqdm.write(f"学期 {calendar_id}  已切换到 {target_db}")
 
 
+def parse_calendars():
+    parser = argparse.ArgumentParser(
+        description='同济课程数据同步 — 蓝绿部署，独立学期更新')
+    parser.add_argument('-c', '--calendars', type=int, nargs='+', required=True,
+                        help='指定学期 (e.g. -c 122 / -c 122 121)')
+    parser.add_argument('-m', '--msg', type=str, default='', help='同步备注')
+    parser.add_argument('--fail-fast', action='store_true', help='任一学期失败则停止')
+    parser.add_argument('--dry-run', action='store_true', help='只打印计划，不执行')
+
+    args = parser.parse_args()
+    return sorted(args.calendars), args
+
+
 if __name__ == "__main__":
-    # TODO: US-1.3 argparse 替换
-    latest_calendar = int(os.getenv('CRAWLER_LATEST_TERM', '0'))
-    depth = int(os.getenv('CRAWLER_DEPTH', '1'))
-    if not latest_calendar:
-        tqdm.write("请使用 --calendar 参数或设置 CRAWLER_LATEST_TERM 环境变量")
-        exit(-1)
+    semesters, args = parse_calendars()
+
+    if args.dry_run:
+        tqdm.write(f"[干跑] 将同步学期: {semesters}")
+        tqdm.write(f"[干跑] 备注: {args.msg or '(无)'}")
+        sys.exit(0)
 
     session = loginout.login()
     if session is None:
-        exit(-1)
+        sys.exit(1)
 
-    semesters = list(range(latest_calendar - depth + 1, latest_calendar + 1))
+    failed = []
     for idx, cal in enumerate(semesters, 1):
         tqdm.write(f"[{idx}/{len(semesters)}] 正在同步学期 {cal}")
-        sync_one(session, cal)
+        try:
+            sync_one(session, cal)
+        except Exception as e:
+            tqdm.write(f"[FAIL] 学期 {cal}: {e}")
+            if args.fail_fast:
+                sys.exit(1)
+            failed.append(cal)
 
     # 邮件通知
     if os.getenv('CRAWLER_SEND_EMAIL', 'false').lower() == 'true':
         email_client = SMTPEmailClient()
         now = datetime.now()
         with tjSql() as sql:
-            start_term = sql.calendarIdToText(semesters[0])
-            end_term = sql.calendarIdToText(semesters[-1])
-        subject = f"课程数据更新完成通知 - {now.strftime('%Y-%m-%d')}"
-        body = (f"夏凌！\n\n课程数据已成功更新。\n"
-                f"更新学期范围：{start_term} 至 {end_term}\n"
-                f"更新完成时间：{now.strftime('%Y-%m-%d %H:%M:%S')}\n\n祝好！\n琪露诺bot")
+            names = [sql.calendarIdToText(c) or str(c) for c in semesters]
+        status_text = '完成' if not failed else f'部分失败 (失败学期: {failed})'
+        subject = f"课程数据更新{status_text} - {now.strftime('%Y-%m-%d')}"
+        body = (f"夏凌！\n\n课程数据更新{status_text}。\n"
+                f"更新学期：{', '.join(names)}\n"
+                f"完成时间：{now.strftime('%Y-%m-%d %H:%M:%S')}\n\n祝好！\n琪露诺bot")
         if email_client.send_email(os.getenv('SMTP_SENDER', ''), subject, body):
             tqdm.write("[OK] 邮件通知已发送")
         else:
             tqdm.write("[FAIL] 邮件通知发送失败")
+
+    sys.exit(1 if failed else 0)

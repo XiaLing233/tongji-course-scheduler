@@ -22,9 +22,9 @@ class BlueGreen(Connection):
         meta = os.getenv('DB_META', 'course_scheduler_meta')
         try:
             self.cursor.execute(
-                f"CREATE USER IF NOT EXISTS '{r_user}'@'%%' IDENTIFIED BY %s", (r_pass,)
+                f"CREATE USER IF NOT EXISTS '{r_user}'@'%' IDENTIFIED BY %s", (r_pass,)
             )
-            self.cursor.execute(f"GRANT SELECT ON `{meta}`.* TO '{r_user}'@'%%'")
+            self.cursor.execute(f"GRANT SELECT ON `{meta}`.* TO '{r_user}'@'%'")
         except mysql.connector.Error:
             pass
 
