@@ -1,6 +1,7 @@
 """同步日志 — startFetchLog / finishFetchLog。"""
 
 from db.connection import Connection
+from db.redis_pub import aggregate as redis_aggregate
 
 
 class FetchLogger(Connection):
@@ -18,14 +19,14 @@ class FetchLogger(Connection):
         return self.cursor.lastrowid
 
     def finishFetchLog(self, fetchlog_id, status='completed', totalCourses=0,
-                       totalPages=0, errorMessage=None, fullLog=None):
-        """UPDATE 为 completed 或 failed。"""
+                       totalPages=0, errorMessage=None):
+        """UPDATE 为 completed 或 failed。completed 时从 Redis 聚合 fullLog。"""
         self._use_meta()
         if status == 'completed':
             self.cursor.execute(
                 "UPDATE fetchlog SET status='completed', endTime=NOW(3), "
                 "totalCourses=%s, totalPages=%s, fullLog=%s WHERE id=%s",
-                (totalCourses, totalPages, fullLog, fetchlog_id)
+                (totalCourses, totalPages, redis_aggregate(fetchlog_id), fetchlog_id)
             )
         else:
             self.cursor.execute(

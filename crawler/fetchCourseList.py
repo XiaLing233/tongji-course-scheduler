@@ -5,22 +5,22 @@ import time
 from datetime import datetime
 
 from dotenv import load_dotenv
-from tqdm import tqdm
 
 from tjSql import tjSql
 from auth import loginout
+from db.redis_pub import publish as redis_publish
 from meru.smtp import SMTPEmailClient
 
 load_dotenv()
 
 
-class PipeTqdm(tqdm):
-    """tqdm 在非 TTY 下可能用 \r 结尾而非 \n，导致 bash read 不返回行。
-    这里在每个 display 后补一个 \n，确保管道里每行都以 \n 结束。"""
-    def display(self, msg=None, pos=None):
-        super().display(msg, pos)
-        self.fp.write('\n')
-        self.fp.flush()
+def _log(message, log_id=None, calendar_id=None, calendar_name=None,
+        level='info', seq=0):
+    """打印到控制台，同时发布到 Redis Stream。"""
+    print(message)
+    if log_id is not None:
+        redis_publish(log_id, calendar_id, calendar_name, level, message, seq=seq)
+
 
 # 1 系统的 URL
 URL = "https://1.tongji.edu.cn/api/arrangementservice/manualArrange/page?profile"
@@ -65,23 +65,21 @@ def safeFetch(session, headers, payload):
             last_exc = exc
             delay = min(BASE_DELAY * (2 ** (attempt - 1)), MAX_DELAY)
 
-            tqdm.write(
-                f"[重试 {attempt}/{MAX_RETRIES}] "
-                f"请求失败: {exc}")
-            tqdm.write(f"  {delay}s 后重试...")
+            _log(f"[重试 {attempt}/{MAX_RETRIES}] 请求失败: {exc}")
+            _log(f"  {delay}s 后重试...")
 
             if attempt < MAX_RETRIES:
                 time.sleep(delay)
             else:
-                tqdm.write(f"已达最大重试次数 {MAX_RETRIES}，放弃。")
+                _log(f"已达最大重试次数 {MAX_RETRIES}，放弃。")
                 raise last_exc
 
 
 PAGESIZE = 200
 
 
-def fetchCourseList(session, calendar, target_db):
-    """爬取一个学期的课程，写入 target_db。返回 (totalCourses, totalPages)。"""
+def fetchCourseList(session, calendar, target_db, log_id=None):
+    """爬取一个学期的课程，写入 target_db。返回 (totalCourses, totalPages, calendarName)。"""
 
     payload = {
         "condition": {
@@ -109,32 +107,37 @@ def fetchCourseList(session, calendar, target_db):
     # 从第一页第一条课程提取学期中文名（如 "2025-2026学年第1学期"）
     calendar_name = data['data']['list'][0]['calendarIdI18n']
 
-    tqdm.write(f"学期 {calendar_name}  —  {total} 条课程, {total_pages} 页  →  {target_db}")
+    _log(f"学期 {calendar_name}  —  {total} 条课程, {total_pages} 页  →  {target_db}",
+         log_id, calendar, calendar_name)
 
-    for i in PipeTqdm(range(1, total_pages + 1), desc=f"学期 {calendar}", unit="页"):
+    for i in range(1, total_pages + 1):
         payload['pageNum_'] = i
         data = safeFetch(session, headers, payload)
         with tjSql(target_db) as sql:
             sql.insertCourseList(data['data']['list'])
+        _log(f'第 {i}/{total_pages} 页完成 ({min(i * PAGESIZE, total)}/{total} 条)',
+             log_id, calendar, calendar_name, seq=i)
         time.sleep(3)
 
-    tqdm.write(f"学期 {calendar}  [OK] 完成")
+    _log(f"学期 {calendar}  [OK] 完成", log_id, calendar, calendar_name)
     return total, total_pages, calendar_name
 
 
-def sync_one(session, calendar_id):
+def sync_one(session, calendar_id, msg=''):
     """蓝绿同步单个学期：建库 → 日志(running) → 爬取 → 命名 → 切换 → 日志(completed)。"""
     with tjSql() as sql:
         target_db = sql.ensureCalendarDb(calendar_id)
-        log_id = sql.startFetchLog(calendar_id)
+        log_id = sql.startFetchLog(calendar_id, msg=msg)
 
     try:
-        total_courses, total_pages, calendar_name = fetchCourseList(session, calendar_id, target_db)
+        total_courses, total_pages, calendar_name = fetchCourseList(
+            session, calendar_id, target_db, log_id=log_id)
     except Exception as e:
-        tqdm.write(f"[FAIL] 学期 {calendar_id} 同步失败: {e}")
+        _log(f"[FAIL] 学期 {calendar_id} 同步失败: {e}")
         with tjSql() as sql:
             sql.finishFetchLog(log_id, status='failed', errorMessage=str(e))
-        return
+        redis_publish(log_id, calendar_id, '', 'end', 'sync failed')
+        return False, calendar_id, None
 
     with tjSql() as sql:
         sql.setCalendarName(calendar_id, calendar_name)
@@ -142,7 +145,9 @@ def sync_one(session, calendar_id):
         sql.finishFetchLog(log_id, status='completed',
                            totalCourses=total_courses, totalPages=total_pages)
 
-    tqdm.write(f"学期 {calendar_id}  已切换到 {target_db}")
+    _log(f"学期 {calendar_id}  已切换到 {target_db}")
+    redis_publish(log_id, calendar_id, calendar_name, 'end', 'sync completed')
+    return True, calendar_id, calendar_name
 
 
 def parse_calendars():
@@ -162,8 +167,8 @@ if __name__ == "__main__":
     semesters, args = parse_calendars()
 
     if args.dry_run:
-        tqdm.write(f"[干跑] 将同步学期: {semesters}")
-        tqdm.write(f"[干跑] 备注: {args.msg or '(无)'}")
+        _log(f"[干跑] 将同步学期: {semesters}")
+        _log(f"[干跑] 备注: {args.msg or '(无)'}")
         sys.exit(0)
 
     session = loginout.login()
@@ -172,14 +177,18 @@ if __name__ == "__main__":
 
     failed = []
     for idx, cal in enumerate(semesters, 1):
-        tqdm.write(f"[{idx}/{len(semesters)}] 正在同步学期 {cal}")
+        _log(f"[{idx}/{len(semesters)}] 正在同步学期 {cal}")
         try:
-            sync_one(session, cal)
+            ok, cal_id, cal_name = sync_one(session, cal, msg=args.msg)
         except Exception as e:
-            tqdm.write(f"[FAIL] 学期 {cal}: {e}")
+            _log(f"[FAIL] 学期 {cal}: {e}")
+            ok = False
+            cal_id = cal
             if args.fail_fast:
                 sys.exit(1)
-            failed.append(cal)
+
+        if not ok:
+            failed.append(cal_id)
 
     # 邮件通知
     if os.getenv('CRAWLER_SEND_EMAIL', 'false').lower() == 'true':
@@ -193,8 +202,8 @@ if __name__ == "__main__":
                 f"更新学期：{', '.join(names)}\n"
                 f"完成时间：{now.strftime('%Y-%m-%d %H:%M:%S')}\n\n祝好！\n琪露诺bot")
         if email_client.send_email(os.getenv('SMTP_SENDER', ''), subject, body):
-            tqdm.write("[OK] 邮件通知已发送")
+            _log("[OK] 邮件通知已发送")
         else:
-            tqdm.write("[FAIL] 邮件通知发送失败")
+            _log("[FAIL] 邮件通知发送失败")
 
     sys.exit(1 if failed else 0)
