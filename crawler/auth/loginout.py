@@ -8,8 +8,8 @@ from urllib.parse import urlencode, parse_qs, urlparse
 
 import requests
 
-from . import imap_email
-from . import myEncrypt
+from meru import imap
+from auth import encrypt
 
 
 class LoginState(Enum):
@@ -126,14 +126,14 @@ class SSOLoginStateMachine:
         if not self.ctx.rsa_url:
             raise RuntimeError("无法解析 RSA URL")
 
-        self.ctx.sp_auth_chain_code = myEncrypt.getspAuthChainCode(response.text)
+        self.ctx.sp_auth_chain_code = encrypt.getspAuthChainCode(response.text)
         self.ctx.state = LoginState.SUBMIT_PASSWORD
 
     def _submit_password(self) -> None:
         data = urlencode(
             {
                 "j_username": os.getenv('TJ_SNO', ''),
-                "j_password": myEncrypt.encryptPassword(self.ctx.rsa_url),
+                "j_password": encrypt.encryptPassword(self.ctx.rsa_url),
                 "j_checkcode": "请输入验证码",
                 "op": "login",
                 "spAuthChainCode": self.ctx.sp_auth_chain_code,
@@ -195,7 +195,7 @@ class SSOLoginStateMachine:
     def _submit_enhance_code(self) -> None:
         time.sleep(self.ctx.wait_seconds)
 
-        with imap_email.EmailVerifier(
+        with imap.EmailVerifier(
             os.getenv('IMAP_EMAIL', ''),
             os.getenv('IMAP_GRANTCODE', ''),
             os.getenv('IMAP_SERVER', 'imap.qq.com'),

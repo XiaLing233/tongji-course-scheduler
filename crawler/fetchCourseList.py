@@ -5,9 +5,9 @@ from datetime import datetime
 from dotenv import load_dotenv
 from tqdm import tqdm
 
-from utils import loginout
-from utils import tjSql
-from utils.smtp_email import SMTPEmailClient
+from tjSql import tjSql
+from auth import loginout
+from meru.smtp import SMTPEmailClient
 
 load_dotenv()
 
@@ -109,7 +109,7 @@ def fetchCourseList(session, calendar, target_db):
     for i in PipeTqdm(range(1, total_pages + 1), desc=f"学期 {calendar}", unit="页"):
         payload['pageNum_'] = i
         data = safeFetch(session, headers, payload)
-        with tjSql.tjSql(target_db) as sql:
+        with tjSql(target_db) as sql:
             sql.insertCourseList(data['data']['list'])
         time.sleep(3)
 
@@ -119,7 +119,7 @@ def fetchCourseList(session, calendar, target_db):
 
 def sync_one(session, calendar_id, name=None):
     """蓝绿同步单个学期：建库 → 日志(running) → 爬取 → 切换 → 日志(completed)。"""
-    with tjSql.tjSql() as sql:
+    with tjSql() as sql:
         target_db = sql.ensureCalendarDb(calendar_id, name)
         log_id = sql.startFetchLog(calendar_id)
 
@@ -127,11 +127,11 @@ def sync_one(session, calendar_id, name=None):
         total_courses, total_pages = fetchCourseList(session, calendar_id, target_db)
     except Exception as e:
         tqdm.write(f"[FAIL] 学期 {calendar_id} 同步失败: {e}")
-        with tjSql.tjSql() as sql:
+        with tjSql() as sql:
             sql.finishFetchLog(log_id, status='failed', errorMessage=str(e))
         return
 
-    with tjSql.tjSql() as sql:
+    with tjSql() as sql:
         sql.switchActiveDb(calendar_id)
         sql.finishFetchLog(log_id, status='completed',
                            totalCourses=total_courses, totalPages=total_pages)
@@ -160,7 +160,7 @@ if __name__ == "__main__":
     if os.getenv('CRAWLER_SEND_EMAIL', 'false').lower() == 'true':
         email_client = SMTPEmailClient()
         now = datetime.now()
-        with tjSql.tjSql() as sql:
+        with tjSql() as sql:
             start_term = sql.calendarIdToText(semesters[0])
             end_term = sql.calendarIdToText(semesters[-1])
         subject = f"课程数据更新完成通知 - {now.strftime('%Y-%m-%d')}"

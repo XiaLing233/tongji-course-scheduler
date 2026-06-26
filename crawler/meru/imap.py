@@ -52,6 +52,10 @@ class EmailVerifier:
             self.connect()
         
         # Search unread verification email, criteria is title
+        # 说明：这里选择了搜索关键词和搜索的信箱
+        # 在我的 QQ 邮箱中，我为所有来自同济的验证码创建了一个专门的信箱（文件夹）
+        # 因此选择了下方的这一看上去乱码的信箱
+        # 如果没有额外做配置，应该是 INBOX 或其他类似含义的名称
         search_criteria = '(UNSEEN SUBJECT "加强认证验证码通知")'.encode('utf-8')  # because Chinese chars are contained, encode is a MUST
         self.mailbox.select("&UXZO1mWHTvZZOQ-/IAM&kK5O9pAad+U-")  # 本来应该是"IAM邮件通知", 但是腾讯给重新编码了下
         result, data = self.mailbox.search(None, search_criteria)
