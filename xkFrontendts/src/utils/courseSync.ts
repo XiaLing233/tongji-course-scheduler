@@ -435,17 +435,14 @@ function compareClassDetails(
     let hasArrangementChange = false;
     let newArrangementInfo = undefined;
     
-    // 比较教师
-    const oldTeachers = (oldCourse.teacher || [])
-        .map(t => `${t.teacherName}(${t.teacherCode})`)
-        .sort()
-        .join(', ');
-    const newTeachers = (newClassDetail.teachers || [])
-        .map(t => `${t.teacherName}(${t.teacherCode})`)
-        .sort()
-        .join(', ');
-    if (oldTeachers !== newTeachers) {
-        classDetails.push(`授课教师: ${oldTeachers} → ${newTeachers}`);
+    // 比较教师（去重后比较集合，避免同一组教师不同授课量时输出冗余信息；
+    // 授课量变化由排课 diff 精确展示）
+    const oldTeacherSet = [...new Set((oldCourse.teacher || [])
+        .map(t => `${t.teacherName}(${t.teacherCode})`))].sort().join(', ');
+    const newTeacherSet = [...new Set((newClassDetail.teachers || [])
+        .map(t => `${t.teacherName}(${t.teacherCode})`))].sort().join(', ');
+    if (oldTeacherSet !== newTeacherSet) {
+        classDetails.push(`授课教师: ${oldTeacherSet || '(无)'} → ${newTeacherSet || '(无)'}`);
     }
     
     // 比较校区

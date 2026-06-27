@@ -33,9 +33,6 @@ export default {
             // updateTime: ''
         }
     },
-    mounted() {
-        this.getUpdateTime();
-    },
     watch: {
         '$store.state.majorSelected.calendarId'() {
             this.getUpdateTime();

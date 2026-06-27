@@ -695,8 +695,8 @@ def getLatestCourseInfo():
             "data": {}
         }), 400
 
-    with bckndSql() as sql:
-        result_dict = sql.getLatestCourseInfo(majorCourseCodes, otherCourseCodes, calendarId, majorInfo)
+    with bckndSql(calendar_id=calendarId) as sql:
+        result_dict = sql.getLatestCourseInfo(majorCourseCodes, otherCourseCodes, majorInfo)
 
         # Process arrangement info for each course code
         for course_code, course_details in result_dict.items():

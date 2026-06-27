@@ -35,24 +35,28 @@ class MetaQueries(ReadConnection):
         return self.cursor.fetchone()
 
     def getSyncHistory(self, calendarId=None, page=1, pageSize=20):
-        base = ('SELECT id, calendarId, startTime, endTime, status, '
-                'totalCourses, totalPages, msg, errorMessage FROM fetchlog')
+        base = (
+            'SELECT f.id, f.calendarId, r.calendarIdI18n, f.startTime, f.endTime, '
+            'f.status, f.totalCourses, f.totalPages, f.msg, f.errorMessage '
+            'FROM fetchlog f JOIN calendar_registry r ON f.calendarId = r.calendarId'
+        )
         if calendarId is not None:
             self.cursor.execute(
-                f'{base} WHERE calendarId = %s ORDER BY startTime DESC LIMIT %s OFFSET %s',
+                f'{base} WHERE f.calendarId = %s ORDER BY f.startTime DESC LIMIT %s OFFSET %s',
                 (calendarId, pageSize, (page - 1) * pageSize)
             )
         else:
             self.cursor.execute(
-                f'{base} ORDER BY startTime DESC LIMIT %s OFFSET %s',
+                f'{base} ORDER BY f.startTime DESC LIMIT %s OFFSET %s',
                 (pageSize, (page - 1) * pageSize)
             )
         return self.cursor.fetchall()
 
     def getSyncHistoryDetail(self, logId):
         self.cursor.execute(
-            'SELECT id, calendarId, startTime, endTime, status, '
-            'totalCourses, totalPages, msg, errorMessage, fullLog '
-            'FROM fetchlog WHERE id = %s', (logId,)
+            'SELECT f.id, f.calendarId, r.calendarIdI18n, f.startTime, f.endTime, '
+            'f.status, f.totalCourses, f.totalPages, f.msg, f.errorMessage, f.fullLog '
+            'FROM fetchlog f JOIN calendar_registry r ON f.calendarId = r.calendarId '
+            'WHERE f.id = %s', (logId,)
         )
         return self.cursor.fetchone()

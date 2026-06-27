@@ -16,10 +16,12 @@ load_dotenv()
 
 def _log(message, log_id=None, calendar_id=None, calendar_name=None,
         level='info', seq=0):
-    """打印到控制台，同时发布到 Redis Stream。"""
-    print(message)
+    """打印到控制台，同时发布到 Redis Stream。自动加时间戳。"""
+    ts = datetime.now().strftime('%H:%M:%S')
+    line = f'[{ts}] {message}'
+    print(line)
     if log_id is not None:
-        redis_publish(log_id, calendar_id, calendar_name, level, message, seq=seq)
+        redis_publish(log_id, calendar_id, calendar_name, level, line, seq=seq)
 
 
 # 1 系统的 URL
@@ -133,7 +135,7 @@ def sync_one(session, calendar_id, msg=''):
         total_courses, total_pages, calendar_name = fetchCourseList(
             session, calendar_id, target_db, log_id=log_id)
     except Exception as e:
-        _log(f"[FAIL] 学期 {calendar_id} 同步失败: {e}")
+        _log(f"[FAIL] 学期 {calendar_id} 同步失败: {e}", log_id, calendar_id, '')
         with tjSql() as sql:
             sql.finishFetchLog(log_id, status='failed', errorMessage=str(e))
         redis_publish(log_id, calendar_id, '', 'end', 'sync failed')
@@ -145,7 +147,7 @@ def sync_one(session, calendar_id, msg=''):
         sql.finishFetchLog(log_id, status='completed',
                            totalCourses=total_courses, totalPages=total_pages)
 
-    _log(f"学期 {calendar_id}  已切换到 {target_db}")
+    _log(f"学期 {calendar_id}  已切换到 {target_db}", log_id, calendar_id, calendar_name)
     redis_publish(log_id, calendar_id, calendar_name, 'end', 'sync completed')
     return True, calendar_id, calendar_name
 

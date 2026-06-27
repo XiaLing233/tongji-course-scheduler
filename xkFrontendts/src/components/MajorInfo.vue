@@ -26,7 +26,7 @@
                 <a-select
                     :value="$store.state.majorSelected.grade"
                     placeholder="请选择年级"
-                    @change="findMajorByGrade"
+                    @change="onGradeChange"
                     class="w-32"
                 >
                     <a-select-option
@@ -146,13 +146,17 @@ export default {
         async findGradeByCalendarId(value: number) {
             this.$store.commit('setSpin', true);
             this.$store.commit('clearStagednSelectedCourses');
-            this.$store.commit('setMajorInfo', 
+            this.$store.commit('setMajorInfo',
                 {
                     calendarId: value,
                     grade: undefined,
                     major: undefined
                 }
             )
+            // 记录本次访问的学期
+            localStorage.setItem('lastCalendarId', String(value));
+            // 加载该学期缓存（年级、专业、课程）
+            this.$store.commit("loadSolidify");
             try {
                 const res = await axios({
                     url: '/api/findGradeByCalendarId',
@@ -162,11 +166,13 @@ export default {
                     }
                 });
                 this.rawList.grades = res.data.data.gradeList;
-                // 在年级更改时清空专业
                 this.rawList.majors = [];
+                // 如果缓存恢复了年级，自动加载专业列表
+                if (this.$store.state.majorSelected.grade) {
+                    await this.findMajorByGrade(this.$store.state.majorSelected.grade);
+                }
             }
             catch (error: unknown) {
-                // console.log("error:", error);
                 const err = error as { response?: { data?: { msg?: string } } };
                 errorNotify(err.response?.data?.msg || '获取专业失败');
             }
@@ -174,16 +180,24 @@ export default {
                 this.$store.commit('setSpin', false);
             }
         },
+        onGradeChange(value: number) {
+            this.$store.commit('clearStagednSelectedCourses');
+            this.$store.commit('setMajorInfo', {
+                calendarId: this.$store.state.majorSelected.calendarId,
+                grade: value,
+                major: undefined
+            });
+            this.findMajorByGrade(value);
+        },
         async findMajorByGrade(value: number) {
             this.$store.commit('setSpin', true);
-            this.$store.commit('clearStagednSelectedCourses');
-            this.$store.commit('setMajorInfo', 
-                {
+            if (this.$store.state.majorSelected.grade !== value) {
+                this.$store.commit('setMajorInfo', {
                     calendarId: this.$store.state.majorSelected.calendarId,
                     grade: value,
-                    major: undefined
-                }
-            )
+                    major: this.$store.state.majorSelected.major
+                });
+            }
             try {
                 const res = await axios({
                     url: '/api/findMajorByGrade',
@@ -229,34 +243,35 @@ export default {
     },
     async mounted() {
         await this.getAllCalendar()
-        
-        if (this.rawList.calendars.length > 0) {
+
+        // 没有持久化学期则优先恢复上次访问的学期，否则 fallback 到最新
+        if (!this.$store.state.majorSelected.calendarId && this.rawList.calendars.length > 0) {
+            const lastId = Number(localStorage.getItem('lastCalendarId'));
+            const valid = this.rawList.calendars.find(c => c.calendarId === lastId);
             this.$store.commit('setMajorInfo', {
-                calendarId: this.rawList.calendars[0].calendarId,
+                calendarId: valid ? lastId : this.rawList.calendars[0].calendarId,
                 grade: undefined,
                 major: undefined
             });
-            await this.findGradeByCalendarId(this.rawList.calendars[0].calendarId);
+        }
+        if (this.$store.state.majorSelected.calendarId) {
+            this.$store.commit("loadSolidify");
         }
 
-        this.$store.commit("loadSolidify");
-
-        if (this.$store.state.majorSelected.calendarId) {
+        // 加载当前学期的年级列表
+        const calId = this.$store.state.majorSelected.calendarId;
+        if (calId && this.rawList.calendars.length > 0) {
             this.$store.commit('setSpin', true);
             try {
                 const res = await axios({
                     url: '/api/findGradeByCalendarId',
                     method: 'post',
-                    data: {
-                        calendarId: this.$store.state.majorSelected.calendarId
-                    }
+                    data: { calendarId: calId }
                 });
                 this.rawList.grades = res.data.data.gradeList;
-                // 在年级更改时清空专业
                 this.rawList.majors = [];
             }
             catch (error: unknown) {
-                // console.log("error:", error);
                 const err = error as { response?: { data?: { msg?: string } } };
                 errorNotify(err.response?.data?.msg || '获取年级信息失败');
             }

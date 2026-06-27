@@ -15,6 +15,17 @@ import type { State } from "vue";
 
 type StoreState = State;
 
+function _snapRead(calendarId: number) {
+    const raw = localStorage.getItem("solidified");
+    if (!raw) return null;
+    return JSON.parse(raw)[String(calendarId)] || null;
+}
+function _snapWrite(calendarId: number, snap: Record<string, unknown>) {
+    const raw = localStorage.getItem("solidified");
+    const all = raw ? JSON.parse(raw) : {};
+    all[String(calendarId)] = snap;
+    localStorage.setItem("solidified", JSON.stringify(all));
+}
 const store = createStore<StoreState>({
     state() {
         return {
@@ -205,8 +216,15 @@ const store = createStore<StoreState>({
         },
         setUpdateTime(state: StoreState, payload: string) {
             state.updateTime = payload;
-            localStorage.setItem("updateTime", state.updateTime);
-            console.log("Update time set to:", state.updateTime);
+            const cid = state.majorSelected.calendarId;
+            if (cid) {
+                const raw = localStorage.getItem("solidified");
+                const all = raw ? JSON.parse(raw) : {};
+                const snap = all[String(cid)] || {};
+                snap.updateTime = payload;
+                all[String(cid)] = snap;
+                localStorage.setItem("solidified", JSON.stringify(all));
+            }
         },
         setLatestUpdateTime(state: StoreState, payload: string) {
             state.latestUpdateTime = payload;
@@ -216,93 +234,69 @@ const store = createStore<StoreState>({
             state.flags.isDataOutdated = payload;
         },
         syncLatestData(state: StoreState) {
-            // 同步最新数据：清除课程缓存并更新时间
-            localStorage.removeItem("stagedCourses");
-            localStorage.removeItem("selectedCourses");
-            localStorage.removeItem("occupied");
-            localStorage.removeItem("timeTableData");
+            const cid = state.majorSelected.calendarId;
             state.commonLists.stagedCourses = [];
             state.commonLists.selectedCourses = [];
             state.timeTableData = [];
             state.occupied = Array(12).fill(null).map(() => Array(7).fill(undefined).map(() => []));
-            state.clickedCourseInfo = {
-                courseCode: '',
-                courseName: ''
-            };
+            state.clickedCourseInfo = { courseCode: '', courseName: '' };
             state.updateTime = state.latestUpdateTime;
-            localStorage.setItem("updateTime", state.updateTime);
+            if (cid) _snapWrite(cid, { updateTime: state.latestUpdateTime });
             state.flags.isDataOutdated = false;
         },
-        smartSyncCourses(state: StoreState, payload: { 
-            newStagedCourses: stagedCourse[], 
+        smartSyncCourses(state: StoreState, payload: {
+            newStagedCourses: stagedCourse[],
             newSelectedCodes: string[],
             newOccupied: occupyCell[][][],
             newTimeTableData: courseOnTable[]
         }) {
-            // 智能同步：更新课程信息但保留用户选择
+            const cid = state.majorSelected.calendarId;
             state.commonLists.stagedCourses = payload.newStagedCourses;
             state.commonLists.selectedCourses = payload.newSelectedCodes;
             state.occupied = payload.newOccupied;
             state.timeTableData = payload.newTimeTableData;
             state.updateTime = state.latestUpdateTime;
-            
-            // 更新localStorage
-            localStorage.setItem("stagedCourses", JSON.stringify(state.commonLists.stagedCourses));
-            localStorage.setItem("selectedCourses", JSON.stringify(state.commonLists.selectedCourses));
-            localStorage.setItem("occupied", JSON.stringify(state.occupied));
-            localStorage.setItem("timeTableData", JSON.stringify(state.timeTableData));
-            localStorage.setItem("updateTime", state.updateTime);
-            
+            if (cid) _snapWrite(cid, {
+                stagedCourses: payload.newStagedCourses,
+                selectedCourses: payload.newSelectedCodes,
+                occupied: payload.newOccupied,
+                timeTableData: payload.newTimeTableData,
+                updateTime: state.latestUpdateTime,
+            });
             state.flags.isDataOutdated = false;
         },
         solidify(state: StoreState) {
-            localStorage.setItem("majorSelected", JSON.stringify(state.majorSelected));
-            localStorage.setItem("stagedCourses", JSON.stringify(state.commonLists.stagedCourses));
-            localStorage.setItem("selectedCourses", JSON.stringify(state.commonLists.selectedCourses));
-            localStorage.setItem("occupied", JSON.stringify(state.occupied));
-            localStorage.setItem("timeTableData", JSON.stringify(state.timeTableData));
+            const cid = state.majorSelected.calendarId;
+            if (cid) _snapWrite(cid, {
+                grade: state.majorSelected.grade,
+                major: state.majorSelected.major,
+                stagedCourses: state.commonLists.stagedCourses,
+                selectedCourses: state.commonLists.selectedCourses,
+                occupied: state.occupied,
+                timeTableData: state.timeTableData,
+                updateTime: state.updateTime,
+            });
         },
         loadSolidify(state: StoreState) {
-            const majorSelected = localStorage.getItem("majorSelected");
-            if (majorSelected) {
-                console.log(majorSelected);
-                state.majorSelected = JSON.parse(majorSelected);
-                console.log(state.majorSelected);
+            const cid = state.majorSelected.calendarId;
+            if (cid) {
+                const snap = _snapRead(cid) || {};
+                if (snap) {
+                    if (snap.grade !== undefined) state.majorSelected.grade = snap.grade;
+                    if (snap.major !== undefined) state.majorSelected.major = snap.major;
+                    if (snap.stagedCourses) state.commonLists.stagedCourses = snap.stagedCourses;
+                    if (snap.selectedCourses) state.commonLists.selectedCourses = snap.selectedCourses;
+                    if (snap.occupied) state.occupied = snap.occupied;
+                    if (snap.timeTableData) state.timeTableData = snap.timeTableData;
+                    if (snap.updateTime) state.updateTime = snap.updateTime;
+                }
             }
-            const stagedCourses = localStorage.getItem("stagedCourses");
-            if (stagedCourses) {
-                state.commonLists.stagedCourses = JSON.parse(stagedCourses);
-            }
-            const selectedCourses = localStorage.getItem("selectedCourses");
-            if (selectedCourses) {
-                state.commonLists.selectedCourses = JSON.parse(selectedCourses);
-            }
-            const occupied = localStorage.getItem("occupied");
-            if (occupied) {
-                state.occupied = JSON.parse(occupied);
-            }
-            const timeTableData = localStorage.getItem("timeTableData");
-            if (timeTableData) {
-                state.timeTableData = JSON.parse(timeTableData);
-            }
-        },
-        clearSolidify() {
-            localStorage.removeItem("majorSelected");
-            localStorage.removeItem("stagedCourses");
-            localStorage.removeItem("selectedCourses");
-            localStorage.removeItem("occupied");
-            localStorage.removeItem("timeTableData");
-        },
-        clearSolidifyCourse() {
-            localStorage.removeItem("stagedCourses");
-            localStorage.removeItem("selectedCourses");
-            localStorage.removeItem("occupied");
-            localStorage.removeItem("timeTableData");
         },
         loadSolidifyTime(state: StoreState) {
-            const updateTime = localStorage.getItem("updateTime");
-            if (updateTime) {
-                state.updateTime = updateTime;
+            const cid = state.majorSelected.calendarId;
+            if (cid) {
+                const snap = _snapRead(cid) || {};
+                if (snap?.updateTime) state.updateTime = snap.updateTime;
             }
         }
     },

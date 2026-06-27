@@ -116,14 +116,20 @@ def sync_history_detail(log_id):
     return jsonify({'code': 200, 'data': _history_row(row, with_full_log=True)}), 200
 
 
+def _fmt(ts):
+    """MySQL datetime(3) → 'YYYY-MM-DD HH:MM:SS'"""
+    if ts is None:
+        return None
+    return str(ts)[:19]
+
+
 def _history_row(row, with_full_log=False):
     d = {
-        'id': row[0], 'calendarId': row[1],
-        'startTime': str(row[2]) if row[2] else None,
-        'endTime': str(row[3]) if row[3] else None,
-        'status': row[4], 'totalCourses': row[5],
-        'totalPages': row[6], 'msg': row[7], 'errorMessage': row[8],
+        'id': row[0], 'calendarId': row[1], 'calendarName': row[2],
+        'startTime': _fmt(row[3]), 'endTime': _fmt(row[4]),
+        'status': row[5], 'totalCourses': row[6],
+        'totalPages': row[7], 'msg': row[8], 'errorMessage': row[9],
     }
     if with_full_log:
-        d['fullLog'] = row[9]
+        d['fullLog'] = row[10]
     return d
