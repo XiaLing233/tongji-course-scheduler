@@ -131,13 +131,8 @@ export default {
       // 第三步：批量请求选修课详情
       if (optionalCodes.length > 0) {
         try {
-          const res = await axios({
-            url: '/api/findCourseDetailByCode',
-            method: 'post',
-            data: {
-              courseCodes: optionalCodes,
-              calendarId: this.$store.state.majorSelected.calendarId
-            }
+          const res = await axios.post(`/api/calendars/${this.$store.state.majorSelected.calendarId}/courses/details`, {
+            courseCodes: optionalCodes
           });
 
           const courseDetailMap = res.data.data; // { courseCode: [details] }
@@ -190,13 +185,8 @@ export default {
       // 第四步：批量请求搜索课程详情
       if (searchCodes.length > 0) {
         try {
-          const res = await axios({
-            url: '/api/findCourseDetailByCode',
-            method: 'post',
-            data: {
-              courseCodes: searchCodes,
-              calendarId: this.$store.state.majorSelected.calendarId
-            }
+          const res = await axios.post(`/api/calendars/${this.$store.state.majorSelected.calendarId}/courses/details`, {
+            courseCodes: searchCodes
           });
 
           const courseDetailMap = res.data.data;
@@ -249,11 +239,8 @@ export default {
       console.log("cell", cell);
 
       try {
-        const res = await axios({
-          url: '/api/findCourseByTime',
-          method: 'post',
-          data: {
-            calendarId: cell.calendarId,
+        const res = await axios.get(`/api/calendars/${cell.calendarId}/courses`, {
+          params: {
             day: cell.day,
             section: getRowSection(cell.class, cell.calendarId)
           }

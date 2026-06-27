@@ -134,36 +134,25 @@ export default {
         },
         async fetchCompulsoryCourses() {
             // 获取必修课程
-            const res = await axios({
-                url: '/api/findCourseByMajor',
-                method: 'post',
-                data: {
+            const cid = this.$store.state.majorSelected.calendarId;
+            const res = await axios.get(`/api/calendars/${cid}/courses`, {
+                params: {
                     grade: this.$store.state.majorSelected.grade,
-                    code: this.$store.state.majorSelected.major,
-                    calendarId: this.$store.state.majorSelected.calendarId
+                    major: this.$store.state.majorSelected.major
                 }
             });
             this.$store.commit('setCompulsoryCourses', res.data.data);
         },
         async fetchOptionalCourses() {
             // 获取选修课程类型
-            const typesRes = await axios({
-                url: '/api/findOptionalCourseType',
-                method: 'post',
-                data: {
-                    calendarId: this.$store.state.majorSelected.calendarId
-                }
-            });
+            const cid = this.$store.state.majorSelected.calendarId;
+            const typesRes = await axios.get(`/api/calendars/${cid}/course-types`);
             this.$store.commit('setOptionalTypes', typesRes.data.data);
 
             // 获取选修课程具体信息
-            const coursesRes = await axios({
-                url: '/api/findCourseByNatureId',
-                method: 'post',
-                data: {
-                    calendarId: this.$store.state.majorSelected.calendarId,
-                    ids: typesRes.data.data.map((type: any) => type.courseLabelId)
-                }
+            const natureIds = typesRes.data.data.map((type: any) => type.courseLabelId).join(',');
+            const coursesRes = await axios.get(`/api/calendars/${cid}/courses`, {
+                params: { natureIds }
             });
             this.$store.commit('setOptionalCourses', coursesRes.data.data);
         },

@@ -55,11 +55,7 @@ export default {
         },
         async getUpdateTime() {
             try {
-                const res = await axios({
-                    method: 'get',
-                    url: '/api/getLatestUpdateTime',
-                    params: { calendarId: this.$store.state.majorSelected.calendarId }
-                });
+                const res = await axios.get(`/api/calendars/${this.$store.state.majorSelected.calendarId}/update-time`);
 
                 this.$store.commit("loadSolidifyTime");
                 this.$store.commit("setLatestUpdateTime", res.data.data);

@@ -128,10 +128,7 @@ export default {
             this.$store.commit("setSpin", true);
 
             try {
-                const res = await axios({
-                    url: '/api/getAllCalendar',
-                    method: 'get'
-                });
+                const res = await axios.get('/api/calendars');
                 this.rawList.calendars = res.data.data;
             }
             catch (error: unknown) {
@@ -158,13 +155,7 @@ export default {
             // 加载该学期缓存（年级、专业、课程）
             this.$store.commit("loadSolidify");
             try {
-                const res = await axios({
-                    url: '/api/findGradeByCalendarId',
-                    method: 'post',
-                    data: {
-                        calendarId: this.$store.state.majorSelected.calendarId
-                    }
-                });
+                const res = await axios.get(`/api/calendars/${this.$store.state.majorSelected.calendarId}/grades`);
                 this.rawList.grades = res.data.data.gradeList;
                 this.rawList.majors = [];
                 // 如果缓存恢复了年级，自动加载专业列表
@@ -199,14 +190,7 @@ export default {
                 });
             }
             try {
-                const res = await axios({
-                    url: '/api/findMajorByGrade',
-                    method: 'post',
-                    data: {
-                        grade: this.$store.state.majorSelected.grade,
-                        calendarId: this.$store.state.majorSelected.calendarId
-                    }
-                });
+                const res = await axios.get(`/api/calendars/${this.$store.state.majorSelected.calendarId}/grades/${this.$store.state.majorSelected.grade}/majors`);
                 this.rawList.majors = res.data.data;
             }
             catch (error: unknown) {
@@ -263,11 +247,7 @@ export default {
         if (calId && this.rawList.calendars.length > 0) {
             this.$store.commit('setSpin', true);
             try {
-                const res = await axios({
-                    url: '/api/findGradeByCalendarId',
-                    method: 'post',
-                    data: { calendarId: calId }
-                });
+                const res = await axios.get(`/api/calendars/${calId}/grades`);
                 this.rawList.grades = res.data.data.gradeList;
                 this.rawList.majors = [];
             }
@@ -283,14 +263,7 @@ export default {
         if (this.$store.state.majorSelected.grade) {
             this.$store.commit('setSpin', true);
             try {
-                const res = await axios({
-                    url: '/api/findMajorByGrade',
-                    method: 'post',
-                    data: {
-                        grade: this.$store.state.majorSelected.grade,
-                        calendarId: this.$store.state.majorSelected.calendarId
-                    }
-                });
+                const res = await axios.get(`/api/calendars/${this.$store.state.majorSelected.calendarId}/grades/${this.$store.state.majorSelected.grade}/majors`);
                 this.rawList.majors = res.data.data;
             }
             catch (error: unknown) {

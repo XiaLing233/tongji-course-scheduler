@@ -316,12 +316,10 @@ export async function fetchLatestCourseInfo(
         
         // 构建请求参数
         const payload: {
-            calendarId: number;
             majorCourseCodes: string[];
             otherCourseCodes: string[];
             majorInfo?: { grade: number; code: string };
         } = {
-            calendarId,
             majorCourseCodes,
             otherCourseCodes
         };
@@ -334,7 +332,7 @@ export async function fetchLatestCourseInfo(
             payload.majorInfo = majorInfo;
         }
         
-        const response = await axios.post('/api/getLatestCourseInfo', payload);
+        const response = await axios.post(`/api/calendars/${calendarId}/courses/batch`, payload);
 
         if (response.data.code === 200) {
             const apiData = response.data.data; // 这是一个对象 { courseCode: [courseDetails] }
