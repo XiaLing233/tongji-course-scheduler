@@ -40,8 +40,21 @@ jobs:
           npm ci
           npm run type-check
 
+  frontend-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install & test
+        working-directory: xkFrontendts
+        run: |
+          npm ci
+          npm run test
+
   deploy:
-    needs: [backend-test, crawler-test, frontend-typecheck]
+    needs: [backend-test, crawler-test, frontend-typecheck, frontend-test]
     if: github.ref == 'refs/heads/master' && github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
