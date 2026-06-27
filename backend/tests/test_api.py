@@ -12,8 +12,8 @@ from app import app
 #  测试数据填充
 # ================================================================
 
-@pytest.fixture
-def seed_data(db_config, test_meta_conn, test_cal_a_conn, patch_env):
+@pytest.fixture(scope='session')
+def seed_data(db_config, test_meta_conn, test_cal_a_conn):
     """向 test_calendar_999_a 填充维度、课程、教师、专业数据。"""
     db = test_cal_a_conn
     c = db.cursor()
@@ -22,8 +22,8 @@ def seed_data(db_config, test_meta_conn, test_cal_a_conn, patch_env):
     # 维度（值来自真实数据库）
     c.execute("INSERT IGNORE INTO assessment VALUES (1, '考试'), (2, '考查')")
     c.execute("INSERT IGNORE INTO campus VALUES (1, '四平路校区'), (3, '嘉定校区'), (4, '沪西校区')")
-    c.execute("INSERT IGNORE INTO coursenature VALUES (325, '专业课必修'), (848, '通识课'), (958, '科学探索与生命关怀')")
-    c.execute("INSERT IGNORE INTO faculty VALUES ('000034', '职业技术教育学院'), ('000285', '其他学院')")
+    c.execute("INSERT IGNORE INTO coursenature VALUES (325, '人文经典与审美素养'), (848, '通识选修课'), (958, '科学探索与生命关怀')")
+    c.execute("INSERT IGNORE INTO faculty VALUES ('000034', '职业技术教育学院'), ('000050', '电子与信息工程学院'), ('000285', '其他学院')")
     c.execute("INSERT IGNORE INTO language VALUES (1, '中文'), (8, '英语')")
 
     # 课程
@@ -33,7 +33,8 @@ def seed_data(db_config, test_meta_conn, test_cal_a_conn, patch_env):
               "VALUES "
               "(1001, '34001201', '01班', 325, 1, 1, '340012', '测试课程A', 3.0, 1, '000034'),"
               "(1002, '34001202', '02班', 325, 2, 3, '340012', '测试课程A', 3.0, 1, '000034'),"
-              "(1003, '14007601', '01班', 958, 1, 1, '140076', '公共营养学', 1.5, 1, '000285')")
+              "(1003, '14007601', '01班', 958, 1, 1, '140076', '公共营养学', 1.5, 1, '000285'),"
+              "(1004, '99900001', '01班', 848, 2, 1, '999000', '测试选修课', 2.0, 1, '000034')")
 
     # 教师
     c.execute("INSERT INTO teacher VALUES "
@@ -46,7 +47,7 @@ def seed_data(db_config, test_meta_conn, test_cal_a_conn, patch_env):
               "(1, '10054', 2023, '2023(10054 计算机科学与技术)')")
     c.execute("INSERT INTO majorandcourse (majorId, courseId) VALUES (1, 1001)")
 
-    db.commit(); db.close()
+    db.commit()
 
     # 元数据库 — fetchlog
     mc = test_meta_conn.cursor()
