@@ -1,6 +1,120 @@
-"""共享测试数据 — 从真实数据库采集的 arrangeInfo 样本。"""
+"""共享测试数据 — 真实 arrangeInfo 样本 + DB 集成测试 fixture。"""
 
+import os
+
+import mysql.connector
 import pytest
+
+# ================================================================
+#  DB 集成测试 fixture — 独立测试数据库
+# ================================================================
+
+TEST_META = 'test_course_scheduler_meta'
+TEST_CAL_ID = 999
+TEST_CAL_A = f'calendar_{TEST_CAL_ID}_a'
+TEST_CAL_B = f'calendar_{TEST_CAL_ID}_b'
+
+_META_DDL = """
+CREATE TABLE IF NOT EXISTS `calendar_registry` (
+  `calendarId` int NOT NULL,
+  `calendarIdI18n` varchar(200) NOT NULL,
+  `active_suffix` char(1) NOT NULL DEFAULT 'a',
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`calendarId`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+CREATE VIEW `active_calendars` AS
+SELECT `calendarId`, `calendarIdI18n`,
+  CONCAT('calendar_', `calendarId`, '_', `active_suffix`) AS `db_name`,
+  `active_suffix`, `updated_at`
+FROM `calendar_registry`;
+CREATE TABLE `fetchlog` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `calendarId` int NOT NULL,
+  `startTime` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `endTime` datetime(3) DEFAULT NULL,
+  `status` enum('running','completed','failed') NOT NULL DEFAULT 'running',
+  `totalCourses` int DEFAULT 0, `totalPages` int DEFAULT 0,
+  `msg` varchar(500) DEFAULT NULL, `errorMessage` text, `fullLog` mediumtext,
+  PRIMARY KEY (`id`), KEY `idx_fetchlog_time` (`startTime`),
+  CONSTRAINT `fk_fetchlog_calendar` FOREIGN KEY (`calendarId`) REFERENCES `calendar_registry` (`calendarId`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+"""
+_COURSE_DDL = """
+CREATE TABLE `campus` (
+  `campus` varchar(200) NOT NULL, `campusI18n` varchar(200) DEFAULT NULL,
+  PRIMARY KEY (`campus`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+"""
+
+
+def _get_db_config(database=None):
+    return {
+        'host': os.getenv('DB_HOST', 'mysql'),
+        'port': int(os.getenv('DB_PORT', '3306')),
+        'user': os.getenv('DB_USER', 'root'),
+        'password': os.getenv('DB_PASSWORD', ''),
+        'database': database, 'charset': 'utf8mb4',
+    }
+
+
+def _exec_ddl(conn, ddl):
+    c = conn.cursor()
+    for stmt in ddl.split(';'):
+        stmt = stmt.strip()
+        if stmt:
+            c.execute(stmt)
+    conn.commit()
+
+
+@pytest.fixture(scope='session')
+def db_config():
+    return _get_db_config()
+
+
+@pytest.fixture(scope='session')
+def test_meta_conn(db_config):
+    cfg = {**db_config}
+    conn = mysql.connector.connect(**cfg)
+    c = conn.cursor()
+    c.execute(f"CREATE DATABASE IF NOT EXISTS `{TEST_META}` "
+              "CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci")
+    conn.commit(); conn.close()
+    conn = mysql.connector.connect(**{**cfg, 'database': TEST_META})
+    _exec_ddl(conn, _META_DDL)
+    c = conn.cursor()
+    c.execute("INSERT INTO calendar_registry (calendarId, calendarIdI18n) "
+              f"VALUES ({TEST_CAL_ID}, '测试学期-A面活跃')")
+    conn.commit()
+    yield conn
+    c = conn.cursor()
+    for db_name in [TEST_META, TEST_CAL_A, TEST_CAL_B]:
+        c.execute(f"DROP DATABASE IF EXISTS `{db_name}`")
+    conn.commit(); conn.close()
+
+
+@pytest.fixture(scope='session')
+def test_cal_a_conn(db_config, test_meta_conn):
+    conn = mysql.connector.connect(**{**db_config})
+    c = conn.cursor()
+    c.execute(f"CREATE DATABASE IF NOT EXISTS `{TEST_CAL_A}` "
+              "CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci")
+    conn.commit(); conn.close()
+    conn = mysql.connector.connect(**{**db_config, 'database': TEST_CAL_A})
+    _exec_ddl(conn, _COURSE_DDL)
+    yield conn; conn.close()
+
+
+@pytest.fixture
+def patch_env(monkeypatch):
+    monkeypatch.setenv('DB_META', TEST_META)
+    monkeypatch.setenv('DB_R_USER', os.getenv('DB_USER', 'root'))
+    monkeypatch.setenv('DB_R_PASSWORD', os.getenv('DB_PASSWORD', ''))
+
+
+# ================================================================
+#  ArrangeInfo 样本 fixture
+# ================================================================
 
 
 # ================================================================

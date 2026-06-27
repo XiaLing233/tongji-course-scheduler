@@ -1,0 +1,62 @@
+name: CI/CD
+
+on:
+  push:
+  pull_request:
+    branches: [ master ]
+  workflow_dispatch:
+
+jobs:
+  backend-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run backend tests
+        run: docker compose --profile test up --build test-backend --exit-code-from test-backend
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose --profile test logs test-backend
+
+  crawler-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run crawler tests
+        run: docker compose --profile test up --build test-crawler --exit-code-from test-crawler
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose --profile test logs test-crawler
+
+  frontend-typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install & typecheck
+        working-directory: xkFrontendts
+        run: |
+          npm ci
+          npm run type-check
+
+  deploy:
+    needs: [backend-test, crawler-test, frontend-typecheck]
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+      - name: Deploy
+        run: |
+          ssh -o StrictHostKeyChecking=no \
+          ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+            set -e
+            cd ~/xkB/
+            git fetch origin
+            git reset --hard origin/master
+            docker compose up -d --build
+          EOF
