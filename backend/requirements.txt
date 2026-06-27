@@ -3,4 +3,5 @@ mysql-connector-python==9.2.0
 redis==8.0.0
 python-dotenv==1.2.1
 gunicorn==23.0.0
+pytest==8.3.5
 gevent==26.5.0
