@@ -113,7 +113,7 @@ export default defineComponent({
           params: { page: 1, pageSize: this.pageSize }
         })
         this.logs = res.data.data
-        this.hasMore = res.data.data.length === this.pageSize
+        this.hasMore = res.data.data.length < (res.data.pagination?.total || 0)
       } catch {
         // silent
       } finally {
@@ -130,7 +130,7 @@ export default defineComponent({
         })
         const more = res.data.data
         this.logs.push(...more)
-        this.hasMore = more.length === this.pageSize
+        this.hasMore = this.logs.length < (res.data.pagination?.total || 0)
       } catch {
         // silent
       } finally {

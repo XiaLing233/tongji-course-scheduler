@@ -1,10 +1,11 @@
 import json
 
 import redis
-from flask import Blueprint, request, jsonify, Response
+from flask import Blueprint, request, Response
 
 from bckndSql import bckndSql
 from utils.redis_client import state, format_sse_event
+from utils.response import ok, ok_paginated, err
 
 status_bp = Blueprint('status', __name__)
 
@@ -16,15 +17,8 @@ def health():
             sql.getHealth()
     except Exception as e:
         print(e)
-        return jsonify({
-            "code": 500,
-            "msg": "数据库连接失败！"
-        }), 500
-
-    return jsonify({
-        "code": 200,
-        "msg": "服务健康！"
-    }), 200
+        return err(500, "数据库连接失败！")
+    return ok(msg="服务健康！")
 
 
 @status_bp.route('/api/sync/history/<int:log_id>/stream', methods=['GET'])
@@ -100,8 +94,12 @@ def sync_history():
 
     with bckndSql() as sql:
         rows = sql.getSyncHistory(calendar_id, page, page_size)
+        total = sql.getSyncHistoryCount(calendar_id)
 
-    return jsonify({'code': 200, 'data': [_history_row(r) for r in rows]}), 200
+    return ok_paginated(
+        [_history_row(r) for r in rows],
+        page=page, page_size=page_size, total=total
+    )
 
 
 @status_bp.route('/api/sync/history/<int:log_id>', methods=['GET'])
@@ -111,9 +109,9 @@ def sync_history_detail(log_id):
         row = sql.getSyncHistoryDetail(log_id)
 
     if not row:
-        return jsonify({'code': 404, 'msg': '记录不存在'}), 404
+        return err(404, "记录不存在")
 
-    return jsonify({'code': 200, 'data': _history_row(row, with_full_log=True)}), 200
+    return ok(_history_row(row, with_full_log=True))
 
 
 def _fmt(ts):

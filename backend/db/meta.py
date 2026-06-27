@@ -34,6 +34,15 @@ class MetaQueries(ReadConnection):
         self.cursor.execute('SELECT 1')
         return self.cursor.fetchone()
 
+    def getSyncHistoryCount(self, calendarId=None):
+        if calendarId is not None:
+            self.cursor.execute(
+                'SELECT COUNT(*) FROM fetchlog WHERE calendarId = %s', (calendarId,)
+            )
+        else:
+            self.cursor.execute('SELECT COUNT(*) FROM fetchlog')
+        return self.cursor.fetchone()[0]
+
     def getSyncHistory(self, calendarId=None, page=1, pageSize=20):
         base = (
             'SELECT f.id, f.calendarId, r.calendarIdI18n, f.startTime, f.endTime, '
