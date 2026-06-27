@@ -1,9 +1,22 @@
 """共享测试数据 — 真实 arrangeInfo 样本 + DB 集成测试 fixture。"""
 
 import os
+import time
 
 import mysql.connector
 import pytest
+from mysql.connector.errors import DatabaseError
+
+
+def _connect_with_retry(config, max_retries=10, delay=2):
+    """连接 MySQL，失败时重试（应对容器初始化后短暂重启窗口）。"""
+    for i in range(max_retries):
+        try:
+            return mysql.connector.connect(**config)
+        except DatabaseError:
+            if i == max_retries - 1:
+                raise
+            time.sleep(delay)
 
 # ================================================================
 #  DB 集成测试 fixture — 独立测试数据库
@@ -75,12 +88,12 @@ def db_config():
 @pytest.fixture(scope='session')
 def test_meta_conn(db_config):
     cfg = {**db_config}
-    conn = mysql.connector.connect(**cfg)
+    conn = _connect_with_retry(cfg)
     c = conn.cursor()
     c.execute(f"CREATE DATABASE IF NOT EXISTS `{TEST_META}` "
               "CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci")
     conn.commit(); conn.close()
-    conn = mysql.connector.connect(**{**cfg, 'database': TEST_META})
+    conn = _connect_with_retry({**cfg, 'database': TEST_META})
     _exec_ddl(conn, _META_DDL)
     c = conn.cursor()
     c.execute("INSERT INTO calendar_registry (calendarId, calendarIdI18n) "
@@ -95,7 +108,7 @@ def test_meta_conn(db_config):
 
 @pytest.fixture(scope='session')
 def test_cal_a_conn(db_config, test_meta_conn):
-    conn = mysql.connector.connect(**{**db_config})
+    conn = _connect_with_retry({**db_config})
     c = conn.cursor()
     c.execute(f"CREATE DATABASE IF NOT EXISTS `{TEST_CAL_A}` "
               "CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci")
