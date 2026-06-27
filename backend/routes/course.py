@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 
 from flask import Blueprint, request
@@ -5,6 +6,7 @@ from flask import Blueprint, request
 from bckndSql import bckndSql
 from utils.bckndTools import arrangementTextToObj, splitEndline, optCourseQueryListGenerator
 from utils.response import ok, err
+from utils.redis_cache import cache_get, cache_set, cache_key
 
 course_bp = Blueprint('course', __name__)
 
@@ -27,32 +29,52 @@ def query_courses(calendar_id):
     day = request.args.get('day', type=int)
     section = request.args.get('section', type=int)
 
-    # 模式 3: 按时段查询
+    # 模式 3: 按时段查询 — normal 策略（组合太多，热度分散）
     if day is not None and section is not None:
+        ck = cache_key(calendar_id, 'courses:time', day=day, section=section)
+        cached = cache_get(ck)
+        if cached is not None:
+            return ok(cached)
+
         query_str = optCourseQueryListGenerator(day, section, calendar_id)
         if query_str is None:
             return err(400, "输入参数有误")
         with bckndSql(calendar_id=calendar_id) as sql:
             result = sql.findCourseByTime(query_str)
+
+        cache_set(ck, result, 'normal')
         return ok(result)
 
-    # 模式 2: 按课程性质查询
+    # 模式 2: 按课程性质查询 — static 策略
     if nature_ids_str:
         try:
-            ids = [int(x.strip()) for x in nature_ids_str.split(',') if x.strip()]
+            ids = tuple(int(x.strip()) for x in nature_ids_str.split(',') if x.strip())
         except ValueError:
             return err(400, "natureIds 格式错误，应为逗号分隔的数字")
         if not ids:
             return err(400, "natureIds 不能为空")
+
+        ck = cache_key(calendar_id, 'courses:nature', ids=ids)
+        cached = cache_get(ck)
+        if cached is not None:
+            return ok(cached)
+
         with bckndSql(calendar_id=calendar_id) as sql:
             try:
                 result = sql.findCourseByNatureId(ids)
             except ValueError as e:
                 return err(400, str(e))
+
+        cache_set(ck, result, 'static')
         return ok(result)
 
-    # 模式 1: 按专业查询
+    # 模式 1: 按专业查询 — hot 策略
     if grade is not None and major:
+        ck = cache_key(calendar_id, 'courses:major', grade=grade, major=major)
+        cached = cache_get(ck)
+        if cached is not None:
+            return ok(cached)
+
         with bckndSql(calendar_id=calendar_id) as sql:
             result = sql.findCourseByMajor(grade, major)
 
@@ -91,6 +113,7 @@ def query_courses(calendar_id):
                                 existing_texts.add(item['arrangementText'])
             res['courses'] = merged_courses
 
+        cache_set(ck, result, 'hot')
         return ok(result)
 
     return err(400, "请提供有效的查询参数（grade+major / natureIds / day+section）")
@@ -106,8 +129,15 @@ def get_course_types(calendar_id):
     GET /api/calendars/{id}/course-types
     获取指定学期的选修课类型。
     '''
+    ck = cache_key(calendar_id, 'course-types')
+    cached = cache_get(ck)
+    if cached is not None:
+        return ok(cached)
+
     with bckndSql(calendar_id=calendar_id) as sql:
         result = sql.findOptionalCourseType()
+
+    cache_set(ck, result, 'static')
     return ok(result)
 
 
@@ -127,6 +157,12 @@ def batch_course_detail(calendar_id):
 
     if not codes:
         return err(400, "courseCodes 不能为空")
+
+    codes_sorted = tuple(sorted(codes))
+    ck = cache_key(calendar_id, 'courses:detail', codes=codes_sorted)
+    cached = cache_get(ck)
+    if cached is not None:
+        return ok(cached)
 
     with bckndSql(calendar_id=calendar_id) as sql:
         result = sql.findCourseDetailByCode(codes)
@@ -159,6 +195,7 @@ def batch_course_detail(calendar_id):
     for course_code, course_list in result.items():
         processed[course_code] = process(course_list)
 
+    cache_set(ck, processed, 'normal')
     return ok(processed)
 
 
@@ -175,10 +212,19 @@ def search_courses(calendar_id):
     payload = request.json
     size_limit = 100
 
+    # 用 payload 稳定 hash 做 key
+    payload_str = json.dumps(payload, sort_keys=True, ensure_ascii=False)
+    ck = cache_key(calendar_id, 'courses:search', q=payload_str)
+    cached = cache_get(ck)
+    if cached is not None:
+        return ok(cached)
+
     with bckndSql(calendar_id=calendar_id) as sql:
         result = sql.findCourseBySearch(payload, size_limit)
 
-    return ok({"courses": result, "sizeLimit": size_limit})
+    data = {"courses": result, "sizeLimit": size_limit}
+    cache_set(ck, data, 'normal')
+    return ok(data)
 
 
 # ================================================================
@@ -202,6 +248,17 @@ def batch_course_info(calendar_id):
 
     if major_course_codes and not major_info:
         return err(400, "参数错误: majorCourseCodes 需要配合 majorInfo 使用")
+
+    # 构建缓存 key
+    codes_key = (tuple(sorted(major_course_codes)), tuple(sorted(other_course_codes)))
+    grade_key = major_info.get('grade') if major_info else None
+    major_key = major_info.get('code') if major_info else None
+    ck = cache_key(calendar_id, 'courses:batch',
+                   major=codes_key[0], other=codes_key[1],
+                   grade=grade_key, major_code=major_key)
+    cached = cache_get(ck)
+    if cached is not None:
+        return ok(cached)
 
     with bckndSql(calendar_id=calendar_id) as sql:
         result_dict = sql.getLatestCourseInfo(major_course_codes, other_course_codes, major_info)
@@ -245,6 +302,7 @@ def batch_course_info(calendar_id):
                             current_detail['arrangementInfo'].sort(key=lambda x: (x['occupyDay'], x['occupyTime'][0] if x['occupyTime'] else 0))
                 result_dict[course_code] = merged_details
 
+    cache_set(ck, result_dict, 'normal')
     return ok(result_dict)
 
 
@@ -258,9 +316,14 @@ def get_update_time(calendar_id):
     GET /api/calendars/{id}/update-time
     获取指定学期数据的最新更新时间。
     '''
+    ck = cache_key(calendar_id, 'update-time')
+    cached = cache_get(ck)
+    if cached is not None:
+        return ok(cached)
+
     with bckndSql() as sql:
         result = sql.getLatestUpdateTime(calendar_id)
 
-    if result is None:
-        return ok(None)
-    return ok(datetime.strftime(result, "%Y-%m-%d %H:%M"))
+    data = None if result is None else datetime.strftime(result, "%Y-%m-%d %H:%M")
+    cache_set(ck, data, 'static')
+    return ok(data)

@@ -40,6 +40,19 @@ def publish(fetchlog_id, calendar_id, calendar_name, level, message, seq=0):
         pass
 
 
+def cache_invalidate(calendar_id):
+    """同步完成后清除该学期的后端缓存，返回清除的 key 数量。"""
+    try:
+        r = _get_redis()
+        deleted = 0
+        for key in r.scan_iter(f"cache:cal:{calendar_id}:*"):
+            r.delete(key)
+            deleted += 1
+        return deleted
+    except redis.RedisError:
+        return 0
+
+
 def aggregate(fetchlog_id):
     """读取并删除累积 LIST，返回聚合日志文本。"""
     try:

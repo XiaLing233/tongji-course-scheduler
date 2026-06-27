@@ -29,6 +29,10 @@ services:
       start_period: 10s
     restart: "no"
 
+  test-redis:
+    image: redis:8.4-alpine
+    restart: "no"
+
   backend:
     build: ./backend
     environment:
@@ -47,6 +51,8 @@ services:
     depends_on:
       backend-db:
         condition: service_healthy
+      test-redis:
+        condition: service_started
     entrypoint: ["python3", "-m", "pytest", "/app/tests/", "-v"]
     restart: "no"
 
@@ -68,5 +74,7 @@ services:
     depends_on:
       crawler-db:
         condition: service_healthy
+      test-redis:
+        condition: service_started
     entrypoint: ["python3", "-m", "pytest", "/app/tests/", "-v"]
     restart: "no"

@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 
 from tjSql import tjSql
 from auth import loginout
-from db.redis_pub import publish as redis_publish
+from db.redis_pub import publish as redis_publish, cache_invalidate as redis_cache_invalidate
 from meru.smtp import SMTPEmailClient
 
 load_dotenv()
@@ -158,6 +158,11 @@ def sync_one(session, calendar_id, msg=''):
 
     _log(f"学期 {calendar_id}  已切换到 {target_db}", log_id, calendar_id, calendar_name)
     redis_publish(log_id, calendar_id, calendar_name, 'end', 'sync completed')
+
+    cleared = redis_cache_invalidate(calendar_id)
+    if cleared:
+        _log(f"已清除 {cleared} 条后端缓存")
+
     return True, calendar_id, calendar_name
 
 
