@@ -222,7 +222,7 @@ export default defineComponent({
         axios.get(`/api/sync/history/${logId}`)
           .then(res => {
             this.selectedLog = res.data.data
-            if (this.selectedLog.fullLog) {
+            if (this.selectedLog?.fullLog) {
               this.logLines = this.selectedLog.fullLog
                 .split('\n')
                 .filter(line => line.trim())

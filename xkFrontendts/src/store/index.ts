@@ -11,9 +11,25 @@ import type {
     courseOnTable
  } from "@/utils/myInterface";
 import { errorNotify } from "@/utils/notify";
-import type { State } from "vue";
 
-type StoreState = State;
+interface StoreState {
+    majorSelected: baseInfoTriplet;
+    commonLists: {
+        compulsoryCourses: courseInfo[];
+        optionalTypes: optionalCourseType[];
+        optionalCourses: courseInfo[];
+        stagedCourses: stagedCourse[];
+        selectedCourses: string[];
+        searchCourses: courseInfo[];
+    };
+    clickedCourseInfo: { courseCode: string; courseName: string };
+    occupied: occupyCell[][][];
+    timeTableData: courseOnTable[];
+    flags: { majorNotChanged: boolean; isDataOutdated: boolean };
+    updateTime: string;
+    latestUpdateTime: string;
+    isSpin: boolean;
+}
 
 function _snapRead(calendarId: number) {
     const raw = localStorage.getItem("solidified");
@@ -26,7 +42,7 @@ function _snapWrite(calendarId: number, snap: Record<string, unknown>) {
     all[String(calendarId)] = snap;
     localStorage.setItem("solidified", JSON.stringify(all));
 }
-const store = createStore<StoreState>({
+const store = createStore({
     state() {
         return {
             // 检索的基本信息
