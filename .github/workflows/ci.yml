@@ -12,20 +12,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Run backend tests
-        run: docker compose --profile test up --build test-backend --exit-code-from test-backend
+        run: docker compose -f docker-compose.test.yml up --build backend --exit-code-from backend
       - name: Show logs on failure
         if: failure()
-        run: docker compose --profile test logs test-backend
+        run: docker compose -f docker-compose.test.yml logs backend
 
   crawler-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Run crawler tests
-        run: docker compose --profile test up --build test-crawler --exit-code-from test-crawler
+        run: docker compose -f docker-compose.test.yml up --build crawler --exit-code-from crawler
       - name: Show logs on failure
         if: failure()
-        run: docker compose --profile test logs test-crawler
+        run: docker compose -f docker-compose.test.yml logs crawler
 
   frontend-typecheck:
     runs-on: ubuntu-latest

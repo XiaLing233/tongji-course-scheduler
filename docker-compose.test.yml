@@ -1,0 +1,72 @@
+services:
+  backend-db:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: test_pass_123
+      MYSQL_ROOT_HOST: "%"
+      TZ: Asia/Shanghai
+    command: --default-time-zone=+08:00
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    restart: "no"
+
+  crawler-db:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: test_pass_123
+      MYSQL_ROOT_HOST: "%"
+      TZ: Asia/Shanghai
+    command: --default-time-zone=+08:00
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    restart: "no"
+
+  backend:
+    build: ./backend
+    environment:
+      TZ: Asia/Shanghai
+      DB_HOST: backend-db
+      DB_PORT: "3306"
+      DB_USER: root
+      DB_PASSWORD: test_pass_123
+      DB_R_USER: root
+      DB_R_PASSWORD: test_pass_123
+      DB_META: test_course_scheduler_meta
+      REDIS_HOST: test-redis
+      REDIS_PORT: "6379"
+      REDIS_DB: "0"
+      REDIS_STREAM_KEY: crawler:log
+    depends_on:
+      backend-db:
+        condition: service_healthy
+    entrypoint: ["python3", "-m", "pytest", "/app/tests/", "-v"]
+    restart: "no"
+
+  crawler:
+    build: ./crawler
+    environment:
+      TZ: Asia/Shanghai
+      DB_HOST: crawler-db
+      DB_PORT: "3306"
+      DB_USER: root
+      DB_PASSWORD: test_pass_123
+      DB_R_USER: root
+      DB_R_PASSWORD: test_pass_123
+      DB_META: test_course_scheduler_meta
+      REDIS_HOST: test-redis
+      REDIS_PORT: "6379"
+      REDIS_DB: "0"
+      REDIS_STREAM_KEY: crawler:log
+    depends_on:
+      crawler-db:
+        condition: service_healthy
+    entrypoint: ["python3", "-m", "pytest", "/app/tests/", "-v"]
+    restart: "no"

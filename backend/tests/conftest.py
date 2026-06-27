@@ -54,9 +54,64 @@ CREATE TABLE `fetchlog` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 """
 _COURSE_DDL = """
-CREATE TABLE `campus` (
+CREATE TABLE IF NOT EXISTS `assessment` (
+  `assessmentMode` varchar(200) NOT NULL, `assessmentModeI18n` varchar(200) DEFAULT NULL,
+  PRIMARY KEY (`assessmentMode`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+CREATE TABLE IF NOT EXISTS `campus` (
   `campus` varchar(200) NOT NULL, `campusI18n` varchar(200) DEFAULT NULL,
   PRIMARY KEY (`campus`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+CREATE TABLE IF NOT EXISTS `coursenature` (
+  `courseLabelId` int NOT NULL, `courseLabelName` varchar(200) DEFAULT NULL,
+  PRIMARY KEY (`courseLabelId`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+CREATE TABLE IF NOT EXISTS `faculty` (
+  `faculty` varchar(200) NOT NULL, `facultyI18n` varchar(200) DEFAULT NULL,
+  PRIMARY KEY (`faculty`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+CREATE TABLE IF NOT EXISTS `language` (
+  `teachingLanguage` varchar(200) NOT NULL,
+  `teachingLanguageI18n` varchar(200) DEFAULT NULL,
+  PRIMARY KEY (`teachingLanguage`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+CREATE TABLE IF NOT EXISTS `major` (
+  `id` int NOT NULL AUTO_INCREMENT, `code` varchar(200) DEFAULT NULL,
+  `grade` int DEFAULT NULL, `name` varchar(200) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+CREATE TABLE IF NOT EXISTS `coursedetail` (
+  `id` bigint NOT NULL, `code` varchar(200) DEFAULT NULL,
+  `name` TEXT DEFAULT NULL, `courseLabelId` int DEFAULT NULL,
+  `assessmentMode` varchar(200) DEFAULT NULL, `period` int DEFAULT NULL,
+  `weekHour` int DEFAULT NULL, `campus` varchar(200) DEFAULT NULL,
+  `number` int DEFAULT NULL, `elcNumber` int DEFAULT NULL,
+  `startWeek` int DEFAULT NULL, `endWeek` int DEFAULT NULL,
+  `courseCode` varchar(200) DEFAULT NULL, `courseName` varchar(200) DEFAULT NULL,
+  `credit` double DEFAULT NULL, `teachingLanguage` varchar(200) DEFAULT NULL,
+  `faculty` varchar(200) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `nature_idx` (`courseLabelId`), KEY `assess_idx` (`assessmentMode`),
+  KEY `campusKey_idx` (`campus`), KEY `facultyKey_idx` (`faculty`),
+  KEY `langKey_idx` (`teachingLanguage`),
+  CONSTRAINT `assessKey` FOREIGN KEY (`assessmentMode`) REFERENCES `assessment` (`assessmentMode`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `campusKey` FOREIGN KEY (`campus`) REFERENCES `campus` (`campus`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `facultyKey` FOREIGN KEY (`faculty`) REFERENCES `faculty` (`faculty`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `langKey` FOREIGN KEY (`teachingLanguage`) REFERENCES `language` (`teachingLanguage`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `natureKey` FOREIGN KEY (`courseLabelId`) REFERENCES `coursenature` (`courseLabelId`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+CREATE TABLE IF NOT EXISTS `majorandcourse` (
+  `id` int NOT NULL AUTO_INCREMENT, `majorId` int NOT NULL, `courseId` bigint NOT NULL,
+  PRIMARY KEY (`id`), KEY `courseKey_idx` (`courseId`), KEY `majorKeyForMajor_idx` (`majorId`),
+  CONSTRAINT `courseKeyForMajor` FOREIGN KEY (`courseId`) REFERENCES `coursedetail` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `majorKeyForMajor` FOREIGN KEY (`majorId`) REFERENCES `major` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+CREATE TABLE IF NOT EXISTS `teacher` (
+  `id` bigint NOT NULL, `teachingClassId` bigint DEFAULT NULL,
+  `teacherCode` varchar(200) DEFAULT NULL, `teacherName` varchar(200) DEFAULT NULL,
+  `arrangeInfoText` mediumtext,
+  PRIMARY KEY (`id`), KEY `classKey_idx` (`teachingClassId`),
+  CONSTRAINT `courseKey` FOREIGN KEY (`teachingClassId`) REFERENCES `coursedetail` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 """
 
@@ -123,6 +178,12 @@ def patch_env(monkeypatch):
     monkeypatch.setenv('DB_META', TEST_META)
     monkeypatch.setenv('DB_R_USER', os.getenv('DB_USER', 'root'))
     monkeypatch.setenv('DB_R_PASSWORD', os.getenv('DB_PASSWORD', ''))
+    # 清 mysql-connector-python 全局 pool 注册表 + DbRouter 缓存
+    from mysql.connector.pooling import _CONNECTION_POOLS
+    _CONNECTION_POOLS.clear()
+    from db.router import router
+    router._pools.clear()
+    router._meta_pool = None
 
 
 # ================================================================
