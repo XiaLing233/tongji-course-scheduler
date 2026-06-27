@@ -52,7 +52,7 @@
             <div v-if="logLines.length === 0 && selectedLog.status !== 'running'" class="text-gray-400">
               暂无日志内容
             </div>
-            <div v-for="(line, i) in logLines" :key="i" class="text-gray-700 leading-relaxed">{{ line }}</div>
+            <div v-for="(line, i) in logLines" :key="i" :class="logLineClass(line.level)" class="leading-relaxed">{{ line.message }}</div>
           </div>
         </template>
         <div v-else class="flex-1 flex items-center justify-center text-gray-400">
@@ -82,6 +82,28 @@ interface FetchLog {
   fullLog?: string | null
 }
 
+interface LogLine {
+  level: 'info' | 'warning' | 'error'
+  message: string
+}
+
+/** 解析 fullLog 中的一行 NDJSON → LogLine */
+function parseLogLine(raw: string): LogLine {
+  try {
+    const obj = JSON.parse(raw)
+    if (obj.l && obj.m) {
+      return { level: obj.l, message: obj.m }
+    }
+  } catch { /* malformed line */ }
+  return { level: 'info', message: raw }
+}
+
+const LEVEL_CLASS: Record<string, string> = {
+  info: 'text-gray-600',
+  warning: 'text-amber-600',
+  error: 'text-red-600',
+}
+
 export default defineComponent({
   components: { ReloadOutlined },
   data() {
@@ -94,7 +116,7 @@ export default defineComponent({
       hasMore: true,
       selectedId: null as number | null,
       selectedLog: null as FetchLog | null,
-      logLines: [] as string[],
+      logLines: [] as LogLine[],
       eventSource: null as EventSource | null,
     }
   },
@@ -105,6 +127,9 @@ export default defineComponent({
     this.closeSSE()
   },
   methods: {
+    logLineClass(level: string): string {
+      return LEVEL_CLASS[level] || 'text-gray-700'
+    },
     async fetchHistory() {
       this.loading = true
       this.page = 1
@@ -157,7 +182,10 @@ export default defineComponent({
         const res = await axios.get(`/api/sync/history/${log.id}`)
         this.selectedLog = res.data.data
         if (this.selectedLog?.fullLog) {
-          this.logLines = this.selectedLog.fullLog.split('\n')
+          this.logLines = this.selectedLog.fullLog
+            .split('\n')
+            .filter(line => line.trim())
+            .map(parseLogLine)
         }
       } catch {
         this.selectedLog = log
@@ -181,7 +209,7 @@ export default defineComponent({
       this.eventSource.addEventListener('log', (e) => {
         try {
           const data = JSON.parse(e.data)
-          this.logLines.push(data.message)
+          this.logLines.push({ level: data.level || 'info', message: data.message })
           this.$nextTick(() => {
             const panel = this.$refs.logPanel as HTMLElement
             if (panel) panel.scrollTop = panel.scrollHeight
@@ -191,12 +219,14 @@ export default defineComponent({
 
       this.eventSource.addEventListener('end', () => {
         this.closeSSE()
-        // 刷新选中日志状态 + 最终 fullLog
         axios.get(`/api/sync/history/${logId}`)
           .then(res => {
             this.selectedLog = res.data.data
             if (this.selectedLog.fullLog) {
-              this.logLines = this.selectedLog.fullLog.split('\n')
+              this.logLines = this.selectedLog.fullLog
+                .split('\n')
+                .filter(line => line.trim())
+                .map(parseLogLine)
             }
             this.$nextTick(() => {
               const panel = this.$refs.logPanel as HTMLElement

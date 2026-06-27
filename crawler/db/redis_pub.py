@@ -1,6 +1,8 @@
 """Redis 日志发布器。同步过程中写 Stream（SSE 推送），同时累积到 LIST 供 fullLog 聚合。
+LIST 条目使用 NDJSON 格式，便于前端按 level 着色。
 所有 Redis 操作静默容错——Redis 不可用时不影响爬虫主流程。"""
 
+import json
 import os
 
 import redis
@@ -31,7 +33,8 @@ def publish(fetchlog_id, calendar_id, calendar_name, level, message, seq=0):
             'message': message,
         }
         r.xadd(_stream_key, fields, maxlen=_maxlen)
-        r.rpush(f'crawler:log:{fetchlog_id}', f'[{level}] {message}')
+        r.rpush(f'crawler:log:{fetchlog_id}',
+                json.dumps({'l': level, 'm': message}, ensure_ascii=False))
         r.expire(f'crawler:log:{fetchlog_id}', 86400)
     except redis.RedisError:
         pass

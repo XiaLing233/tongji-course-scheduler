@@ -63,12 +63,9 @@ def query_courses(calendar_id):
         for res in result:
             for course in res['courses']:
                 course['arrangementInfo'] = []
-            # 使用 dict.fromkeys() 去重并保持顺序
-                unique_locations = list(dict.fromkeys(splitEndline(course['locations'])))
-                for location in unique_locations:
+                for location in splitEndline(course['locations']):
                     course['arrangementInfo'].append(arrangementTextToObj(location))
-
-            # 按照星期（occupyDay）和节次（occupyTime第一节）排序
+                # 按照星期（occupyDay）和节次（occupyTime第一节）排序
                 course['arrangementInfo'].sort(key=lambda x: (x['occupyDay'], x['occupyTime'][0] if x['occupyTime'] else 0))
                 del course['locations']
 
@@ -137,8 +134,7 @@ def batch_course_detail(calendar_id):
     def process(course_list):
         for course in course_list:
             course['arrangementInfo'] = []
-            unique_locations = list(dict.fromkeys(splitEndline(course['locations'])))
-            for location in unique_locations:
+            for location in splitEndline(course['locations']):
                 course['arrangementInfo'].append(arrangementTextToObj(location))
             course['arrangementInfo'].sort(key=lambda x: (x['occupyDay'], x['occupyTime'][0] if x['occupyTime'] else 0))
             del course['locations']
@@ -215,11 +211,9 @@ def batch_course_info(calendar_id):
             for detail in course_details:
                 if 'arrangementInfo' in detail and isinstance(detail['arrangementInfo'], str):
                     # Parse arrangement text - split into list and convert each element
-                    arrangement_text = detail['arrangementInfo']  # 先保存原始字符串
-                    detail['arrangementInfo'] = []  # 清空，准备填充解析后的数据
-                    unique_locations = list(dict.fromkeys(splitEndline(arrangement_text)))
-
-                    for location in unique_locations:
+                    arrangement_text = detail['arrangementInfo']
+                    detail['arrangementInfo'] = []
+                    for location in splitEndline(arrangement_text):
                         detail['arrangementInfo'].append(arrangementTextToObj(location))
 
                     # Sort by day and time
@@ -269,4 +263,4 @@ def get_update_time(calendar_id):
 
     if result is None:
         return ok(None)
-    return ok(datetime.strftime(result, "%Y-%m-%d"))
+    return ok(datetime.strftime(result, "%Y-%m-%d %H:%M"))

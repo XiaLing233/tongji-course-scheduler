@@ -20,18 +20,19 @@ class FetchLogger(Connection):
 
     def finishFetchLog(self, fetchlog_id, status='completed', totalCourses=0,
                        totalPages=0, errorMessage=None):
-        """UPDATE 为 completed 或 failed。completed 时从 Redis 聚合 fullLog。"""
+        """UPDATE 为 completed 或 failed，均从 Redis 聚合 fullLog。"""
         self._use_meta()
+        full_log = redis_aggregate(fetchlog_id)
         if status == 'completed':
             self.cursor.execute(
                 "UPDATE fetchlog SET status='completed', endTime=NOW(3), "
                 "totalCourses=%s, totalPages=%s, fullLog=%s WHERE id=%s",
-                (totalCourses, totalPages, redis_aggregate(fetchlog_id), fetchlog_id)
+                (totalCourses, totalPages, full_log, fetchlog_id)
             )
         else:
             self.cursor.execute(
                 "UPDATE fetchlog SET status='failed', endTime=NOW(3), "
-                "errorMessage=%s WHERE id=%s",
-                (errorMessage, fetchlog_id)
+                "errorMessage=%s, fullLog=%s WHERE id=%s",
+                (errorMessage, full_log, fetchlog_id)
             )
         self.db.commit()

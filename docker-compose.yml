@@ -26,6 +26,8 @@ services:
     build: ./backend
     container_name: xk-backend
     env_file: .env
+    environment:
+      TZ: Asia/Shanghai
     depends_on:
       mysql:
         condition: service_healthy
@@ -51,6 +53,8 @@ services:
   crawler:
     build: ./crawler
     env_file: .env
+    environment:
+      TZ: Asia/Shanghai
     profiles: ["crawler"]
     depends_on:
       mysql:

@@ -116,12 +116,15 @@ def fetchCourseList(session, calendar, target_db, log_id=None):
         payload['pageNum_'] = i
         data = safeFetch(session, headers, payload)
         with tjSql(target_db) as sql:
-            sql.insertCourseList(data['data']['list'])
+            sql.insertCourseList(
+                data['data']['list'],
+                warn=lambda msg: _log(msg, log_id, calendar, calendar_name, level='warning')
+            )
         _log(f'第 {i}/{total_pages} 页完成 ({min(i * PAGESIZE, total)}/{total} 条)',
              log_id, calendar, calendar_name, seq=i)
         time.sleep(3)
 
-    _log(f"学期 {calendar}  [OK] 完成", log_id, calendar, calendar_name)
+    _log(f"学期 {calendar}  完成", log_id, calendar, calendar_name)
     return total, total_pages, calendar_name
 
 
@@ -135,9 +138,15 @@ def sync_one(session, calendar_id, msg=''):
         total_courses, total_pages, calendar_name = fetchCourseList(
             session, calendar_id, target_db, log_id=log_id)
     except Exception as e:
-        _log(f"[FAIL] 学期 {calendar_id} 同步失败: {e}", log_id, calendar_id, '')
-        with tjSql() as sql:
-            sql.finishFetchLog(log_id, status='failed', errorMessage=str(e))
+        _log(f"学期 {calendar_id} 同步失败: {e}", log_id, calendar_id,
+             level='error')
+        # 尝试更新 fetchlog 状态——MySQL 可能还断着，单独 try
+        try:
+            with tjSql() as sql:
+                sql.finishFetchLog(log_id, status='failed', errorMessage=str(e))
+        except Exception as e2:
+            _log(f"无法更新 fetchlog 状态: {e2}", log_id, calendar_id,
+                 level='error')
         redis_publish(log_id, calendar_id, '', 'end', 'sync failed')
         return False, calendar_id, None
 
@@ -169,8 +178,8 @@ if __name__ == "__main__":
     semesters, args = parse_calendars()
 
     if args.dry_run:
-        _log(f"[干跑] 将同步学期: {semesters}")
-        _log(f"[干跑] 备注: {args.msg or '(无)'}")
+        _log(f"干跑模式 — 将同步学期: {semesters}")
+        _log(f"干跑模式 — 备注: {args.msg or '(无)'}")
         sys.exit(0)
 
     session = loginout.login()
@@ -183,7 +192,7 @@ if __name__ == "__main__":
         try:
             ok, cal_id, cal_name = sync_one(session, cal, msg=args.msg)
         except Exception as e:
-            _log(f"[FAIL] 学期 {cal}: {e}")
+            _log(f"学期 {cal} 同步异常: {e}", level='error')
             ok = False
             cal_id = cal
             if args.fail_fast:
@@ -204,8 +213,8 @@ if __name__ == "__main__":
                 f"更新学期：{', '.join(names)}\n"
                 f"完成时间：{now.strftime('%Y-%m-%d %H:%M:%S')}\n\n祝好！\n琪露诺bot")
         if email_client.send_email(os.getenv('SMTP_SENDER', ''), subject, body):
-            _log("[OK] 邮件通知已发送")
+            _log("邮件通知已发送")
         else:
-            _log("[FAIL] 邮件通知发送失败")
+            _log("邮件通知发送失败", level='error')
 
     sys.exit(1 if failed else 0)

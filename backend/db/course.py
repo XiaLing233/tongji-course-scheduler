@@ -83,8 +83,8 @@ class CourseQueries(ReadConnection):
             FROM teacher AS t GROUP BY t.teachingClassid
         ) AS teachers ON c.id = teachers.teachingClassid
         JOIN (
-            SELECT t.teachingClassid, t.arrangeInfoText AS locations
-            FROM teacher AS t
+            SELECT t.teachingClassid, MIN(t.arrangeInfoText) AS locations
+            FROM teacher AS t GROUP BY t.teachingClassid
         ) AS locations ON c.id = locations.teachingClassid
         JOIN (
             SELECT DISTINCT c.courseCode as myCode, m.grade, m.id as targetMajorId
@@ -186,8 +186,8 @@ class CourseQueries(ReadConnection):
             FROM teacher AS t GROUP BY t.teachingClassid
         ) AS teachers ON c.id = teachers.teachingClassid
         JOIN (
-            SELECT t.teachingClassid, t.arrangeInfoText AS locations
-            FROM teacher AS t
+            SELECT t.teachingClassid, MIN(t.arrangeInfoText) AS locations
+            FROM teacher AS t GROUP BY t.teachingClassid
         ) AS locations ON c.id = locations.teachingClassid
         WHERE c.courseCode IN ({placeholders})
         """
