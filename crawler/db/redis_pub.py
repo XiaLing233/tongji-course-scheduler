@@ -41,11 +41,14 @@ def publish(fetchlog_id, calendar_id, calendar_name, level, message, seq=0):
 
 
 def cache_invalidate(calendar_id):
-    """同步完成后清除该学期的后端缓存，返回清除的 key 数量。"""
+    """同步完成后清除该学期缓存 + 全局日历列表缓存，返回清除的 key 数量。"""
     try:
         r = _get_redis()
         deleted = 0
         for key in r.scan_iter(f"cache:cal:{calendar_id}:*"):
+            r.delete(key)
+            deleted += 1
+        for key in r.scan_iter("cache:cal:0:*"):
             r.delete(key)
             deleted += 1
         return deleted
