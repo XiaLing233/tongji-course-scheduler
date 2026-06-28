@@ -153,15 +153,20 @@ def sync_one(session, calendar_id, msg=''):
     with tjSql() as sql:
         sql.setCalendarName(calendar_id, calendar_name)
         sql.switchActiveDb(calendar_id)
-        sql.finishFetchLog(log_id, status='completed',
-                           totalCourses=total_courses, totalPages=total_pages)
 
+    # 完成日志必须在 finishFetchLog 之前写入
+    # ——finishFetchLog 内部调用 redis_aggregate 聚合 LIST 到 fullLog
     _log(f"学期 {calendar_id}  已切换到 {target_db}", log_id, calendar_id, calendar_name)
-    redis_publish(log_id, calendar_id, calendar_name, 'end', 'sync completed')
 
     cleared = redis_cache_invalidate(calendar_id)
     if cleared:
-        _log(f"已清除 {cleared} 条后端缓存")
+        _log(f"已清除 {cleared} 条后端缓存", log_id, calendar_id, calendar_name)
+
+    with tjSql() as sql:
+        sql.finishFetchLog(log_id, status='completed',
+                           totalCourses=total_courses, totalPages=total_pages)
+
+    redis_publish(log_id, calendar_id, calendar_name, 'end', 'sync completed')
 
     return True, calendar_id, calendar_name
 
