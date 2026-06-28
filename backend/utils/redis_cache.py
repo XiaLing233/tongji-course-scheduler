@@ -6,7 +6,7 @@
   normal  — 固定 10min TTL，自然过期（搜索、详情）
 
 Usage:
-  from utils.redis_cache import cache_get, cache_set, cache_invalidate, cache_key
+  from utils.redis_cache import cache_get, cache_set, cache_key
 
   # 读
   data = cache_get(cache_key(calendar_id, 'campuses'))
@@ -19,9 +19,6 @@ Usage:
 
 import hashlib
 import json
-import logging
-
-logger = logging.getLogger(__name__)
 
 
 def _redis():
@@ -97,26 +94,5 @@ def cache_set(key, value, strategy="normal"):
             r.set(key, data, ex=600)
         else:
             r.set(key, data, ex=300)  # fallback 5min
-    except Exception:
-        pass
-
-
-def cache_invalidate(calendar_id):
-    """清除指定学期的所有缓存（同步完成后调用）。
-
-    Args:
-        calendar_id: 要清除的学期 ID。
-    """
-    r = _redis()
-    if not r:
-        return
-    try:
-        pattern = f"cache:cal:{calendar_id}:*"
-        deleted = 0
-        for key in r.scan_iter(pattern):
-            r.delete(key)
-            deleted += 1
-        if deleted:
-            logger.info("已清除 %d 条缓存 (calendarId=%s)", deleted, calendar_id)
     except Exception:
         pass
