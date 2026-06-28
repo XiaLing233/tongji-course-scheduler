@@ -67,14 +67,22 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build and push backend
+      - name: Metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/xk-backend
+          tags: |
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/master' }}
+            type=sha
+            type=ref,event=tag
+      - name: Build and push
         uses: docker/build-push-action@v6
         with:
           context: ./backend
           push: true
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/xk-backend:latest
-            ghcr.io/${{ github.repository_owner }}/xk-backend:${{ github.sha }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
 
   build-frontend:
     needs: [frontend-typecheck, frontend-test]
@@ -90,14 +98,22 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build and push frontend
+      - name: Metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/xk-frontend
+          tags: |
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/master' }}
+            type=sha
+            type=ref,event=tag
+      - name: Build and push
         uses: docker/build-push-action@v6
         with:
           context: ./xkFrontendts
           push: true
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/xk-frontend:latest
-            ghcr.io/${{ github.repository_owner }}/xk-frontend:${{ github.sha }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
 
   build-crawler:
     needs: [crawler-test]
@@ -113,14 +129,22 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build and push crawler
+      - name: Metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/xk-crawler
+          tags: |
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/master' }}
+            type=sha
+            type=ref,event=tag
+      - name: Build and push
         uses: docker/build-push-action@v6
         with:
           context: ./crawler
           push: true
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/xk-crawler:latest
-            ghcr.io/${{ github.repository_owner }}/xk-crawler:${{ github.sha }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
 
   deploy:
     needs: [build-backend, build-frontend, build-crawler]
