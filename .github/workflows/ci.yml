@@ -136,7 +136,7 @@ jobs:
           ssh -o StrictHostKeyChecking=no \
           ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
             set -e
-            cd ~/xkB/
+            cd ~/tongji-course-scheduler/
             git pull
             docker compose pull
             docker compose up -d
