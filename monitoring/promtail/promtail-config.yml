@@ -20,5 +20,7 @@ scrape_configs:
       - source_labels: [__meta_docker_container_name]
         regex: '/(.*)'
         target_label: container
+      - target_label: job
+        replacement: docker
     pipeline_stages:
       - docker: {}

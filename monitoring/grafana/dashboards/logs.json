@@ -14,8 +14,8 @@
       "gridPos": { "x": 0, "y": 0, "w": 24, "h": 6 },
       "targets": [
         {
-          "expr": "sum(count_over_time({job=\"docker\"}[1m])) by (filename)",
-          "legendFormat": "{{filename}}",
+          "expr": "sum(count_over_time({job=\"docker\"}[1m])) by (container)",
+          "legendFormat": "{{container}}",
           "refId": "A"
         }
       ],
