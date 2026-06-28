@@ -1,18 +1,39 @@
 services:
+  mysql:
+    image: mariadb:lts
+    container_name: xk-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-}
+      MYSQL_ROOT_HOST: "%"
+      TZ: Asia/Shanghai
+    command: --default-time-zone=+08:00
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./crawler/meta_template.sql:/docker-entrypoint-initdb.d/01_meta.sql:ro
+    healthcheck:
+      test: ["CMD", "mariadb-admin", "-uroot", "-p$MYSQL_ROOT_PASSWORD", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+
   redis:
     image: redis:8.4-alpine
     container_name: xk-redis
-    ports:
-      - "6380:6379"
     restart: always
 
   backend:
+    image: ghcr.io/xialing233/xk-backend:latest
     build: ./backend
     container_name: xk-backend
-    ports:
-      - "1239:1239"
+    env_file: .env
+    environment:
+      TZ: Asia/Shanghai
     depends_on:
-      - redis
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:1239/api/health"]
       interval: 30s
@@ -20,5 +41,35 @@ services:
       retries: 3
       start_period: 20s
     restart: always
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+
+  frontend:
+    image: ghcr.io/xialing233/xk-frontend:latest
+    build: ./xkFrontendts
+    container_name: xk-frontend
+    ports:
+      - "1239:80"
+    depends_on:
+      - backend
+    restart: always
+
+  crawler:
+    image: ghcr.io/xialing233/xk-crawler:latest
+    build: ./crawler
+    env_file: .env
+    environment:
+      TZ: Asia/Shanghai
+    profiles: ["crawler"]
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    entrypoint: ["python3", "-u", "fetchCourseList.py"]
+    restart: "no"
+
+networks:
+  default:
+    name: xk_network
+
+volumes:
+  mysql_data:

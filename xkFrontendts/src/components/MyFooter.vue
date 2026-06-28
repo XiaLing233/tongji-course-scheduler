@@ -4,7 +4,7 @@
             <div class="text-center">
                 <p>基于 <a href="https://github.com/me-shaon/GLWTPL" target="_blank" >GLWTPL</a> 开源</p>
                 <p>数据来源：<a href="https://1.tongji.edu.cn" target="_blank">同济大学教学管理信息系统</a></p>
-                <p>当前学期数据的更新时间：{{ $store.state.updateTime }}</p>
+                <p>当前学期数据的更新时间：{{ $store.state.updateTime.substring(0, 10) }}</p>
             </div>
         </a-layout-footer>
     </a-layout>
@@ -33,8 +33,10 @@ export default {
             // updateTime: ''
         }
     },
-    mounted() {
-        this.getUpdateTime();
+    watch: {
+        '$store.state.majorSelected.calendarId'() {
+            this.getUpdateTime();
+        }
     },
     methods: {
         waitForSpinEnd(): Promise<void> {
@@ -53,10 +55,7 @@ export default {
         },
         async getUpdateTime() {
             try {
-                const res = await axios({
-                    method: 'get',
-                    url: '/api/getLatestUpdateTime'
-                });
+                const res = await axios.get(`/api/calendars/${this.$store.state.majorSelected.calendarId}/update-time`);
 
                 this.$store.commit("loadSolidifyTime");
                 this.$store.commit("setLatestUpdateTime", res.data.data);

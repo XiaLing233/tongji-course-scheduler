@@ -113,7 +113,7 @@ export default {
             this.$store.commit('setSpin', true);
 
             try {
-                const res = await axios.get('/api/getAllCampus');
+                const res = await axios.get(`/api/calendars/${this.$store.state.majorSelected.calendarId}/campuses`);
                 this.rawList.campus = res.data.data.filter((campus: rawCampus) => campus.campusName !== '');
             }
             catch (error: unknown) {
@@ -129,7 +129,7 @@ export default {
             this.$store.commit('setSpin', true);
 
             try {
-                const res = await axios.get('/api/getAllFaculty');
+                const res = await axios.get(`/api/calendars/${this.$store.state.majorSelected.calendarId}/faculties`);
                 this.rawList.faculty = res.data.data.filter((faculty: rawFaculty) => faculty.facultyName !== '');
             }
             catch (error: unknown) {
@@ -146,16 +146,13 @@ export default {
 
             try {
                 const searchData = { ...this.searchBody } as Record<string, string | undefined>;
+                delete searchData.calendarId;
                 for (const key in searchData) {
                     if (searchData[key] === undefined) {
                         searchData[key] = '';
                     }
                 }
-                const res = await axios({
-                    url: '/api/findCourseBySearch',
-                    method: 'post',
-                    data: searchData
-                });
+                const res = await axios.post(`/api/calendars/${this.$store.state.majorSelected.calendarId}/courses/search`, searchData);
                 // console.log(res.data.data);
                 this.$store.commit('setSearchedCourses', res.data.data.courses);
 

@@ -1,720 +1,276 @@
-from flask import Blueprint, request, jsonify
+import json
 from datetime import datetime
-from utils import bckndSql
+
+from flask import Blueprint, request
+
+from bckndSql import bckndSql
 from utils.bckndTools import arrangementTextToObj, splitEndline, optCourseQueryListGenerator
+from utils.response import ok, err
+from utils.redis_cache import cache_get, cache_set, cache_key
 
 course_bp = Blueprint('course', __name__)
 
 
-@course_bp.route('/api/findCourseByMajor', methods=['POST'])
-def findCourseByMajor():
+# ================================================================
+#  GET /api/calendars/<id>/courses  — 课程查询（多种查询参数组合）
+# ================================================================
+
+@course_bp.route('/api/calendars/<int:calendar_id>/courses', methods=['GET'])
+def query_courses(calendar_id):
     '''
-    Find course by major.
-
-    Payload:
-    ```json
-    {
-        "grade": 2023,
-        "code": "10054",
-        "calendarId": 119
-    }
-    ```
-
-    Response：
-    ```json
-    {
-        "code": 200,
-        "msg": "查询成功",
-        "data": [
-            {
-                "courseCode": 102020,
-                "courseName": "信息论及编码理论",
-                "facultyI18n": "电子与信息工程学院",
-                "grade": 2023,
-                "courseNature": ["专业必修课"], // 有的课程可能存在相同课号多个性质的情况
-                "courses": [
-                    {
-                        "code": "10202005",
-                        "campus": "嘉定校区",
-                        "teachers": [
-                            {
-                                "teacherCode": "06019",
-                                "teacherName": "万国春"
-                            }
-                        ],
-                        "arrangementInfo": [
-                            {
-                                "arrangementText": "星期四10-12节 [1-17] 安楼A205\n",
-                                "occupyDay": 4,
-                                "occupyTime": [10, 11, 12],
-                                "occupyWeek": [
-                                    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17
-                                ],
-                                "occupyRoom": "安楼A205"
-                            }
-                        ],
-                        "isExclusive": 0
-                    },
-                    {
-                        "code": "10202002",
-                        "campus": "嘉定校区",
-                        "teachers": [
-                            {
-                                "teacherCode": "00111",
-                                "teacherName": "李宏强"
-                            },
-                            {
-                                "teacherCode": "16509",
-                                "teacherName": "武超"
-                            }
-                        ],
-                        "arrangementInfo": [
-                            {
-                                "arrangementText": "星期一5-6节 [1-2] 安楼A304\n",
-                                "occupyDay": 1,
-                                "occupyTime": [5, 6],
-                                "occupyWeek": [
-                                    1, 2
-                                ],
-                                "occupyRoom": "安楼A304"
-                            },
-                            {
-                                "arrangementText": "星期一5-6节 [3-17] 安楼A304\n",
-                                "occupyDay": 1,
-                                "occupyTime": [5, 6],
-                                "occupyWeek": [
-                                    3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17
-                                ],
-                                "occupyRoom": "安楼A304"
-                            },
-                            {
-                                "arrangementText": "星期四3-4节 [1] 安楼A304\n",
-                                "occupyDay": 4,
-                                "occupyTime": [3, 4],
-                                "occupyWeek": [
-                                    1
-                                ],
-                                "occupyRoom": "安楼A304"
-                            },
-                            {
-                                "arrangementText": "星期四3-4节 [3-17单] 安楼A304\n",
-                                "occupyDay": 4,
-                                "occupyTime": [3, 4],
-                                "occupyWeek": [
-                                    3, 5, 7, 9, 11, 13, 15, 17
-                                ],
-                                "occupyRoom": "安楼A304"
-                            }
-                        ],
-                        "isExclusive": 1
-                    },
-
-                    // ...
-
-                ]
-            }
-        ]
-    }
-    ```
+    根据查询参数查询课程，支持三种模式：
+    1. 按专业查: ?grade=2023&major=10054
+    2. 按课程性质查: ?natureIds=958,957
+    3. 按时段查: ?day=1&section=1
     '''
+    grade = request.args.get('grade', type=int)
+    major = request.args.get('major')
+    nature_ids_str = request.args.get('natureIds')
+    day = request.args.get('day', type=int)
+    section = request.args.get('section', type=int)
 
-    payload = request.json
+    # 模式 3: 按时段查询 — normal 策略（组合太多，热度分散）
+    if day is not None and section is not None:
+        ck = cache_key(calendar_id, 'courses:time', day=day, section=section)
+        cached = cache_get(ck)
+        if cached is not None:
+            return ok(cached)
 
-    with bckndSql.bckndSql() as sql:
-        result = sql.findCourseByMajor(payload['grade'], payload['code'], payload['calendarId'])
+        query_str = optCourseQueryListGenerator(day, section, calendar_id)
+        if query_str is None:
+            return err(400, "输入参数有误")
+        with bckndSql(calendar_id=calendar_id) as sql:
+            result = sql.findCourseByTime(query_str)
 
-    # 处理 result 中的 locations 字段
-    # 由于 locations 字段是一个字符串，需要转换为数组
-    # 形如：关佶红(05222) 星期一3-4节 [1-17] 南129\n关佶红(05222) 星期三3-4节 [1-17单] 北301\n
+        cache_set(ck, result, 'normal')
+        return ok(result)
 
-    for res in result:
-        for course in res['courses']:
-            course['arrangementInfo'] = []
-            # 使用 dict.fromkeys() 去重并保持顺序
-            unique_locations = list(dict.fromkeys(splitEndline(course['locations'])))
-
-            for location in unique_locations:
-                course['arrangementInfo'].append(arrangementTextToObj(location))
-
-            # 按照星期（occupyDay）和节次（occupyTime第一节）排序
-            course['arrangementInfo'].sort(key=lambda x: (x['occupyDay'], x['occupyTime'][0] if x['occupyTime'] else 0))
-
-            del course['locations']
-
-    # 对于 code 相同的课程，合并 arrangementInfo
-
-    for res in result:
-        res['courses'] = sorted(res['courses'], key=lambda x: x['code']) # 先排序
-
-        # 合并相同课号的课程
-        merged_courses = []
-        current_course = None
-
-        for course in res['courses']:
-            if not current_course or current_course['code'] != course['code']:
-                merged_courses.append(course)
-                current_course = course
-            else:
-                # 如果arrangementInfo不同，则合并（去重）
-                if current_course['arrangementInfo'] != course['arrangementInfo']:
-                    # 使用字典来去重 arrangementInfo（基于 arrangementText）
-                    existing_texts = {item['arrangementText'] for item in current_course['arrangementInfo']}
-                    for item in course['arrangementInfo']:
-                        if item['arrangementText'] not in existing_texts:
-                            current_course['arrangementInfo'].append(item)
-                            existing_texts.add(item['arrangementText'])
-
-        res['courses'] = merged_courses
-
-    return jsonify({
-        "code": 200,
-        "msg": "查询成功",
-        "data": result
-    }), 200
-
-
-@course_bp.route('/api/findOptionalCourseType', methods=['POST'])
-def findOptionalCourseType():
-    '''
-    Find optional course type.
-
-    Payload
-
-    ```json
-    {
-        "calendarId": 119
-    }
-    ```
-
-    Response：
-
-    ```json
-    {
-        "code": 200,
-        "msg": "查询成功",
-        "data": [
-            {
-                "courseLabelId": 958,
-                "courseLabelName": "科学探索与生命关怀"
-            },
-            {
-                "courseLabelId": 957,
-                "courseLabelName": "社会发展与国际视野"
-            },
-            {
-                "courseLabelId": 956,
-                "courseLabelName": "工程能力与创新思维"
-            },
-            {
-                "courseLabelId": 955,
-                "courseLabelName": "人文经典与审美素养"
-            },
-            {
-                "courseLabelId": 947,
-                "courseLabelName": "通识选修课"
-            }
-        ]
-    }
-    ```
-    '''
-
-    payload = request.json
-
-    with bckndSql.bckndSql() as sql:
-        result = sql.findOptionalCourseType(payload['calendarId'])
-
-    return jsonify({
-        "code": 200,
-        "msg": "查询成功",
-        "data": result
-    }), 200
-
-
-@course_bp.route('/api/findCourseByNatureId', methods=['POST'])
-def findCourseByNatureId():
-    '''
-    Find course by nature id.
-
-    Payload：
-
-    ```json
-    {
-        "ids": [958, 957, 956, 955, 947],
-        "calendarId": 119
-    }
-    ```
-
-    Response：
-
-    ```json
-    {
-        "code": 200,
-        "msg": "查询成功",
-        "data": [
-            {
-                "courseLabelId": 958,
-                "courseLabelName": "科学探索与生命关怀",
-                "courses": [
-                    {
-                        "campus": [
-                            "四平路校区"
-                        ],
-                        "courseCode": "140813",
-                        "courseName": "海洋药物与健康",
-                        "facultyI18n": "医学院"
-                    },
-                    {
-                        "campus": [
-                            "四平路校区"
-                        ],
-                        "courseCode": "140662",
-                        "courseName": "五彩缤纷的发光材料",
-                        "facultyI18n": "医学院"
-                    },
-                    {
-                        "campus": [
-                            "四平路校区"
-                        ],
-                        "courseCode": "140572",
-                        "courseName": "人体生理学通识",
-                        "facultyI18n": "医学院"
-                    },
-                    {
-                        "campus": [
-                            "四平路校区"
-                        ],
-                        "courseCode": "140496",
-                        "courseName": "食品与健康",
-                        "facultyI18n": "医学院"
-                    },
-                    {
-                        "campus": [
-                            "四平路校区"
-                        ],
-                        "courseCode": "140495",
-                        "courseName": "食品安全导论",
-                        "facultyI18n": "医学院"
-                    },
-                    {
-                        "campus": [
-                            "四平路校区"
-                        ],
-                        "courseCode": "140076",
-                        "courseName": "公共营养学",
-                        "facultyI18n": "医学院"
-                    },
-                    {
-                        "campus": [
-                            "嘉定校区",
-                            "四平路校区"
-                        ],
-                        "courseCode": "124120",
-                        "courseName": "物理现象探索",
-                        "facultyI18n": "物理科学与工程学院"
-                    }
-
-                    // ...
-
-                ]
-            },
-            {
-                "courseLabelId": 957,
-                "courseLabelName": "社会发展与国际视野",
-                "courses": {[
-                    // ...
-                ]}
-            },
-
-            // ...
-
-        ]
-    }
-    ```
-    '''
-
-    payload = request.json
-
-    if not payload['ids'] or len(payload['ids']) == 0:
-        return jsonify({
-            "code": 400,
-            "msg": "ids 不能为空",
-        }), 400
-
-    with bckndSql.bckndSql() as sql:
+    # 模式 2: 按课程性质查询 — static 策略
+    if nature_ids_str:
         try:
-            result = sql.findCourseByNatureId(payload['ids'], payload['calendarId'])
-        except ValueError as e:
-            return jsonify({
-                "code": 400,
-                "msg": str(e),
-            }), 400
+            ids = tuple(int(x.strip()) for x in nature_ids_str.split(',') if x.strip())
+        except ValueError:
+            return err(400, "natureIds 格式错误，应为逗号分隔的数字")
+        if not ids:
+            return err(400, "natureIds 不能为空")
 
-    return jsonify({
-        "code": 200,
-        "msg": "查询成功",
-        "data": result
-    }), 200
+        ck = cache_key(calendar_id, 'courses:nature', ids=ids)
+        cached = cache_get(ck)
+        if cached is not None:
+            return ok(cached)
 
+        with bckndSql(calendar_id=calendar_id) as sql:
+            try:
+                result = sql.findCourseByNatureId(ids)
+            except ValueError as e:
+                return err(400, str(e))
 
-@course_bp.route('/api/findCourseDetailByCode', methods=['POST'])
-def findCourseDetailByCode():
-    '''
-    Find course detail by code(s).
+        cache_set(ck, result, 'static')
+        return ok(result)
 
-    Payload for single course:
-    ```json
-    {
-        "courseCode": "340012",
-        "calendarId": 119
-    }
-    ```
+    # 模式 1: 按专业查询 — hot 策略
+    if grade is not None and major:
+        ck = cache_key(calendar_id, 'courses:major', grade=grade, major=major)
+        cached = cache_get(ck)
+        if cached is not None:
+            return ok(cached)
 
-    Payload for multiple courses:
-    ```json
-    {
-        "courseCodes": ["340012", "340013", "340014"],
-        "calendarId": 119
-    }
-    ```
+        with bckndSql(calendar_id=calendar_id) as sql:
+            result = sql.findCourseByMajor(grade, major)
 
-    Response for single course:
-    ```json
-    {
-        "code": 200,
-        "msg": "查询成功",
-        "data": [{
-            "code": "34001201",
-            "teachers": [...],
-            "campusI18n": "四平路校区",
-            "arrangementInfo": [...]
-        }]
-    }
-    ```
+        # 处理 result 中的 locations 字段
+        # 由于 locations 字段是一个字符串，需要转换为数组
+        # 形如：关佶红(05222) 星期一3-4节 [1-17] 南129\n关佶红(05222) 星期三3-4节 [1-17单] 北301\n
 
-    Response for multiple courses:
-    ```json
-    {
-        "code": 200,
-        "msg": "查询成功",
-        "data": {
-            "340012": [{...}],
-            "340013": [{...}],
-            "340014": [{...}]
-        }
-    }
-    ```
-    '''
-
-    payload = request.json
-
-    # 判断是单个课程还是多个课程
-    if 'courseCodes' in payload:
-        # 批量查询
-        codes = payload['courseCodes']
-        is_batch = True
-    else:
-        # 单个查询（向后兼容）
-        codes = payload['courseCode']
-        is_batch = False
-
-    with bckndSql.bckndSql() as sql:
-        result = sql.findCourseDetailByCode(codes, payload['calendarId'])
-
-    def process_course_list(course_list):
-        """处理单个课程列表的通用函数"""
-        for course in course_list:
-            course['arrangementInfo'] = []
-            unique_locations = list(dict.fromkeys(splitEndline(course['locations'])))
-
-            for location in unique_locations:
-                course['arrangementInfo'].append(arrangementTextToObj(location))
-
-            course['arrangementInfo'].sort(key=lambda x: (x['occupyDay'], x['occupyTime'][0] if x['occupyTime'] else 0))
-            del course['locations']
+        for res in result:
+            for course in res['courses']:
+                course['arrangementInfo'] = []
+                for location in splitEndline(course['locations']):
+                    course['arrangementInfo'].append(arrangementTextToObj(location))
+                # 按照星期（occupyDay）和节次（occupyTime第一节）排序
+                course['arrangementInfo'].sort(key=lambda x: (x['occupyDay'], x['occupyTime'][0] if x['occupyTime'] else 0))
+                del course['locations']
 
         # 对于 code 相同的课程，合并 arrangementInfo
-        course_list = sorted(course_list, key=lambda x: x['code'])
+        for res in result:
+            res['courses'] = sorted(res['courses'], key=lambda x: x['code'])  # 先排序
 
-        merged_result = []
-        current_course = None
+            # 合并相同课号的课程
+            merged_courses = []
+            current_course = None
+            for course in res['courses']:
+                if not current_course or current_course['code'] != course['code']:
+                    merged_courses.append(course)
+                    current_course = course
+                else:
+                    # 如果arrangementInfo不同，则合并（去重）
+                    if current_course['arrangementInfo'] != course['arrangementInfo']:
+                        # 使用字典来去重 arrangementInfo（基于 arrangementText）
+                        existing_texts = {item['arrangementText'] for item in current_course['arrangementInfo']}
+                        for item in course['arrangementInfo']:
+                            if item['arrangementText'] not in existing_texts:
+                                current_course['arrangementInfo'].append(item)
+                                existing_texts.add(item['arrangementText'])
+            res['courses'] = merged_courses
 
+        cache_set(ck, result, 'hot')
+        return ok(result)
+
+    return err(400, "请提供有效的查询参数（grade+major / natureIds / day+section）")
+
+
+# ================================================================
+#  GET /api/calendars/<id>/course-types  — 选修课类型
+# ================================================================
+
+@course_bp.route('/api/calendars/<int:calendar_id>/course-types', methods=['GET'])
+def get_course_types(calendar_id):
+    '''
+    GET /api/calendars/{id}/course-types
+    获取指定学期的选修课类型。
+    '''
+    ck = cache_key(calendar_id, 'course-types')
+    cached = cache_get(ck)
+    if cached is not None:
+        return ok(cached)
+
+    with bckndSql(calendar_id=calendar_id) as sql:
+        result = sql.findOptionalCourseType()
+
+    cache_set(ck, result, 'static')
+    return ok(result)
+
+
+# ================================================================
+#  POST /api/calendars/<id>/courses/details  — 批量课程详情
+# ================================================================
+
+@course_bp.route('/api/calendars/<int:calendar_id>/courses/details', methods=['POST'])
+def batch_course_detail(calendar_id):
+    '''
+    POST /api/calendars/{id}/courses/details
+    批量获取多个课程的详细信息。
+    Payload: { "courseCodes": ["340012", "340013"] }
+    '''
+    payload = request.json
+    codes = payload.get('courseCodes', [])
+
+    if not codes:
+        return err(400, "courseCodes 不能为空")
+
+    codes_sorted = tuple(sorted(codes))
+    ck = cache_key(calendar_id, 'courses:detail', codes=codes_sorted)
+    cached = cache_get(ck)
+    if cached is not None:
+        return ok(cached)
+
+    with bckndSql(calendar_id=calendar_id) as sql:
+        result = sql.findCourseDetailByCode(codes)
+
+    def process(course_list):
         for course in course_list:
-            if not current_course or current_course['code'] != course['code']:
-                merged_result.append(course)
-                current_course = course
+            course['arrangementInfo'] = []
+            for location in splitEndline(course['locations']):
+                course['arrangementInfo'].append(arrangementTextToObj(location))
+            course['arrangementInfo'].sort(key=lambda x: (x['occupyDay'], x['occupyTime'][0] if x['occupyTime'] else 0))
+            del course['locations']
+
+        course_list = sorted(course_list, key=lambda x: x['code'])
+        merged = []
+        current = None
+        for course in course_list:
+            if not current or current['code'] != course['code']:
+                merged.append(course)
+                current = course
             else:
-                if current_course['arrangementInfo'] != course['arrangementInfo']:
-                    existing_texts = {item['arrangementText'] for item in current_course['arrangementInfo']}
+                if current['arrangementInfo'] != course['arrangementInfo']:
+                    existing_texts = {item['arrangementText'] for item in current['arrangementInfo']}
                     for item in course['arrangementInfo']:
                         if item['arrangementText'] not in existing_texts:
-                            current_course['arrangementInfo'].append(item)
+                            current['arrangementInfo'].append(item)
                             existing_texts.add(item['arrangementText'])
+        return merged
 
-        return merged_result
+    processed = {}
+    for course_code, course_list in result.items():
+        processed[course_code] = process(course_list)
 
-    if is_batch:
-        # 批量处理：result 是 dict {courseCode: [details]}
-        processed_result = {}
-        for course_code, course_list in result.items():
-            processed_result[course_code] = process_course_list(course_list)
-    else:
-        # 单个处理：result 是 list
-        processed_result = process_course_list(result)
-
-    return jsonify({
-        "code": 200,
-        "msg": "查询成功",
-        "data": processed_result
-    }), 200
+    cache_set(ck, processed, 'normal')
+    return ok(processed)
 
 
-@course_bp.route('/api/findCourseBySearch', methods=['POST'])
-def findCourseBySearch():
+# ================================================================
+#  POST /api/calendars/<id>/courses/search  — 搜索课程
+# ================================================================
+
+@course_bp.route('/api/calendars/<int:calendar_id>/courses/search', methods=['POST'])
+def search_courses(calendar_id):
     '''
-    Find course by search.
-
-    Payload：
-
-    ```json
-    {
-        "calendarId": 119,
-        "courseName": "上海",
-        "courseCode": "",
-        "teacherCode": "",
-        "teacherName": "",
-        "campus": "四平路校区",
-        "faculty": ""
-    }
-    ```
-
-    Response：
-
-    ```json
-    {
-        "code": 200,
-        "msg": "查询成功",
-        "data": {
-            "courses": [
-                {
-                    "courseCode": "50002950031",
-                    "courseName": "乡村振兴的上海图景认知",
-                    "facultyI18n": "马克思主义学院",
-                    "courseNature": ["社会发展与国际视野"],
-                    "campus_list": ["四平路校区"]
-                },
-                {
-                    "courseCode": "50002680134",
-                    "courseName": "学讲上海话",
-                    "facultyI18n": "外国语学院",
-                    "courseNature": ["人文经典与审美素养"],
-                    "campus_list": ["四平路校区"]
-                },
-                {
-                    "courseCode": "50001630031",
-                    "courseName": "上海城市空间认知",
-                    "facultyI18n": "建筑与城市规划学院",
-                    "courseNature": ["人文经典与审美素养"],
-                    "campus_list": ["四平路校区"]
-                }
-            ],
-            "sizeLimit": 50,
-        }
-    }
-    ```
+    POST /api/calendars/{id}/courses/search
+    按条件搜索课程。
     '''
+    payload = request.json
+    size_limit = 100
 
+    # 用 payload 稳定 hash 做 key
+    payload_str = json.dumps(payload, sort_keys=True, ensure_ascii=False)
+    ck = cache_key(calendar_id, 'courses:search', q=payload_str)
+    cached = cache_get(ck)
+    if cached is not None:
+        return ok(cached)
+
+    with bckndSql(calendar_id=calendar_id) as sql:
+        result = sql.findCourseBySearch(payload, size_limit)
+
+    data = {"courses": result, "sizeLimit": size_limit}
+    cache_set(ck, data, 'normal')
+    return ok(data)
+
+
+# ================================================================
+#  POST /api/calendars/<id>/courses/batch  — 同步用批量课程信息
+# ================================================================
+
+@course_bp.route('/api/calendars/<int:calendar_id>/courses/batch', methods=['POST'])
+def batch_course_info(calendar_id):
+    '''
+    POST /api/calendars/{id}/courses/batch
+    批量获取课程信息（含 isExclusive 判断，用于同步）。
+    '''
     payload = request.json
 
-    # 字段合法性检验，要求 Payload 中 calendarId 不为空
-    if not payload['calendarId']:
-        return jsonify({
-            "code": 400,
-            "msg": "请指定 calendarId",
-        }), 400
+    if not payload:
+        return err(400, "参数错误: 缺少请求体")
 
-    # 至少有 2 个字段不为空
-    # filledCnt = 0
-    # for key in payload:
-    #     if payload[key]:
-    #         filledCnt += 1
+    major_course_codes = payload.get('majorCourseCodes', [])
+    other_course_codes = payload.get('otherCourseCodes', [])
+    major_info = payload.get('majorInfo', None)
 
-    # if filledCnt < 2 + 1:
-    #     return jsonify({
-    #         "code": 400,
-    #         "msg": "请至少指定两个查询条件",
-    #     }), 400
+    if major_course_codes and not major_info:
+        return err(400, "参数错误: majorCourseCodes 需要配合 majorInfo 使用")
 
+    # 构建缓存 key
+    codes_key = (tuple(sorted(major_course_codes)), tuple(sorted(other_course_codes)))
+    grade_key = major_info.get('grade') if major_info else None
+    major_key = major_info.get('code') if major_info else None
+    ck = cache_key(calendar_id, 'courses:batch',
+                   major=codes_key[0], other=codes_key[1],
+                   grade=grade_key, major_code=major_key)
+    cached = cache_get(ck)
+    if cached is not None:
+        return ok(cached)
 
-    sizeLimit = 100
-
-    with bckndSql.bckndSql() as sql:
-        result = sql.findCourseBySearch(payload, sizeLimit)
-
-    return jsonify({
-        "code": 200,
-        "msg": "查询成功",
-        "data": {
-            "courses": result,
-            "sizeLimit": sizeLimit
-        }
-    }), 200
-
-
-@course_bp.route('/api/findCourseByTime', methods=['POST'])
-def findCourseByTime():
-    '''
-    Find course by time.
-
-    Payload：
-
-    ```json
-    {
-        "calendarId": 119,
-        "day": 1, // 1-7
-        "time": 1 // 1-12
-    }
-    ```
-
-    Response:
-
-    ```json
-    {
-    "code": 200,
-    "data": [
-        {
-            "campus": [
-                "嘉定校区"
-            ],
-            "courseCode": "122117",
-            "courseName": "数学建模",
-            "courseNature": [
-                "科学探索与生命关怀"
-            ],
-            "credit": 2.0,
-            "faculty": "数学科学学院"
-        },
-
-        // ...
-
-        ],
-        message: "查询成功"
-    }
-    ```
-    接口太慢了，一天 100 门课的数据量，需要 40s 左右，需要优化
-    '''
-
-    payload = request.json
-
-    queryStr = optCourseQueryListGenerator(payload['day'], payload['section'], payload.get('calendarId', 0))
-
-    if queryStr == None:
-        return jsonify({
-            "code": 400,
-            "msg": "输入参数有误",
-            "data": []
-        }), 400
-
-    with bckndSql.bckndSql() as sql:
-        result = sql.findCourseByTime(queryStr, payload['calendarId']) # 返回的是这一天的所有课程，需要再过滤一
-        print(len(result))
-
-    return jsonify({
-        "code": 200,
-        "msg": "查询成功",
-        "data": result
-    }), 200
-
-
-@course_bp.route('/api/getLatestUpdateTime', methods=['GET'])
-def getLatestUpdateTime():
-    '''
-    Get latest update time.
-
-    Response:
-
-    ```json
-    {
-        "code": 200,
-        "msg": "查询成功",
-        "data": "2025-02-25"
-    }
-    ```
-    '''
-
-    with bckndSql.bckndSql() as sql:
-        result = sql.getLatestUpdateTime()
-
-    return jsonify({
-        "code": 200,
-        "msg": "查询成功",
-        "data": datetime.strftime(result, "%Y-%m-%d")
-    }), 200
-
-
-@course_bp.route('/api/getLatestCourseInfo', methods=['POST'])
-def getLatestCourseInfo():
-    '''
-    Get latest course information for staged courses (batch version of API 7).
-
-    Payload:
-
-    ```json
-    {
-        "courseCodes": ["340012", "100436", "100225"],
-        "calendarId": 119
-    }
-    ```
-
-    Response:
-
-    ```json
-    {
-        "code": 200,
-        "msg": "查询成功",
-        "data": {
-            "340012": [course details array],
-            "100436": [course details array],
-            "100225": []
-        }
-    }
-    ```
-    '''
-
-    payload = request.json
-
-    if not payload or 'calendarId' not in payload:
-        return jsonify({
-            "code": 400,
-            "msg": "参数错误: 缺少 calendarId",
-            "data": {}
-        }), 400
-
-    calendarId = payload['calendarId']
-    majorCourseCodes = payload.get('majorCourseCodes', [])  # 需要返回 isExclusive 的课程
-    otherCourseCodes = payload.get('otherCourseCodes', [])  # 不需要返回 isExclusive 的课程
-    majorInfo = payload.get('majorInfo', None)  # { grade, code }
-
-    # 如果有 majorCourseCodes 但没有 majorInfo，返回错误
-    if majorCourseCodes and not majorInfo:
-        return jsonify({
-            "code": 400,
-            "msg": "参数错误: majorCourseCodes 需要配合 majorInfo 使用",
-            "data": {}
-        }), 400
-
-    with bckndSql.bckndSql() as sql:
-        result_dict = sql.getLatestCourseInfo(majorCourseCodes, otherCourseCodes, calendarId, majorInfo)
+    with bckndSql(calendar_id=calendar_id) as sql:
+        result_dict = sql.getLatestCourseInfo(major_course_codes, other_course_codes, major_info)
 
         # Process arrangement info for each course code
         for course_code, course_details in result_dict.items():
             for detail in course_details:
                 if 'arrangementInfo' in detail and isinstance(detail['arrangementInfo'], str):
                     # Parse arrangement text - split into list and convert each element
-                    arrangement_text = detail['arrangementInfo']  # 先保存原始字符串
-                    detail['arrangementInfo'] = []  # 清空，准备填充解析后的数据
-                    unique_locations = list(dict.fromkeys(splitEndline(arrangement_text)))
-
-                    for location in unique_locations:
+                    arrangement_text = detail['arrangementInfo']
+                    detail['arrangementInfo'] = []
+                    for location in splitEndline(arrangement_text):
                         detail['arrangementInfo'].append(arrangementTextToObj(location))
 
                     # Sort by day and time
@@ -744,11 +300,30 @@ def getLatestCourseInfo():
 
                             # 重新排序合并后的 arrangementInfo
                             current_detail['arrangementInfo'].sort(key=lambda x: (x['occupyDay'], x['occupyTime'][0] if x['occupyTime'] else 0))
-
                 result_dict[course_code] = merged_details
 
-    return jsonify({
-        "code": 200,
-        "msg": "查询成功",
-        "data": result_dict
-    }), 200
+    cache_set(ck, result_dict, 'normal')
+    return ok(result_dict)
+
+
+# ================================================================
+#  GET /api/calendars/<id>/update-time  — 最新更新时间
+# ================================================================
+
+@course_bp.route('/api/calendars/<int:calendar_id>/update-time', methods=['GET'])
+def get_update_time(calendar_id):
+    '''
+    GET /api/calendars/{id}/update-time
+    获取指定学期数据的最新更新时间。
+    '''
+    ck = cache_key(calendar_id, 'update-time')
+    cached = cache_get(ck)
+    if cached is not None:
+        return ok(cached)
+
+    with bckndSql() as sql:
+        result = sql.getLatestUpdateTime(calendar_id)
+
+    data = None if result is None else datetime.strftime(result, "%Y-%m-%d %H:%M")
+    cache_set(ck, data, 'static')
+    return ok(data)

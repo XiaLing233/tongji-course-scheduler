@@ -1,0 +1,144 @@
+name: CI/CD
+
+on:
+  push:
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  backend-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run backend tests
+        run: docker compose -f docker-compose.test.yml up --build backend --exit-code-from backend
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose -f docker-compose.test.yml logs backend
+
+  crawler-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run crawler tests
+        run: docker compose -f docker-compose.test.yml up --build crawler --exit-code-from crawler
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose -f docker-compose.test.yml logs crawler
+
+  frontend-typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install & typecheck
+        working-directory: xkFrontendts
+        run: |
+          npm ci
+          npm run type-check
+
+  frontend-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install & test
+        working-directory: xkFrontendts
+        run: |
+          npm ci
+          npm run test
+
+  build-backend:
+    needs: [backend-test, frontend-test]
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push backend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/xk-backend:latest
+            ghcr.io/${{ github.repository_owner }}/xk-backend:${{ github.sha }}
+
+  build-frontend:
+    needs: [frontend-typecheck, frontend-test]
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./xkFrontendts
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/xk-frontend:latest
+            ghcr.io/${{ github.repository_owner }}/xk-frontend:${{ github.sha }}
+
+  build-crawler:
+    needs: [crawler-test]
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push crawler
+        uses: docker/build-push-action@v6
+        with:
+          context: ./crawler
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/xk-crawler:latest
+            ghcr.io/${{ github.repository_owner }}/xk-crawler:${{ github.sha }}
+
+  deploy:
+    needs: [build-backend, build-frontend, build-crawler]
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+      - name: Deploy
+        run: |
+          ssh -o StrictHostKeyChecking=no \
+          ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+            set -e
+            cd ~/tongji-course-scheduler/
+            git pull
+            docker compose pull
+            docker compose up -d
+            docker image prune -f
+          EOF

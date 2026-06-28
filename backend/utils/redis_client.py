@@ -6,25 +6,25 @@ Uses a mutable dict as container so that ``from redis_client import state``
 always sees the live values set by init_redis() across all Gunicorn workers.
 """
 
+import os
+
 import redis
 
 state = {
     'r': None,
     'stream_key': None,
-    'status_key': None
 }
 
 
-def init_redis(redis_cfg):
-    """Initialize Redis connection from config. Must be called before first request."""
+def init_redis():
+    """Initialize Redis connection from env vars. Must be called before first request."""
     state['r'] = redis.Redis(
-        host=redis_cfg['host'],
-        port=redis_cfg.getint('port'),
-        db=redis_cfg.getint('db'),
+        host=os.getenv('REDIS_HOST'),
+        port=int(os.getenv('REDIS_PORT')),
+        db=int(os.getenv('REDIS_DB')),
         decode_responses=True,
     )
-    state['stream_key'] = redis_cfg['stream_key']
-    state['status_key'] = redis_cfg['status_key']
+    state['stream_key'] = os.getenv('REDIS_STREAM_KEY')
 
 
 def format_sse_event(event_type, msg_id, data):

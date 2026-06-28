@@ -1,0 +1,31 @@
+# 告警规则
+
+groups:
+  - name: backend
+    rules:
+      - alert: BackendDown
+        expr: up{job="backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "后端服务不可达"
+          description: "Prometheus 无法抓取 backend:1239/metrics，已持续 {{ $value }} 分钟。"
+
+      - alert: High5xxRate
+        expr: increase(flask_http_request_total{status=~"5.."}[10m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "5xx 错误过多"
+          description: "过去 10 分钟 {{ $labels.method }} {{ $labels.path }} 产生了 {{ $value }} 个 5xx 错误。"
+
+      - alert: HighLatency
+        expr: histogram_quantile(0.99, rate(flask_http_request_duration_seconds_bucket[5m])) > 3
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API 延迟过高"
+          description: "{{ $labels.path }} 的 p99 延迟超过 3 秒。"

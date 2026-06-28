@@ -1,10 +1,11 @@
 import json
 
 import redis
-from flask import Blueprint, request, jsonify, Response
+from flask import Blueprint, request, Response
 
-from utils import bckndSql
+from bckndSql import bckndSql
 from utils.redis_client import state, format_sse_event
+from utils.response import ok, ok_paginated, err
 
 status_bp = Blueprint('status', __name__)
 
@@ -12,45 +13,31 @@ status_bp = Blueprint('status', __name__)
 @status_bp.route('/api/health', methods=['GET'])
 def health():
     try:
-        with bckndSql.bckndSql() as sql:
+        with bckndSql() as sql:
             sql.getHealth()
     except Exception as e:
         print(e)
-        return jsonify({
-            "code": 500,
-            "msg": "数据库连接失败！"
-        }), 500
-
-    return jsonify({
-        "code": 200,
-        "msg": "服务健康！"
-    }), 200
+        return err(500, "数据库连接失败！")
+    return ok(msg="服务健康！")
 
 
-@status_bp.route('/api/getFetchLog', methods=['GET'])
-def get_fetch_log():
+@status_bp.route('/api/sync/history/<int:log_id>/stream', methods=['GET'])
+def sync_history_stream(log_id):
     '''
-    Server-Sent Events endpoint for real-time crawler log streaming.
-    Reads from Redis Stream (XREAD BLOCK) and pushes log lines to the browser.
-
-    EventSource auto-reconnects with Last-Event-ID header,
-    which maps to the Redis Stream entry ID for resuming.
-
-    SSE Events:
-        log:       A new log line (data = plain text)
-        meta:      Status info update (data = JSON)
-        completed: Crawler finished successfully
-        failed:    Crawler exited with error
-    '''
-    # Read headers outside the generator — gevent may lose request context on switch
+    SSE 端点：实时推送指定 fetchlog 的日志。
+    读到 level='end' 时发送 end 事件并关闭连接。'''
     last_id = request.headers.get('Last-Event-ID', '0')
 
-    def event_generator(last_id):
+    def event_generator(log_id, last_id):
         r = state['r']
         stream_key = state['stream_key']
-        status_key = state['status_key']
 
-        # Phase 1: catch up missed messages
+        def _emit(msg_id, fields):
+            event_type = 'end' if fields.get('level') == 'end' else 'log'
+            return format_sse_event(event_type, msg_id,
+                                    json.dumps(dict(fields), ensure_ascii=False)), event_type
+
+        # Phase 1: 追赶历史消息
         try:
             if last_id == '0':
                 history = r.xrange(stream_key, min='-', max='+')
@@ -58,47 +45,89 @@ def get_fetch_log():
                 history = r.xrange(stream_key, min=f'({last_id}', max='+')
 
             for msg_id, fields in history:
-                yield format_sse_event('log', msg_id, fields.get('msg', ''))
+                if fields.get('fetchlogId') != str(log_id):
+                    last_id = msg_id
+                    continue
+                data, event_type = _emit(msg_id, fields)
+                yield data
                 last_id = msg_id
-
-            # Push current status
-            status_data = r.get(status_key)
-            if status_data:
-                yield format_sse_event('meta', last_id, status_data)
+                if event_type == 'end':
+                    return
         except redis.ConnectionError:
-            yield format_sse_event('log', '0', '[系统] Redis 连接失败，重试中...')
+            pass
 
-        # Phase 2: block on new messages
+        # Phase 2: 阻塞等待新消息
         while True:
             try:
-                result = r.xread({stream_key: last_id}, block=1000, count=50)
+                result = r.xread({stream_key: last_id}, block=3000, count=50)
             except redis.ConnectionError:
-                yield format_sse_event('log', '0', '[系统] Redis 连接失败，重试中...')
                 continue
 
             if result:
-                for _stream_name, messages in result:
+                for _, messages in result:
                     for msg_id, fields in messages:
-                        yield format_sse_event('log', msg_id, fields.get('msg', ''))
+                        if fields.get('fetchlogId') != str(log_id):
+                            last_id = msg_id
+                            continue
+                        data, event_type = _emit(msg_id, fields)
+                        yield data
                         last_id = msg_id
-
-            # Check completion
-            status_str = r.get(status_key)
-            if status_str:
-                try:
-                    status = json.loads(status_str)
-                    if status.get('status') in ('completed', 'failed'):
-                        event_type = 'completed' if status['status'] == 'completed' else 'failed'
-                        yield format_sse_event(event_type, last_id, status_str)
-                        break
-                except json.JSONDecodeError:
-                    pass
+                        if event_type == 'end':
+                            return
 
     return Response(
-        event_generator(last_id),
+        event_generator(log_id, last_id),
         mimetype='text/event-stream',
         headers={
             'Cache-Control': 'no-cache',
             'X-Accel-Buffering': 'no',
         }
     )
+
+
+@status_bp.route('/api/sync/history', methods=['GET'])
+def sync_history():
+    '''同步历史列表（不含 fullLog）。支持 ?calendarId= 筛选和分页。'''
+    calendar_id = request.args.get('calendarId', type=int)
+    page = request.args.get('page', 1, type=int)
+    page_size = request.args.get('pageSize', 20, type=int)
+
+    with bckndSql() as sql:
+        rows = sql.getSyncHistory(calendar_id, page, page_size)
+        total = sql.getSyncHistoryCount(calendar_id)
+
+    return ok_paginated(
+        [_history_row(r) for r in rows],
+        page=page, page_size=page_size, total=total
+    )
+
+
+@status_bp.route('/api/sync/history/<int:log_id>', methods=['GET'])
+def sync_history_detail(log_id):
+    '''单条同步记录详情（含 fullLog）。'''
+    with bckndSql() as sql:
+        row = sql.getSyncHistoryDetail(log_id)
+
+    if not row:
+        return err(404, "记录不存在")
+
+    return ok(_history_row(row, with_full_log=True))
+
+
+def _fmt(ts):
+    """MySQL datetime(3) → 'YYYY-MM-DD HH:MM:SS'"""
+    if ts is None:
+        return None
+    return str(ts)[:19]
+
+
+def _history_row(row, with_full_log=False):
+    d = {
+        'id': row[0], 'calendarId': row[1], 'calendarName': row[2],
+        'startTime': _fmt(row[3]), 'endTime': _fmt(row[4]),
+        'status': row[5], 'totalCourses': row[6],
+        'totalPages': row[7], 'msg': row[8], 'errorMessage': row[9],
+    }
+    if with_full_log:
+        d['fullLog'] = row[10]
+    return d

@@ -1,0 +1,93 @@
+# 可观测性栈 — 通过文件本身切换，无需 profile 参数
+#
+#   开发/日常:
+#     docker compose up -d --build
+#
+#   生产（开启监控）:
+#     docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d --build
+#
+
+services:
+  backend:
+    environment:
+      ENABLE_METRICS: "true"
+
+  prometheus:
+    image: prom/prometheus:v3.12.0
+    container_name: xk-prometheus
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+    restart: always
+
+  alertmanager:
+    image: prom/alertmanager:v0.33.0
+    container_name: xk-alertmanager
+    env_file: .env
+    volumes:
+      - ./monitoring/alertmanager:/etc/alertmanager:ro
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        sed \
+          -e "s|\$${SMTP_SERVER}|${SMTP_SERVER}|g" \
+          -e "s|\$${SMTP_ALERTMANAGER_PORT}|${SMTP_ALERTMANAGER_PORT}|g" \
+          -e "s|\$${SMTP_USERNAME}|${SMTP_USERNAME}|g" \
+          -e "s|\$${SMTP_PASSWORD}|${SMTP_PASSWORD}|g" \
+          -e "s|\$${SMTP_SENDER}|${SMTP_SENDER}|g" \
+          /etc/alertmanager/alertmanager.yml.template > /tmp/alertmanager.yml
+        exec /bin/alertmanager --config.file=/tmp/alertmanager.yml
+    restart: always
+
+  grafana:
+    image: grafana/grafana-oss:13.0.2
+    container_name: xk-grafana
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+      GF_AUTH_DISABLE_SIGNOUT_MENU: "true"
+      GF_SERVER_ROOT_URL: "%(protocol)s://%(domain)s:%(http_port)s/grafana/"
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+      GF_USERS_DEFAULT_THEME: light
+      GF_UNIFIED_ALERTING_ENABLED: "false"
+      GF_NEWS_NEWS_FEED_ENABLED: "false"
+    volumes:
+      - ./monitoring/grafana/datasources/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    restart: always
+
+  loki:
+    image: grafana/loki:3.6.12
+    container_name: xk-loki
+    volumes:
+      - ./monitoring/loki/loki-config.yml:/etc/loki/config.yml:ro
+      - loki_data:/loki
+    command: -config.file=/etc/loki/config.yml
+    restart: always
+
+  promtail:
+    image: grafana/promtail:3.6.9
+    container_name: xk-promtail
+    environment:
+      COMPOSE_PROJECT_NAME: ${COMPOSE_PROJECT_NAME}
+    volumes:
+      - ./monitoring/promtail/promtail-config.yml:/etc/promtail/config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        sed "s/__PROJECT__/${COMPOSE_PROJECT_NAME}/g" /etc/promtail/config.yml > /tmp/config.yml
+        exec /usr/bin/promtail -config.file=/tmp/config.yml
+    restart: always
+
+volumes:
+  prometheus_data:
+  grafana_data:
+  loki_data:

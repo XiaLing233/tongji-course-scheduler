@@ -1,199 +1,96 @@
-from flask import Blueprint, request, jsonify
-from utils import bckndSql
+from flask import Blueprint, request
+from bckndSql import bckndSql
+from utils.response import ok
+from utils.redis_cache import cache_get, cache_set, cache_key
 
 basic_bp = Blueprint('basic', __name__)
 
 
-@basic_bp.route('/api/getAllCalendar', methods=['GET'])
-def getAllCalendar():
+@basic_bp.route('/api/calendars', methods=['GET'])
+def get_calendars():
     '''
-    Get all calendar.
-
-    Response:
-    ```json
-    {
-        "code": 200,
-        "msg": "查询成功",
-        "data": [
-                {
-                    "calendarId": 119,
-                    "calendarName": "2024-2025学年第2学期"
-                },
-                {
-                    "calendarId": 118,
-                    "calendarName": "2024-2025学年第1学期"
-                },
-
-                // ...
-
-        ]
-    }
-    ```
+    GET /api/calendars
+    获取所有学期列表。
     '''
-    with bckndSql.bckndSql() as sql:
+    ck = cache_key(0, 'calendars')
+    cached = cache_get(ck)
+    if cached is not None:
+        return ok(cached)
+
+    with bckndSql() as sql:
         result = sql.getAllCalendar(limit=8)
 
-    return jsonify({
-        "code": 200,
-        "msg": "查询成功",
-        "data": result
-    }), 200
+    cache_set(ck, result, 'static')
+    return ok(result)
 
 
-@basic_bp.route('/api/getAllCampus', methods=['GET'])
-def getAllCampus():
+@basic_bp.route('/api/calendars/<int:calendar_id>/campuses', methods=['GET'])
+def get_campuses(calendar_id):
     '''
-    Get all campus.
-
-    Response:
-    ```json
-    {
-        "code": 200,
-        "msg": "查询成功",
-        "data": [
-            {
-                "campusId": 3,
-                "campusName": "嘉定校区"
-            },
-            {
-                "campusId": 1,
-                "campusName": "四平路校区"
-            }
-        ]
-    }
-    ```
+    GET /api/calendars/{id}/campuses
+    获取指定学期的所有校区。
     '''
+    ck = cache_key(calendar_id, 'campuses')
+    cached = cache_get(ck)
+    if cached is not None:
+        return ok(cached)
 
-    with bckndSql.bckndSql() as sql:
+    with bckndSql(calendar_id=calendar_id) as sql:
         result = sql.getAllCampus()
 
-    return jsonify({
-        "code": 200,
-        "msg": "查询成功",
-        "data": result
-    }), 200
+    cache_set(ck, result, 'static')
+    return ok(result)
 
 
-@basic_bp.route('/api/getAllFaculty', methods=['GET'])
-def getAllFaculty():
+@basic_bp.route('/api/calendars/<int:calendar_id>/faculties', methods=['GET'])
+def get_faculties(calendar_id):
     '''
-    Get all faculty.
-
-    Response:
-    ```json
-    {
-        "code": 200,
-        "msg": "查询成功",
-        "data": [
-            {
-                "facultyId": 000034,
-                "facultyName": "职业技术教育学院"
-            },
-            {
-                "facultyId": 000037,
-                "facultyName": "图书馆"
-            },
-            {
-                "facultyId": 000039,
-                "facultyName": "国际文化交流学院"
-            },
-
-            // ...
-
-        ]
-    }
-    ```
+    GET /api/calendars/{id}/faculties
+    获取指定学期的所有院系。
     '''
+    ck = cache_key(calendar_id, 'faculties')
+    cached = cache_get(ck)
+    if cached is not None:
+        return ok(cached)
 
-    with bckndSql.bckndSql() as sql:
+    with bckndSql(calendar_id=calendar_id) as sql:
         result = sql.getAllFaculty()
 
-    return jsonify({
-        "code": 200,
-        "msg": "查询成功",
-        "data": result
-    }), 200
+    cache_set(ck, result, 'static')
+    return ok(result)
 
 
-@basic_bp.route('/api/findGradeByCalendarId', methods=['POST'])
-def findGradeByCalendarId():
+@basic_bp.route('/api/calendars/<int:calendar_id>/grades', methods=['GET'])
+def get_grades(calendar_id):
     '''
-    Find grade by calendarId.
-
-    Payload:
-    ```json
-    {
-        "calendarId": 119
-    }
-    ```
-
-    Response:
-    ```json
-    {
-        "code": 200,
-        "msg": "查询成功",
-        "data": {
-            "gradeList": [2024, 2023, 2022, 2021, 2020, 2019]
-        }
-    }
-    ```
+    GET /api/calendars/{id}/grades
+    获取指定学期所有有课程的年级。
     '''
+    ck = cache_key(calendar_id, 'grades')
+    cached = cache_get(ck)
+    if cached is not None:
+        return ok(cached)
 
-    payload = request.json
+    with bckndSql(calendar_id=calendar_id) as sql:
+        result = sql.findGrades()
 
-    with bckndSql.bckndSql() as sql:
-        result = sql.findGradeByCalendarId(payload['calendarId'])
-
-    return jsonify({
-        "code": 200,
-        "msg": "查询成功",
-        "data": {
-            "gradeList": result
-        }
-    }), 200
+    cache_set(ck, {"gradeList": result}, 'static')
+    return ok({"gradeList": result})
 
 
-@basic_bp.route('/api/findMajorByGrade', methods=['POST'])
-def findMajorByGrade():
+@basic_bp.route('/api/calendars/<int:calendar_id>/grades/<int:grade>/majors', methods=['GET'])
+def get_majors(calendar_id, grade):
     '''
-    Find major by grade.
-
-    Payload:
-    ```json
-    {
-        "grade": 2023
-    }
-    ```
-
-    Response:
-    ```json
-        {
-            "code": 200,
-            "msg": "查询成功",
-            "data": [
-                {
-                    "code": "00304",
-                    "name": "2023(00304 基础学科拔尖基地(数学))"
-                },
-                {
-                    "code": "00402",
-                    "name": "2023(00402 基础学科拔尖基地(化学))"
-                }
-
-                // ...
-
-            ]
-        }
-        ```
+    GET /api/calendars/{id}/grades/{grade}/majors
+    获取指定学期、指定年级的所有专业。
     '''
+    ck = cache_key(calendar_id, 'majors', grade=grade)
+    cached = cache_get(ck)
+    if cached is not None:
+        return ok(cached)
 
-    payload = request.json
+    with bckndSql(calendar_id=calendar_id) as sql:
+        result = sql.findMajorByGrade(grade)
 
-    with bckndSql.bckndSql() as sql:
-        result = sql.findMajorByGrade(payload['grade'])
-
-    return jsonify({
-        "code": 200,
-        "msg": "查询成功",
-        "data": result
-    }), 200
+    cache_set(ck, result, 'static')
+    return ok(result)

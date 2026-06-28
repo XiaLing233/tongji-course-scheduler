@@ -1,0 +1,128 @@
+{
+  "title": "系统状态",
+  "uid": "xk-system-status",
+  "schemaVersion": 39,
+  "version": 1,
+  "templating": { "list": [] },
+  "time": { "from": "now-24h", "to": "now" },
+  "panels": [
+    {
+      "id": 10,
+      "type": "row",
+      "title": "概览",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 1 },
+      "collapsed": false
+    },
+    {
+      "id": 1,
+      "title": "后端存活",
+      "type": "stat",
+      "gridPos": { "x": 0, "y": 1, "w": 8, "h": 4 },
+      "targets": [
+        {
+          "expr": "up{job=\"backend\"}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          },
+          "mappings": [
+            { "type": "value", "value": "1", "text": "在线" },
+            { "type": "value", "value": "0", "text": "离线" }
+          ]
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "请求数 (24h)",
+      "type": "stat",
+      "gridPos": { "x": 8, "y": 1, "w": 8, "h": 4 },
+      "targets": [
+        {
+          "expr": "sum(increase(flask_http_request_total[24h]))",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0
+        }
+      }
+    },
+    {
+      "id": 3,
+      "title": "平均延迟",
+      "type": "stat",
+      "gridPos": { "x": 16, "y": 1, "w": 8, "h": 4 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(flask_http_request_duration_seconds_bucket[5m])) by (le))",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 3
+        }
+      }
+    },
+    {
+      "id": 30,
+      "type": "row",
+      "title": "趋势",
+      "gridPos": { "x": 0, "y": 5, "w": 24, "h": 1 },
+      "collapsed": false
+    },
+    {
+      "id": 4,
+      "title": "请求趋势",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 6, "w": 24, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(flask_http_request_total[2m])) by (status)",
+          "legendFormat": "{{status}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": { "lineWidth": 2, "fillOpacity": 15, "stacking": { "mode": "normal" }, "spanNulls": true }
+        }
+      }
+    },
+    {
+      "id": 5,
+      "title": "延迟热力图",
+      "type": "heatmap",
+      "gridPos": { "x": 0, "y": 14, "w": 24, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum(increase(flask_http_request_duration_seconds_bucket[5m])) by (le)",
+          "format": "heatmap",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "options": {
+        "calculate": false,
+        "yAxis": { "unit": "s" }
+      }
+    }
+  ]
+}

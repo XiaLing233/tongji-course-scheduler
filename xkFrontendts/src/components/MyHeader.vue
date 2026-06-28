@@ -45,11 +45,45 @@
                 <a-dropdown>
                     <template #overlay>
                         <a-menu class="text-center">
+                        <a-menu-item key="history">
+                            <a href="/sync" target="_blank">
+                                <div class="flex flex-row space-x-2 items-center">
+                                    <div><OrderedListOutlined /></div>
+                                    <p>同步历史</p>
+                                </div>
+                            </a>
+                        </a-menu-item>
+                        <a-menu-item key="status">
+                            <a href="/grafana/dashboards" target="_blank">
+                                <div class="flex flex-row space-x-2 items-center">
+                                    <div><DashboardOutlined /></div>
+                                    <p>Grafana 仪表盘</p>
+                                </div>
+                            </a>
+                        </a-menu-item>
+                        </a-menu>
+                    </template>
+                    <a-button>
+                        <div class="flex flex-row space-x-2 items-center">
+                            <p>服务状态</p>
+                            <div><HeartOutlined /></div>
+                        </div>
+                    </a-button>
+                </a-dropdown>
+
+            </div>
+            <div>
+                <a-dropdown>
+                    <template #overlay>
+                        <a-menu class="text-center">
                         <a-menu-item key="tongji">
                             <a href="https://1.tongji.edu.cn" target="_blank">1 系统</a>
                         </a-menu-item>
                         <a-menu-item key="courseSystem">
                             <a href="https://tongji.xialing.icu" target="_blank">课程检索</a>
+                        </a-menu-item>
+                        <a-menu-item key="yourtj">
+                            <a href="https://xk.yourtj.de" target="_blank">YourTJ</a>
                         </a-menu-item>
                         <a-menu-item key="wlc">
                             <a href="https://1.tongji.icu" target="_blank">乌龙茶</a>
@@ -76,7 +110,7 @@
 </template>
 
 <script lang="ts">
-import { ExportOutlined, GithubOutlined, LinkOutlined, ReadOutlined, SyncOutlined, ExclamationCircleOutlined } from '@ant-design/icons-vue';
+import { DashboardOutlined, ExportOutlined, GithubOutlined, HeartOutlined, LinkOutlined, OrderedListOutlined, ReadOutlined, SyncOutlined, ExclamationCircleOutlined } from '@ant-design/icons-vue';
 import { codesToJsonForCSV, jsonToCSV, downloadCSV } from '@/utils/csvRelated';
 import { codesToJsonForXLS, jsonToXLS, downloadXLS } from '@/utils/xlsRelated';
 import { errorNotify, successNotify } from '@/utils/notify';
@@ -94,8 +128,11 @@ import type { occupyCell, courseOnTable } from '@/utils/myInterface';
 
 export default {
     components: {
+        DashboardOutlined,
         ExportOutlined,
         GithubOutlined,
+        HeartOutlined,
+        OrderedListOutlined,
         ReadOutlined,
         LinkOutlined,
         SyncOutlined
@@ -140,7 +177,7 @@ export default {
                     : undefined;
 
                 // 显示加载中
-                this.$store.commit("setIsSpin", true);
+                this.$store.commit("setSpin", true);
 
                 // 从后端获取最新课程信息
                 const latestCourses = await fetchLatestCourseInfo(calendarId, stagedCourses, selectedCourses, majorInfo);
@@ -153,7 +190,7 @@ export default {
                     this.$store.state.occupied
                 );
 
-                this.$store.commit("setIsSpin", false);
+                this.$store.commit("setSpin", false);
 
                 if (!syncResult.hasChanges) {
                     // 没有变更，直接更新时间
@@ -253,7 +290,7 @@ export default {
                 }
 
             } catch (error) {
-                this.$store.commit("setIsSpin", false);
+                this.$store.commit("setSpin", false);
                 console.error('获取课程信息失败:', error);
                 
                 // 如果获取失败，提供降级选项：清空所有课程

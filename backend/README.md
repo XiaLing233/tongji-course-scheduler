@@ -1,12 +1,14 @@
-# api
+# API 文档
 
-说明：所有的地址，不论语法如何，都**不加**复数；所有的键均使用 `camelCase`
+说明：所有地址遵循 RESTful 风格，资源名使用复数。`{id}` 表示 `calendarId`。
+
+---
 
 ## API 1 获得支持的所有学期
 
 方法：`GET`
 
-地址：`/api/getAllCalendar`
+地址：`/api/calendars`
 
 Response：
 
@@ -30,21 +32,17 @@ Response：
 }
 ```
 
-说明：降序排列，确保最新的学期在第 1 个(`data.[0]`)
+说明：降序排列，确保最新的学期在第 1 个 (`data.[0]`)
+
+---
 
 ## API 2 获得这一学期中所有的年级
 
-方法：`POST`
+方法：`GET`
 
-地址：`/api/findGradeByCalendarId`
+地址：`/api/calendars/{id}/grades`
 
-Payload：
-
-```json
-{
-    "calendarId": 119
-}
-```
+示例：`GET /api/calendars/119/grades`
 
 Response：
 
@@ -60,19 +58,15 @@ Response：
 
 说明：降序排列。
 
+---
+
 ## API 3 获得所有的可选专业
 
-方法：`POST`
+方法：`GET`
 
-地址：`/api/findMajorByGrade`
+地址：`/api/calendars/{id}/grades/{grade}/majors`
 
-Payload:
-
-```json
-{
-    "grade": 2023
-}
-```
+示例：`GET /api/calendars/119/grades/2023/majors`
 
 Response：
 
@@ -98,21 +92,15 @@ Response：
 
 说明：升序，按 code 排序。
 
+---
+
 ## API 4 通过专业查询所有专业课
 
-方法：`POST`
+方法：`GET`
 
-地址：`/api/findCourseByMajor`
+地址：`/api/calendars/{id}/courses?grade=&major=`
 
-Payload：
-
-```json
-{
-    "grade": 2023,
-    "code": "10054",
-    "calendarId": 119
-}
-```
+示例：`GET /api/calendars/119/courses?grade=2023&major=10054`
 
 Response：
 
@@ -127,7 +115,7 @@ Response：
             "facultyI18n": "电子与信息工程学院",
             "credit": 3.0,
             "grade": 2023,
-            "courseNature": ["专业必修课"], // 有的课程可能存在相同课号多个性质的情况
+            "courseNature": ["专业必修课"],
             "courses": [
                 {
                     "code": "10202005",
@@ -138,7 +126,7 @@ Response：
                             "teacherName": "万国春"
                         }
                     ],
-                    "arragementInfo": [
+                    "arrangementInfo": [
                         {
                             "arrangementText": "星期四10-12节 [1-17] 安楼A205\n",
                             "occupyDay": 4,
@@ -150,60 +138,7 @@ Response：
                         }
                     ],
                     "isExclusive": 0
-                },
-                {
-                    "code": "10202002",
-                    "campus": "嘉定校区",
-                    "teachers": [
-                        {
-                            "teacherCode": "00111",
-                            "teacherName": "李宏强"
-                        },
-                        {
-                            "teacherCode": "16509",
-                            "teacherName": "武超"
-                        }
-                    ],
-                    "arragementInfo": [
-                        {
-                            "arrangementText": "星期一5-6节 [1-2] 安楼A304\n",
-                            "occupyDay": 1,
-                            "occupyTime": [5, 6],
-                            "occupyWeek": [
-                                1, 2
-                            ],
-                            "occupyRoom": "安楼A304"
-                        },
-                        {
-                            "arrangementText": "星期一5-6节 [3-17] 安楼A304\n",
-                            "occupyDay": 1,
-                            "occupyTime": [5, 6],
-                            "occupyWeek": [
-                                3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17
-                            ],
-                            "occupyRoom": "安楼A304"
-                        },
-                        {
-                            "arrangementText": "星期四3-4节 [1] 安楼A304\n",
-                            "occupyDay": 4,
-                            "occupyTime": [3, 4],
-                            "occupyWeek": [
-                                1
-                            ],
-                            "occupyRoom": "安楼A304"
-                        },
-                        {
-                            "arrangementText": "星期四3-4节 [3-17单] 安楼A304\n",
-                            "occupyDay": 4,
-                            "occupyTime": [3, 4],
-                            "occupyWeek": [
-                                3, 5, 7, 9, 11, 13, 15, 17
-                            ],
-                            "occupyRoom": "安楼A304"
-                        }
-                    ],
-                    "isExclusive": 1
-                },
+                }
 
                 // ...
 
@@ -213,19 +148,15 @@ Response：
 }
 ```
 
+---
+
 ## API 5 获得所有的选修课类别
 
-方法：`POST`
+方法：`GET`
 
-地址：`/api/findOptionalCourseType`
+地址：`/api/calendars/{id}/course-types`
 
-Payload：
-
-```json
-{
-    "calendarId": 119
-}
-```
+示例：`GET /api/calendars/119/course-types`
 
 Response：
 
@@ -258,20 +189,15 @@ Response：
 }
 ```
 
-## API 6 通过课程性质查询所有课程（只支持选修课）
+---
 
-方法：`POST`
+## API 6 通过课程性质查询所有课程
 
-地址：`/api/findCourseByNatureId`
+方法：`GET`
 
-Payload：
+地址：`/api/calendars/{id}/courses?natureIds=`
 
-```json
-{
-    "ids": [958, 957, 956, 955, 947],
-    "calendarId": 119
-}
-```
+示例：`GET /api/calendars/119/courses?natureIds=958,957`
 
 Response：
 
@@ -285,67 +211,10 @@ Response：
             "courseLabelName": "科学探索与生命关怀",
             "courses": [
                 {
-                    "campus": [
-                        "四平路校区"
-                    ],
+                    "campus": ["四平路校区"],
                     "courseCode": "140813",
                     "courseName": "海洋药物与健康",
                     "facultyI18n": "医学院",
-                    "credit": 1.5
-                },
-                {
-                    "campus": [
-                        "四平路校区"
-                    ],
-                    "courseCode": "140662",
-                    "courseName": "五彩缤纷的发光材料",
-                    "facultyI18n": "医学院",
-                    "credit": 1.5
-                },
-                {
-                    "campus": [
-                        "四平路校区"
-                    ],
-                    "courseCode": "140572",
-                    "courseName": "人体生理学通识",
-                    "facultyI18n": "医学院",
-                    "credit": 1.5
-                },
-                {
-                    "campus": [
-                        "四平路校区"
-                    ],
-                    "courseCode": "140496",
-                    "courseName": "食品与健康",
-                    "facultyI18n": "医学院",
-                    "credit": 1.5
-                },
-                {
-                    "campus": [
-                        "四平路校区"
-                    ],
-                    "courseCode": "140495",
-                    "courseName": "食品安全导论",
-                    "facultyI18n": "医学院",
-                    "credit": 1.5
-                },
-                {
-                    "campus": [
-                        "四平路校区"
-                    ],
-                    "courseCode": "140076",
-                    "courseName": "公共营养学",
-                    "facultyI18n": "医学院",
-                    "credit": 1.5
-                },
-                {
-                    "campus": [
-                        "嘉定校区",
-                        "四平路校区"
-                    ],
-                    "courseCode": "124120",
-                    "courseName": "物理现象探索",
-                    "facultyI18n": "物理科学与工程学院",
                     "credit": 1.5
                 }
 
@@ -356,91 +225,87 @@ Response：
         {
             "courseLabelId": 957,
             "courseLabelName": "社会发展与国际视野",
-            "courses": {[
+            "courses": [
                 // ...
-            ]}
-        },
+            ]
+        }
 
         // ...
-        
+
     ]
 }
 ```
 
-说明：按 `courseLabelId` 降序返回。而每个 `courseLabelId` 内部的排序不能保证，如果必要的话，需要手动排序。返回的课程不包含具体的上课时间等信息，没必要。如果要获得选修课的信息，需要再用课号查询。
+说明：按 `courseLabelId` 降序返回。返回的课程不包含具体的上课时间等信息，需要用 API 7 再查。
+
+---
 
 ## API 7 通过课号获得课程的具体排课信息
 
 方法：`POST`
 
-地址：`/api/findCourseDetailByCode`
+地址：`/api/calendars/{id}/courses/details`
+
+示例：`POST /api/calendars/119/courses/details`
 
 Payload：
 
 ```json
 {
-    "courseCode": "340012",
-    "calendarId": 119
+    "courseCodes": ["340012", "340013", "340014"]
 }
 ```
 
-Response：
+### Response
 
 ```json
 {
     "code": 200,
     "msg": "查询成功",
-    "data": {[
-        "code": "34001201",
-        "teachers": [
-            {
-                "teacherCode": "13060",
-                "teacherName": "李华"
-            },
-            {
-                "teacherCode": "17076",
-                "teacherName": "朱梦皎"
-            }
-        ],
-        "campusI18n": "四平路校区",
-        "arragementInfo": {
-            {
-                "arrangementText": "星期三7-8节 [2-4双 5-6 10-12 14 17] 北214\n",
-                "occupyDay": 3,
-                "occupyTime": [7, 8],
-                "occupyWeek": [
-                    2, 4, 5, 6, 10, 11, 12, 14, 17
-                ],
-                "occupyRoom": "北214"
-            },
-            {
-                "arrangementText": "星期三7-8节 [1-3单 7-9 13-15单 16] 北214\n",
-                "occupyDay": 3,
-                "occupyTime": [7, 8],
-                "occupyWeek": [
-                    1, 3, 7, 8, 9, 13, 15, 16
-                ],
-                "occupyRoom": "北214"
-            }
-        },
-
-        // ...
-
-    ]}
+    "data": [
+        {
+            "code": "34001201",
+            "teachers": [
+                {
+                    "teacherCode": "13060",
+                    "teacherName": "李华"
+                },
+                {
+                    "teacherCode": "17076",
+                    "teacherName": "朱梦皎"
+                }
+            ],
+            "campusI18n": "四平路校区",
+            "arrangementInfo": [
+                {
+                    "arrangementText": "星期三7-8节 [2-4双 5-6 10-12 14 17] 北214\n",
+                    "occupyDay": 3,
+                    "occupyTime": [7, 8],
+                    "occupyWeek": [2, 4, 5, 6, 10, 11, 12, 14, 17],
+                    "occupyRoom": "北214"
+                }
+            ]
+        }
+    ]
 }
 ```
+
+说明：批量查询时返回 `{ courseCode: [...] }` 对象。
+
+---
 
 ## API 8 高级检索课程
 
 方法：`POST`
 
-地址：`/api/findCourseBySearch`
+地址：`/api/calendars/{id}/courses/search`
+
+示例：`POST /api/calendars/119/courses/search`
 
 Payload：
 
 ```json
 {
-    "calendarId": 119,
     "courseName": "上海",
     "courseCode": "",
     "teacherCode": "",
@@ -452,11 +317,9 @@ Payload：
 
 说明：
 
-* 必须有 `calendarId`，其他字段至少有一个。
-
-* 关于 `courseCode`，不管是否传入二位班级序号（如 `50002440016` 或 `5000244001601`），都可以检索。
-
-* 为了方便添加课程，不提供太丰富的检索条件，且返回条数有上限：目前是 50 条。后续可能会动态调整。根据返回的字段来判断上限以及是否达到上限。
+* 其他字段至少有一个非空。
+* 关于 `courseCode`，不管是否传入二位班级序号，都可以检索。
+* 返回条数上限 100 条。根据 `sizeLimit` 字段判断是否达到上限。
 
 Response：
 
@@ -472,32 +335,22 @@ Response：
                 "facultyI18n": "马克思主义学院",
                 "courseNature": ["社会发展与国际视野"],
                 "campus_list": ["四平路校区"]
-            },
-            {
-                "courseCode": "50002680134",
-                "courseName": "学讲上海话",
-                "facultyI18n": "外国语学院",
-                "courseNature": ["人文经典与审美素养"],
-                "campus_list": ["四平路校区"]
-            },
-            {
-                "courseCode": "50001630031",
-                "courseName": "上海城市空间认知",
-                "facultyI18n": "建筑与城市规划学院",
-                "courseNature": ["人文经典与审美素养"],
-                "campus_list": ["四平路校区"]
             }
         ],
-        "sizeLimit": 50,
+        "sizeLimit": 100
     }
 }
 ```
+
+---
 
 ## API 9 获得所有校区
 
 方法：`GET`
 
-地址：`/api/getAllCampus`
+地址：`/api/calendars/{id}/campuses`
+
+示例：`GET /api/calendars/119/campuses`
 
 Response:
 
@@ -505,28 +358,23 @@ Response:
 {
     "code": 200,
     "data": [
-        {
-            "campusId": "1",
-            "campusName": "四平路校区"
-        },
-        {
-            "campusId": "3",
-            "campusName": "嘉定校区"
-        },
-        {
-            "campusId": "4",
-            "campusName": "沪西校区"
-        }
+        { "campusId": "1", "campusName": "四平路校区" },
+        { "campusId": "3", "campusName": "嘉定校区" },
+        { "campusId": "4", "campusName": "沪西校区" }
     ],
     "msg": "查询成功"
 }
 ```
+
+---
 
 ## API 10 获得所有学院
 
 方法：`GET`
 
-地址：`/api/getAllFaculty`
+地址：`/api/calendars/{id}/faculties`
+
+示例：`GET /api/calendars/119/faculties`
 
 Response:
 
@@ -534,30 +382,23 @@ Response:
 {
     "code": 200,
     "data": [
-        {
-            "facultyId": "000034",
-            "facultyName": "职业技术教育学院"
-        },
-        {
-            "facultyId": "000037",
-            "facultyName": "图书馆"
-        },
-        {
-            "facultyId": "000039",
-            "facultyName": "国际文化交流学院"
-        },
-
-        // ...
+        { "facultyId": "000034", "facultyName": "职业技术教育学院" },
+        { "facultyId": "000037", "facultyName": "图书馆" },
+        { "facultyId": "000039", "facultyName": "国际文化交流学院" }
     ],
     "msg": "查询成功"
 }
 ```
 
+---
+
 ## API 11 获得最近更新的时间
 
 方法：`GET`
 
-地址：`/api/getLatestUpdateTime`
+地址：`/api/calendars/{id}/update-time`
+
+示例：`GET /api/calendars/119/update-time`
 
 Response：
 
@@ -569,11 +410,15 @@ Response：
 }
 ```
 
-## API 12 获得最新课程信息
+---
+
+## API 12 获得最新课程信息（同步用）
 
 方法：`POST`
 
-地址：`/api/getLatestCourseInfo`
+地址：`/api/calendars/{id}/courses/batch`
+
+示例：`POST /api/calendars/119/courses/batch`
 
 Payload:
 
@@ -584,17 +429,15 @@ Payload:
     "majorInfo": {
         "grade": 2022,
         "code": "1234"
-    },
-    "calendarId": 119
+    }
 }
 ```
 
 参数说明：
 
-* `majorCourseCodes`：专业课程代码列表（通过 API 2 获取的课程），这些课程需要返回 `isExclusive` 字段
-* `otherCourseCodes`：其他课程代码列表（通过搜索等方式添加的课程），不返回 `isExclusive` 字段
-* `majorInfo`：专业信息，包含 `grade`（年级）和 `code`（专业代码），当 `majorCourseCodes` 不为空时必填
-* `calendarId`：校历 ID
+* `majorCourseCodes`：专业课程代码列表，需要返回 `isExclusive` 字段
+* `otherCourseCodes`：其他课程代码列表，不返回 `isExclusive` 字段
+* `majorInfo`：专业信息（`grade` + `code`），当 `majorCourseCodes` 不为空时必填
 
 Response:
 
@@ -606,12 +449,7 @@ Response:
         "340012": [
             {
                 "code": "34001201",
-                "teachers": [
-                    {
-                        "teacherCode": "13060",
-                        "teacherName": "李华"
-                    }
-                ],
+                "teachers": [{ "teacherCode": "13060", "teacherName": "李华" }],
                 "campusI18n": "四平路校区",
                 "teachingLanguageI18n": "中文",
                 "isExclusive": true,
@@ -624,50 +462,6 @@ Response:
                         "occupyRoom": "A楼101"
                     }
                 ]
-            },
-            {
-                "code": "34001202",
-                "teachers": [
-                    {
-                        "teacherCode": "13061",
-                        "teacherName": "王五"
-                    }
-                ],
-                "campusI18n": "嘉定校区",
-                "teachingLanguageI18n": "中文",
-                "isExclusive": false,
-                "arrangementInfo": [
-                    {
-                        "arrangementText": "星期二5-6节 [1-17] B楼201\n",
-                        "occupyDay": 2,
-                        "occupyTime": [5, 6],
-                        "occupyWeek": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
-                        "occupyRoom": "B楼201"
-                    }
-                ]
-            }
-        ],
-        "100436": [
-            {
-                "code": "10043601",
-                "teachers": [
-                    {
-                        "teacherCode": "12345",
-                        "teacherName": "赵六"
-                    }
-                ],
-                "campusI18n": "四平路校区",
-                "teachingLanguageI18n": "中文",
-                "isExclusive": true,
-                "arrangementInfo": [
-                    {
-                        "arrangementText": "星期三7-8节 [1-17] C楼301\n",
-                        "occupyDay": 3,
-                        "occupyTime": [7, 8],
-                        "occupyWeek": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
-                        "occupyRoom": "C楼301"
-                    }
-                ]
             }
         ],
         "100225": []
@@ -675,10 +469,38 @@ Response:
 }
 ```
 
-说明：
+说明：本接口是 API 7 的批量版本，支持同步场景中一次查询多个课程的最新排课信息。如果某课程已关课，对应列表为空数组 `[]`。
 
-* 本接口是 API 7 的批量版本，支持一次查询多个课程的详细排课信息。
-* `data` 是一个对象，key 是课程代码 `courseCode`，value 是该课程的排课信息列表。
-* 对于 `majorCourseCodes` 中的课程，每个班级会返回 `isExclusive` 字段，表示该班级是否专属于指定专业。
-* 对于 `otherCourseCodes` 中的课程，不返回 `isExclusive` 字段。
-* 如果某个课程已经关课（不存在），则该 `courseCode` 对应的列表为空数组 `[]`。
+---
+
+## 同步日志 API
+
+### 历史列表
+
+方法：`GET`
+
+地址：`/api/sync/history`
+
+参数：`?calendarId=119&page=1&pageSize=20`
+
+### 历史详情（含 fullLog）
+
+方法：`GET`
+
+地址：`/api/sync/history/{id}`
+
+示例：`GET /api/sync/history/42`
+
+### SSE 实时日志流
+
+方法：`GET`（EventSource）
+
+地址：`/api/sync/history/{id}/stream`
+
+---
+
+## 健康检查
+
+方法：`GET`
+
+地址：`/api/health`
