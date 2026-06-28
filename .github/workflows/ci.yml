@@ -3,7 +3,7 @@ name: CI/CD
 on:
   push:
   pull_request:
-    branches: [ master ]
+    branches: [master]
   workflow_dispatch:
 
 jobs:
@@ -53,12 +53,80 @@ jobs:
           npm ci
           npm run test
 
-  deploy:
-    needs: [backend-test, crawler-test, frontend-typecheck, frontend-test]
-    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+  build-backend:
+    needs: [backend-test, frontend-test]
+    if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
+    permissions:
+      packages: write
     steps:
       - uses: actions/checkout@v4
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push backend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/xk-backend:latest
+            ghcr.io/${{ github.repository_owner }}/xk-backend:${{ github.sha }}
+
+  build-frontend:
+    needs: [frontend-typecheck, frontend-test]
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./xkFrontendts
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/xk-frontend:latest
+            ghcr.io/${{ github.repository_owner }}/xk-frontend:${{ github.sha }}
+
+  build-crawler:
+    needs: [crawler-test]
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push crawler
+        uses: docker/build-push-action@v6
+        with:
+          context: ./crawler
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/xk-crawler:latest
+            ghcr.io/${{ github.repository_owner }}/xk-crawler:${{ github.sha }}
+
+  deploy:
+    needs: [build-backend, build-frontend, build-crawler]
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    steps:
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.9.0
         with:
@@ -69,7 +137,8 @@ jobs:
           ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
             set -e
             cd ~/xkB/
-            git fetch origin
-            git reset --hard origin/master
-            docker compose up -d --build
+            git pull
+            docker compose pull
+            docker compose up -d
+            docker image prune -f
           EOF

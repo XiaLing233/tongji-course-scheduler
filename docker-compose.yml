@@ -23,6 +23,7 @@ services:
     restart: always
 
   backend:
+    image: ghcr.io/xialing233/xk-backend:latest
     build: ./backend
     container_name: xk-backend
     env_file: .env
@@ -42,6 +43,7 @@ services:
     restart: always
 
   frontend:
+    image: ghcr.io/xialing233/xk-frontend:latest
     build: ./xkFrontendts
     container_name: xk-frontend
     ports:
@@ -51,6 +53,7 @@ services:
     restart: always
 
   crawler:
+    image: ghcr.io/xialing233/xk-crawler:latest
     build: ./crawler
     env_file: .env
     environment:
@@ -63,6 +66,10 @@ services:
         condition: service_started
     entrypoint: ["python3", "-u", "fetchCourseList.py"]
     restart: "no"
+
+networks:
+  default:
+    name: xk_network
 
 volumes:
   mysql_data:
