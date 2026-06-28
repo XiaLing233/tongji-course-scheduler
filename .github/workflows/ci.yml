@@ -162,7 +162,6 @@ jobs:
             set -e
             cd ~/tongji-course-scheduler/
             git pull
-            docker compose pull
             docker compose -f docker-compose.yml -f docker-compose.monitoring.yml pull
             docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
             docker image prune -f
