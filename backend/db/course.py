@@ -59,7 +59,7 @@ class CourseQueries(ReadConnection):
             'faculty', f.facultyI18n,
             'credit', c.credit,
             'grade', codes.grade,
-            'courseNature', CAST(CONCAT('[', GROUP_CONCAT(DISTINCT JSON_QUOTE(n.courseLabelName)), ']') AS JSON),
+            'courseNature', JSON_ARRAYAGG(DISTINCT n.courseLabelName),
             'courses', JSON_ARRAYAGG(JSON_OBJECT(
                 'code', c.code,
                 'teachers', teachers.teachers,
@@ -144,7 +144,7 @@ class CourseQueries(ReadConnection):
         FROM (
             SELECT c.courseLabelId, n.courseLabelName, c.courseCode, c.courseName,
                    c.credit, f.facultyI18n,
-                   CAST(CONCAT('[', GROUP_CONCAT(DISTINCT JSON_QUOTE(ca.campusI18n) ORDER BY ca.campusI18n), ']') AS JSON) AS campus_list
+                   JSON_ARRAYAGG(DISTINCT ca.campusI18n ORDER BY ca.campusI18n) AS campus_list
             FROM coursedetail as c
             JOIN faculty as f ON f.faculty = c.faculty
             JOIN coursenature as n ON n.courseLabelId = c.courseLabelId
@@ -232,8 +232,8 @@ class CourseQueries(ReadConnection):
             'courseName', c.courseName,
             'faculty', f.facultyI18n,
             'credit', c.credit,
-            'courseNature', CAST(CONCAT('[', GROUP_CONCAT(DISTINCT JSON_QUOTE(n.courseLabelName)), ']') AS JSON),
-            'campus', CAST(CONCAT('[', GROUP_CONCAT(DISTINCT JSON_QUOTE(ca.campusI18n) ORDER BY ca.campusI18n), ']') AS JSON)
+            'courseNature', JSON_ARRAYAGG(DISTINCT n.courseLabelName),
+            'campus', JSON_ARRAYAGG(DISTINCT ca.campusI18n ORDER BY ca.campusI18n)
         )
         FROM coursedetail as c
         JOIN faculty AS f ON f.faculty = c.faculty
@@ -255,8 +255,8 @@ class CourseQueries(ReadConnection):
             'courseName', c.courseName,
             'faculty', f.facultyI18n,
             'credit', c.credit,
-            'courseNature', CAST(CONCAT('[', GROUP_CONCAT(DISTINCT JSON_QUOTE(n.courseLabelName)), ']') AS JSON),
-            'campus', CAST(CONCAT('[', GROUP_CONCAT(DISTINCT JSON_QUOTE(ca.campusI18n) ORDER BY ca.campusI18n), ']') AS JSON)
+            'courseNature', JSON_ARRAYAGG(DISTINCT n.courseLabelName),
+            'campus', JSON_ARRAYAGG(DISTINCT ca.campusI18n ORDER BY ca.campusI18n)
         )
         FROM coursedetail as c
         JOIN faculty AS f ON f.faculty = c.faculty

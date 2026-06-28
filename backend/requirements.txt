@@ -5,3 +5,4 @@ python-dotenv==1.2.1
 gunicorn==23.0.0
 pytest==8.3.5
 gevent==26.5.0
+prometheus-flask-exporter==0.23.2

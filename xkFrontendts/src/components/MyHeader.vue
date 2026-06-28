@@ -42,14 +42,35 @@
                 </a-button>
             </div>
             <div>
-                <router-link to="/sync">
+                <a-dropdown>
+                    <template #overlay>
+                        <a-menu class="text-center">
+                        <a-menu-item key="history">
+                            <a href="/sync" target="_blank">
+                                <div class="flex flex-row space-x-2 items-center">
+                                    <div><OrderedListOutlined /></div>
+                                    <p>同步历史</p>
+                                </div>
+                            </a>
+                        </a-menu-item>
+                        <a-menu-item key="status">
+                            <a href="/grafana/dashboards" target="_blank">
+                                <div class="flex flex-row space-x-2 items-center">
+                                    <div><DashboardOutlined /></div>
+                                    <p>Grafana 仪表盘</p>
+                                </div>
+                            </a>
+                        </a-menu-item>
+                        </a-menu>
+                    </template>
                     <a-button>
                         <div class="flex flex-row space-x-2 items-center">
-                            <p>同步历史</p>
-                            <div><OrderedListOutlined /></div>
+                            <p>服务状态</p>
+                            <div><HeartOutlined /></div>
                         </div>
                     </a-button>
-                </router-link>
+                </a-dropdown>
+
             </div>
             <div>
                 <a-dropdown>
@@ -89,7 +110,7 @@
 </template>
 
 <script lang="ts">
-import { ExportOutlined, GithubOutlined, LinkOutlined, OrderedListOutlined, ReadOutlined, SyncOutlined, ExclamationCircleOutlined } from '@ant-design/icons-vue';
+import { DashboardOutlined, ExportOutlined, GithubOutlined, HeartOutlined, LinkOutlined, OrderedListOutlined, ReadOutlined, SyncOutlined, ExclamationCircleOutlined } from '@ant-design/icons-vue';
 import { codesToJsonForCSV, jsonToCSV, downloadCSV } from '@/utils/csvRelated';
 import { codesToJsonForXLS, jsonToXLS, downloadXLS } from '@/utils/xlsRelated';
 import { errorNotify, successNotify } from '@/utils/notify';
@@ -107,8 +128,10 @@ import type { occupyCell, courseOnTable } from '@/utils/myInterface';
 
 export default {
     components: {
+        DashboardOutlined,
         ExportOutlined,
         GithubOutlined,
+        HeartOutlined,
         OrderedListOutlined,
         ReadOutlined,
         LinkOutlined,

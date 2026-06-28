@@ -1,13 +1,13 @@
 services:
   backend-db:
-    image: mysql:8.4
+    image: mariadb:lts
     environment:
       MYSQL_ROOT_PASSWORD: test_pass_123
       MYSQL_ROOT_HOST: "%"
       TZ: Asia/Shanghai
     command: --default-time-zone=+08:00
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD", "mariadb-admin", "-uroot", "-p$MYSQL_ROOT_PASSWORD", "ping", "-h", "localhost"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -15,14 +15,14 @@ services:
     restart: "no"
 
   crawler-db:
-    image: mysql:8.4
+    image: mariadb:lts
     environment:
       MYSQL_ROOT_PASSWORD: test_pass_123
       MYSQL_ROOT_HOST: "%"
       TZ: Asia/Shanghai
     command: --default-time-zone=+08:00
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD", "mariadb-admin", "-uroot", "-p$MYSQL_ROOT_PASSWORD", "ping", "-h", "localhost"]
       interval: 5s
       timeout: 3s
       retries: 10

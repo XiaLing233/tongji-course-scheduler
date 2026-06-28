@@ -206,17 +206,18 @@ if __name__ == "__main__":
         if not ok:
             failed.append(cal_id)
 
-    # 邮件通知
-    if os.getenv('CRAWLER_SEND_EMAIL', 'false').lower() == 'true':
+    # 邮件通知 — 仅失败时发送
+    if failed and os.getenv('CRAWLER_SEND_EMAIL', 'false').lower() == 'true':
         email_client = SMTPEmailClient()
         now = datetime.now()
         with tjSql() as sql:
             names = [sql.calendarIdToText(c) or str(c) for c in semesters]
-        status_text = '完成' if not failed else f'部分失败 (失败学期: {failed})'
-        subject = f"课程数据更新{status_text} - {now.strftime('%Y-%m-%d')}"
-        body = (f"夏凌！\n\n课程数据更新{status_text}。\n"
+        subject = f"课程数据更新失败 - {now.strftime('%Y-%m-%d')}"
+        failed_names = [sql.calendarIdToText(c) or str(c) for c in failed]
+        body = (f"夏凌！\n\n课程数据更新失败。\n"
                 f"更新学期：{', '.join(names)}\n"
-                f"完成时间：{now.strftime('%Y-%m-%d %H:%M:%S')}\n\n祝好！\n琪露诺bot")
+                f"失败学期：{', '.join(failed_names)}\n"
+                f"时间：{now.strftime('%Y-%m-%d %H:%M:%S')}\n\n祝好！\n琪露诺bot")
         if email_client.send_email(os.getenv('SMTP_SENDER', ''), subject, body):
             _log("邮件通知已发送")
         else:

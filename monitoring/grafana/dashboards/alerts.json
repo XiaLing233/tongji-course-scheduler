@@ -1,0 +1,60 @@
+{
+  "title": "告警",
+  "uid": "xk-alerts",
+  "schemaVersion": 39,
+  "version": 1,
+  "templating": { "list": [] },
+  "time": { "from": "now-6h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "活跃告警",
+      "type": "table",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 10 },
+      "targets": [
+        {
+          "expr": "ALERTS{alertstate=\"firing\"}",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "align": "auto", "cellOptions": { "type": "auto" } }
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "alertname" }, "properties": [{ "id": "displayName", "value": "告警名称" }] },
+          { "matcher": { "id": "byName", "options": "severity" }, "properties": [{ "id": "displayName", "value": "级别" }] },
+          { "matcher": { "id": "byName", "options": "alertstate" }, "properties": [{ "id": "displayName", "value": "状态" }] },
+          { "matcher": { "id": "byName", "options": "instance" }, "properties": [{ "id": "displayName", "value": "实例" }] }
+        ]
+      }
+    },
+    {
+      "id": 2,
+      "title": "告警时间线",
+      "type": "state-timeline",
+      "gridPos": { "x": 0, "y": 10, "w": 24, "h": 6 },
+      "targets": [
+        {
+          "expr": "ALERTS",
+          "legendFormat": "{{alertname}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "lineWidth": 0,
+            "fillOpacity": 70,
+            "spanNulls": true
+          },
+          "mappings": [
+            { "type": "value", "value": "0", "text": "正常" },
+            { "type": "value", "value": "1", "text": "告警中" }
+          ]
+        }
+      }
+    }
+  ]
+}

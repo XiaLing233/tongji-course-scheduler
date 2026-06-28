@@ -1,0 +1,68 @@
+{
+  "title": "日志",
+  "uid": "xk-logs",
+  "schemaVersion": 39,
+  "version": 1,
+  "templating": { "list": [] },
+  "time": { "from": "now-6h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "日志量",
+      "type": "timeseries",
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 6 },
+      "targets": [
+        {
+          "expr": "sum(count_over_time({job=\"docker\"}[1m])) by (filename)",
+          "legendFormat": "{{filename}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "lineWidth": 2, "fillOpacity": 10, "spanNulls": true }
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "错误日志",
+      "type": "logs",
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "x": 0, "y": 6, "w": 16, "h": 14 },
+      "targets": [
+        {
+          "expr": "{job=\"docker\"} |= \"ERROR\"",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "showTime": true,
+        "sortOrder": "Descending"
+      }
+    },
+    {
+      "id": 3,
+      "title": "HTTP 5xx 日志",
+      "type": "logs",
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "x": 16, "y": 6, "w": 8, "h": 14 },
+      "targets": [
+        {
+          "expr": "{job=\"docker\"} |~ \" 500 | 502 | 503 \"",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "showTime": true,
+        "sortOrder": "Descending"
+      }
+    }
+  ]
+}

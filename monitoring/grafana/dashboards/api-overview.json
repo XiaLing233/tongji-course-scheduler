@@ -1,0 +1,115 @@
+{
+  "title": "API 总览",
+  "uid": "xk-api-overview",
+  "schemaVersion": 39,
+  "version": 1,
+  "templating": { "list": [] },
+  "time": { "from": "now-6h", "to": "now" },
+  "panels": [
+    {
+      "id": 10,
+      "type": "row",
+      "title": "流量",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 1 },
+      "collapsed": false
+    },
+    {
+      "id": 1,
+      "title": "请求速率",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 1, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(flask_http_request_total[2m])) by (method, path)",
+          "legendFormat": "{{method}} {{path}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": { "lineWidth": 2, "fillOpacity": 10, "spanNulls": true }
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "错误率",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 1, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(flask_http_request_total{status=~\"5..\"}[2m])) by (path) / sum(rate(flask_http_request_total[2m])) by (path)",
+          "legendFormat": "{{path}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "custom": { "lineWidth": 2, "fillOpacity": 10, "spanNulls": true }
+        }
+      }
+    },
+    {
+      "id": 20,
+      "type": "row",
+      "title": "延迟与状态码",
+      "gridPos": { "x": 0, "y": 9, "w": 24, "h": 1 },
+      "collapsed": false
+    },
+    {
+      "id": 3,
+      "title": "延迟 p50 / p95 / p99",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 10, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(flask_http_request_duration_seconds_bucket[2m])) by (le, path))",
+          "legendFormat": "p50 {{path}}",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(flask_http_request_duration_seconds_bucket[2m])) by (le, path))",
+          "legendFormat": "p95 {{path}}",
+          "refId": "B"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(flask_http_request_duration_seconds_bucket[2m])) by (le, path))",
+          "legendFormat": "p99 {{path}}",
+          "refId": "C"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": { "lineWidth": 2, "fillOpacity": 5, "spanNulls": true }
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "状态码分布",
+      "type": "piechart",
+      "gridPos": { "x": 12, "y": 10, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum(increase(flask_http_request_total[1h])) by (status)",
+          "legendFormat": "{{status}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "spanNulls": true }
+        }
+      },
+      "options": {
+        "reduceOptions": { "values": false, "calcs": ["lastNotNull"] },
+        "displayLabels": ["name", "percent"],
+        "legend": { "displayMode": "table", "placement": "right" }
+      }
+    }
+  ]
+}
