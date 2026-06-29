@@ -57,6 +57,8 @@ services:
       GF_USERS_DEFAULT_THEME: light
       GF_UNIFIED_ALERTING_ENABLED: "false"
       GF_NEWS_NEWS_FEED_ENABLED: "false"
+      GF_LOG_LEVEL: "warn"
+      GF_PLUGINS_DISABLE_PLUGINS: "elasticsearch"
     volumes:
       - ./monitoring/grafana/datasources/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
       - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
@@ -69,7 +71,7 @@ services:
     volumes:
       - ./monitoring/loki/loki-config.yml:/etc/loki/config.yml:ro
       - loki_data:/loki
-    command: -config.file=/etc/loki/config.yml
+    command: -config.file=/etc/loki/config.yml -log.level=warn
     restart: always
 
   promtail:
