@@ -85,20 +85,20 @@
     },
     {
       "id": 4,
-      "title": "请求趋势",
+      "title": "总 QPS",
       "type": "timeseries",
       "gridPos": { "x": 0, "y": 6, "w": 24, "h": 8 },
       "targets": [
         {
-          "expr": "sum(rate(flask_http_request_total[2m])) by (status)",
-          "legendFormat": "{{status}}",
+          "expr": "sum(rate(flask_http_request_total[2m]))",
+          "legendFormat": "QPS",
           "refId": "A"
         }
       ],
       "fieldConfig": {
         "defaults": {
           "unit": "reqps",
-          "custom": { "lineWidth": 2, "fillOpacity": 15, "stacking": { "mode": "normal" }, "spanNulls": true }
+          "custom": { "lineWidth": 2, "fillOpacity": 10, "spanNulls": true }
         }
       }
     },
