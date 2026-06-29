@@ -47,7 +47,7 @@
       "gridPos": { "x": 8, "y": 1, "w": 8, "h": 4 },
       "targets": [
         {
-          "expr": "sum(increase(flask_http_request_total[24h]))",
+          "expr": "sum(increase(flask_http_request_duration_seconds_count{path!=\"/api/health\"}[24h]))",
           "refId": "A"
         }
       ],
@@ -85,20 +85,20 @@
     },
     {
       "id": 4,
-      "title": "请求趋势",
+      "title": "总 QPS",
       "type": "timeseries",
       "gridPos": { "x": 0, "y": 6, "w": 24, "h": 8 },
       "targets": [
         {
-          "expr": "sum(rate(flask_http_request_total[2m])) by (status)",
-          "legendFormat": "{{status}}",
+          "expr": "sum(rate(flask_http_request_duration_seconds_count{path!=\"/api/health\"}[2m]))",
+          "legendFormat": "QPS",
           "refId": "A"
         }
       ],
       "fieldConfig": {
         "defaults": {
           "unit": "reqps",
-          "custom": { "lineWidth": 2, "fillOpacity": 15, "stacking": { "mode": "normal" }, "spanNulls": true }
+          "custom": { "lineWidth": 2, "fillOpacity": 10, "spanNulls": true }
         }
       }
     },
@@ -109,7 +109,7 @@
       "gridPos": { "x": 0, "y": 14, "w": 24, "h": 8 },
       "targets": [
         {
-          "expr": "sum(increase(flask_http_request_duration_seconds_bucket[5m])) by (le)",
+          "expr": "sum(increase(flask_http_request_duration_seconds_bucket{path!=\"/api/health\"}[5m])) by (le)",
           "format": "heatmap",
           "refId": "A"
         }

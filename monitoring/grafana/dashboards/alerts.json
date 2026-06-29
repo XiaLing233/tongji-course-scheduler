@@ -24,9 +24,17 @@
         },
         "overrides": [
           { "matcher": { "id": "byName", "options": "alertname" }, "properties": [{ "id": "displayName", "value": "告警名称" }] },
-          { "matcher": { "id": "byName", "options": "severity" }, "properties": [{ "id": "displayName", "value": "级别" }] },
           { "matcher": { "id": "byName", "options": "alertstate" }, "properties": [{ "id": "displayName", "value": "状态" }] },
-          { "matcher": { "id": "byName", "options": "instance" }, "properties": [{ "id": "displayName", "value": "实例" }] }
+          { "matcher": { "id": "byName", "options": "severity" }, "properties": [{ "id": "displayName", "value": "级别" }] },
+          { "matcher": { "id": "byName", "options": "instance" }, "properties": [{ "id": "displayName", "value": "实例" }] },
+          { "matcher": { "id": "byName", "options": "job" }, "properties": [{ "id": "displayName", "value": "服务" }] },
+          { "matcher": { "id": "byName", "options": "path" }, "properties": [{ "id": "displayName", "value": "端点" }] },
+          { "matcher": { "id": "byName", "options": "method" }, "properties": [{ "id": "displayName", "value": "方法" }] },
+          { "matcher": { "id": "byName", "options": "status" }, "properties": [{ "id": "displayName", "value": "状态码" }] },
+          { "matcher": { "id": "byName", "options": "Time" }, "properties": [{ "id": "displayName", "value": "时间" }] },
+          { "matcher": { "id": "byName", "options": "Value" }, "properties": [{ "id": "displayName", "value": "值" }] },
+          { "matcher": { "id": "byName", "options": "service" }, "properties": [{ "id": "displayName", "value": "服务名" }] },
+          { "matcher": { "id": "byName", "options": "__name__" }, "properties": [{ "id": "displayName", "value": "指标" }] }
         ]
       }
     },
@@ -37,7 +45,7 @@
       "gridPos": { "x": 0, "y": 10, "w": 24, "h": 6 },
       "targets": [
         {
-          "expr": "ALERTS",
+          "expr": "max(ALERTS) by (alertname)",
           "legendFormat": "{{alertname}}",
           "refId": "A"
         }
@@ -47,7 +55,7 @@
           "custom": {
             "lineWidth": 0,
             "fillOpacity": 70,
-            "spanNulls": true
+            "spanNulls": false
           },
           "mappings": [
             { "type": "value", "value": "0", "text": "正常" },

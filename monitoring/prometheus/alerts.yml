@@ -13,7 +13,7 @@ groups:
           description: "Prometheus 无法抓取 backend:1239/metrics，已持续 {{ $value }} 分钟。"
 
       - alert: High5xxRate
-        expr: increase(flask_http_request_total{status=~"5.."}[10m]) > 10
+        expr: increase(flask_http_request_duration_seconds_count{status=~"5.."}[10m]) > 10
         for: 5m
         labels:
           severity: warning
@@ -22,7 +22,7 @@ groups:
           description: "过去 10 分钟 {{ $labels.method }} {{ $labels.path }} 产生了 {{ $value }} 个 5xx 错误。"
 
       - alert: HighLatency
-        expr: histogram_quantile(0.99, rate(flask_http_request_duration_seconds_bucket[5m])) > 3
+        expr: histogram_quantile(0.99, rate(flask_http_request_duration_seconds_bucket{path!="/api/health"}[5m])) > 3
         for: 5m
         labels:
           severity: warning

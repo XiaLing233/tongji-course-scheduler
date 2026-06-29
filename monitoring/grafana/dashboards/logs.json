@@ -14,7 +14,7 @@
       "gridPos": { "x": 0, "y": 0, "w": 24, "h": 6 },
       "targets": [
         {
-          "expr": "sum(count_over_time({job=\"docker\"}[1m])) by (container)",
+          "expr": "sum(count_over_time({job=\"docker\", container!~\"xk-grafana|xk-loki|xk-promtail|xk-prometheus|xk-alertmanager\"}[1m])) by (container)",
           "legendFormat": "{{container}}",
           "refId": "A"
         }
@@ -34,7 +34,7 @@
       "gridPos": { "x": 0, "y": 6, "w": 16, "h": 14 },
       "targets": [
         {
-          "expr": "{job=\"docker\"} |= \"ERROR\"",
+          "expr": "{job=\"docker\", container!~\"xk-grafana|xk-loki|xk-promtail|xk-prometheus|xk-alertmanager\"} |= \"ERROR\"",
           "refId": "A"
         }
       ],
@@ -53,7 +53,7 @@
       "gridPos": { "x": 16, "y": 6, "w": 8, "h": 14 },
       "targets": [
         {
-          "expr": "{job=\"docker\"} |~ \" 500 | 502 | 503 \"",
+          "expr": "{job=\"docker\", container=~\"xk-backend|xk-frontend\"} |~ \" 500 | 502 | 503 \"",
           "refId": "A"
         }
       ],

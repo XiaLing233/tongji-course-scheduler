@@ -20,7 +20,7 @@
       "gridPos": { "x": 0, "y": 1, "w": 12, "h": 8 },
       "targets": [
         {
-          "expr": "sum(rate(flask_http_request_total[2m])) by (method, path)",
+          "expr": "sum(rate(flask_http_request_duration_seconds_count{path!=\"/api/health\"}[2m])) by (method, path)",
           "legendFormat": "{{method}} {{path}}",
           "refId": "A"
         }
@@ -39,7 +39,7 @@
       "gridPos": { "x": 12, "y": 1, "w": 12, "h": 8 },
       "targets": [
         {
-          "expr": "sum(rate(flask_http_request_total{status=~\"5..\"}[2m])) by (path) / sum(rate(flask_http_request_total[2m])) by (path)",
+          "expr": "sum(rate(flask_http_request_duration_seconds_count{status=~\"5..\"}[2m])) by (path) / sum(rate(flask_http_request_duration_seconds_count[2m])) by (path)",
           "legendFormat": "{{path}}",
           "refId": "A"
         }
@@ -61,41 +61,69 @@
     },
     {
       "id": 3,
-      "title": "延迟 p50 / p95 / p99",
+      "title": "延迟 p50",
       "type": "timeseries",
-      "gridPos": { "x": 0, "y": 10, "w": 12, "h": 8 },
+      "gridPos": { "x": 0, "y": 10, "w": 8, "h": 8 },
       "targets": [
         {
-          "expr": "histogram_quantile(0.50, sum(rate(flask_http_request_duration_seconds_bucket[2m])) by (le, path))",
-          "legendFormat": "p50 {{path}}",
+          "expr": "histogram_quantile(0.50, sum(rate(flask_http_request_duration_seconds_bucket{path!=\"/api/health\"}[2m])) by (le, path))",
+          "legendFormat": "{{path}}",
           "refId": "A"
-        },
-        {
-          "expr": "histogram_quantile(0.95, sum(rate(flask_http_request_duration_seconds_bucket[2m])) by (le, path))",
-          "legendFormat": "p95 {{path}}",
-          "refId": "B"
-        },
-        {
-          "expr": "histogram_quantile(0.99, sum(rate(flask_http_request_duration_seconds_bucket[2m])) by (le, path))",
-          "legendFormat": "p99 {{path}}",
-          "refId": "C"
         }
       ],
       "fieldConfig": {
         "defaults": {
           "unit": "s",
-          "custom": { "lineWidth": 2, "fillOpacity": 5, "spanNulls": true }
+          "custom": { "lineWidth": 2, "fillOpacity": 5, "spanNulls": false }
         }
       }
     },
     {
       "id": 4,
-      "title": "状态码分布",
-      "type": "piechart",
-      "gridPos": { "x": 12, "y": 10, "w": 12, "h": 8 },
+      "title": "延迟 p95",
+      "type": "timeseries",
+      "gridPos": { "x": 8, "y": 10, "w": 8, "h": 8 },
       "targets": [
         {
-          "expr": "sum(increase(flask_http_request_total[1h])) by (status)",
+          "expr": "histogram_quantile(0.95, sum(rate(flask_http_request_duration_seconds_bucket{path!=\"/api/health\"}[2m])) by (le, path))",
+          "legendFormat": "{{path}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": { "lineWidth": 2, "fillOpacity": 5, "spanNulls": false }
+        }
+      }
+    },
+    {
+      "id": 5,
+      "title": "延迟 p99",
+      "type": "timeseries",
+      "gridPos": { "x": 16, "y": 10, "w": 8, "h": 8 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(flask_http_request_duration_seconds_bucket{path!=\"/api/health\"}[2m])) by (le, path))",
+          "legendFormat": "{{path}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": { "lineWidth": 2, "fillOpacity": 5, "spanNulls": false }
+        }
+      }
+    },
+    {
+      "id": 6,
+      "title": "状态码分布",
+      "type": "piechart",
+      "gridPos": { "x": 6, "y": 18, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "round(sum(increase(flask_http_request_duration_seconds_count{path!=\"/api/health\"}[1h])) by (status))",
           "legendFormat": "{{status}}",
           "refId": "A"
         }
