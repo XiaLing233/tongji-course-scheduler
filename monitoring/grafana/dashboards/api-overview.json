@@ -53,17 +53,24 @@
       }
     },
     {
+      "id": 30,
+      "type": "row",
+      "title": "排行",
+      "gridPos": { "x": 0, "y": 9, "w": 24, "h": 1 },
+      "collapsed": false
+    },
+    {
       "id": 20,
       "type": "row",
       "title": "延迟与状态码",
-      "gridPos": { "x": 0, "y": 9, "w": 24, "h": 1 },
+      "gridPos": { "x": 0, "y": 17, "w": 24, "h": 1 },
       "collapsed": false
     },
     {
       "id": 3,
       "title": "延迟 p50",
       "type": "timeseries",
-      "gridPos": { "x": 0, "y": 10, "w": 8, "h": 8 },
+      "gridPos": { "x": 0, "y": 18, "w": 8, "h": 8 },
       "targets": [
         {
           "expr": "histogram_quantile(0.50, sum(rate(flask_http_request_duration_seconds_bucket{path!=\"/api/health\"}[2m])) by (le, path))",
@@ -82,7 +89,7 @@
       "id": 4,
       "title": "延迟 p95",
       "type": "timeseries",
-      "gridPos": { "x": 8, "y": 10, "w": 8, "h": 8 },
+      "gridPos": { "x": 8, "y": 18, "w": 8, "h": 8 },
       "targets": [
         {
           "expr": "histogram_quantile(0.95, sum(rate(flask_http_request_duration_seconds_bucket{path!=\"/api/health\"}[2m])) by (le, path))",
@@ -101,7 +108,7 @@
       "id": 5,
       "title": "延迟 p99",
       "type": "timeseries",
-      "gridPos": { "x": 16, "y": 10, "w": 8, "h": 8 },
+      "gridPos": { "x": 16, "y": 18, "w": 8, "h": 8 },
       "targets": [
         {
           "expr": "histogram_quantile(0.99, sum(rate(flask_http_request_duration_seconds_bucket{path!=\"/api/health\"}[2m])) by (le, path))",
@@ -120,7 +127,7 @@
       "id": 6,
       "title": "状态码分布",
       "type": "piechart",
-      "gridPos": { "x": 6, "y": 18, "w": 12, "h": 8 },
+      "gridPos": { "x": 6, "y": 26, "w": 12, "h": 8 },
       "targets": [
         {
           "expr": "round(sum(increase(flask_http_request_duration_seconds_count{path!=\"/api/health\"}[1h])) by (status))",
@@ -137,6 +144,33 @@
         "reduceOptions": { "values": false, "calcs": ["lastNotNull"] },
         "displayLabels": ["name", "percent"],
         "legend": { "displayMode": "table", "placement": "right" }
+      }
+    },
+    {
+      "id": 7,
+      "title": "Top API (24h)",
+      "type": "table",
+      "gridPos": { "x": 0, "y": 10, "w": 12, "h": 7 },
+      "targets": [
+        {
+          "expr": "topk(8, round(sum(increase(flask_http_request_duration_seconds_count{path!=\"/api/health\"}[24h])) by (path)))",
+          "format": "table",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "align": "left", "cellOptions": { "type": "auto" } }
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "Time" }, "properties": [{ "id": "custom.hidden", "value": true }] },
+          { "matcher": { "id": "byName", "options": "path" }, "properties": [{ "id": "displayName", "value": "端点" }] },
+          { "matcher": { "id": "byName", "options": "Value" }, "properties": [{ "id": "displayName", "value": "请求数" }, { "id": "unit", "value": "short" }] }
+        ]
+      },
+      "options": {
+        "sortBy": [{ "displayName": "请求数", "desc": true }]
       }
     }
   ]
