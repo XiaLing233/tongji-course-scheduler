@@ -5,6 +5,9 @@ global:
   smtp_auth_password: '${SMTP_PASSWORD}'
   smtp_require_tls: true
 
+templates:
+  - '/etc/alertmanager/template.tmpl'
+
 route:
   receiver: email-admin
   group_by: ['alertname']
@@ -18,3 +21,4 @@ receivers:
       - to: '${SMTP_SENDER}'
         headers:
           Subject: '[选课系统告警] {{ .GroupLabels.alertname }}'
+        html: '{{ template "email.custom.html" . }}'
