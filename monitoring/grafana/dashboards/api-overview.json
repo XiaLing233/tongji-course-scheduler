@@ -61,24 +61,14 @@
     },
     {
       "id": 3,
-      "title": "延迟 p50 / p95 / p99",
+      "title": "延迟 p50",
       "type": "timeseries",
-      "gridPos": { "x": 0, "y": 10, "w": 12, "h": 8 },
+      "gridPos": { "x": 0, "y": 10, "w": 8, "h": 8 },
       "targets": [
         {
           "expr": "histogram_quantile(0.50, sum(rate(flask_http_request_duration_seconds_bucket[2m])) by (le, path))",
-          "legendFormat": "p50 {{path}}",
+          "legendFormat": "{{path}}",
           "refId": "A"
-        },
-        {
-          "expr": "histogram_quantile(0.95, sum(rate(flask_http_request_duration_seconds_bucket[2m])) by (le, path))",
-          "legendFormat": "p95 {{path}}",
-          "refId": "B"
-        },
-        {
-          "expr": "histogram_quantile(0.99, sum(rate(flask_http_request_duration_seconds_bucket[2m])) by (le, path))",
-          "legendFormat": "p99 {{path}}",
-          "refId": "C"
         }
       ],
       "fieldConfig": {
@@ -90,9 +80,47 @@
     },
     {
       "id": 4,
+      "title": "延迟 p95",
+      "type": "timeseries",
+      "gridPos": { "x": 8, "y": 10, "w": 8, "h": 8 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(flask_http_request_duration_seconds_bucket[2m])) by (le, path))",
+          "legendFormat": "{{path}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": { "lineWidth": 2, "fillOpacity": 5, "spanNulls": true }
+        }
+      }
+    },
+    {
+      "id": 5,
+      "title": "延迟 p99",
+      "type": "timeseries",
+      "gridPos": { "x": 16, "y": 10, "w": 8, "h": 8 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(flask_http_request_duration_seconds_bucket[2m])) by (le, path))",
+          "legendFormat": "{{path}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": { "lineWidth": 2, "fillOpacity": 5, "spanNulls": true }
+        }
+      }
+    },
+    {
+      "id": 6,
       "title": "状态码分布",
       "type": "piechart",
-      "gridPos": { "x": 12, "y": 10, "w": 12, "h": 8 },
+      "gridPos": { "x": 0, "y": 18, "w": 12, "h": 8 },
       "targets": [
         {
           "expr": "sum(increase(flask_http_request_total[1h])) by (status)",
