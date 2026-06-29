@@ -7,7 +7,38 @@ on:
   workflow_dispatch:
 
 jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      crawler: ${{ steps.filter.outputs.crawler }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      monitoring: ${{ steps.filter.outputs.monitoring }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+              - 'docker-compose*.yml'
+              - '.github/workflows/ci.yml'
+            crawler:
+              - 'crawler/**'
+              - 'docker-compose*.yml'
+              - '.github/workflows/ci.yml'
+            frontend:
+              - 'xkFrontendts/**'
+              - 'docker-compose*.yml'
+              - '.github/workflows/ci.yml'
+            monitoring:
+              - 'monitoring/**'
+              - 'docker-compose*.yml'
+
   backend-test:
+    needs: [detect-changes]
+    if: needs.detect-changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -18,6 +49,8 @@ jobs:
         run: docker compose -f docker-compose.test.yml logs backend
 
   crawler-test:
+    needs: [detect-changes]
+    if: needs.detect-changes.outputs.crawler == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -28,6 +61,8 @@ jobs:
         run: docker compose -f docker-compose.test.yml logs crawler
 
   frontend-typecheck:
+    needs: [detect-changes]
+    if: needs.detect-changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -41,6 +76,8 @@ jobs:
           npm run type-check
 
   frontend-test:
+    needs: [frontend-typecheck, detect-changes]
+    if: needs.detect-changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -54,8 +91,8 @@ jobs:
           npm run test
 
   build-backend:
-    needs: [backend-test, frontend-test]
-    if: github.ref == 'refs/heads/master'
+    needs: [backend-test, detect-changes]
+    if: github.ref == 'refs/heads/master' && needs.detect-changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -85,8 +122,8 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
 
   build-frontend:
-    needs: [frontend-typecheck, frontend-test]
-    if: github.ref == 'refs/heads/master'
+    needs: [frontend-typecheck, frontend-test, detect-changes]
+    if: github.ref == 'refs/heads/master' && needs.detect-changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -116,8 +153,8 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
 
   build-crawler:
-    needs: [crawler-test]
-    if: github.ref == 'refs/heads/master'
+    needs: [crawler-test, detect-changes]
+    if: github.ref == 'refs/heads/master' && needs.detect-changes.outputs.crawler == 'true'
     runs-on: ubuntu-latest
     permissions:
       packages: write
