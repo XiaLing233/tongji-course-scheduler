@@ -20,7 +20,7 @@
       "gridPos": { "x": 0, "y": 1, "w": 12, "h": 8 },
       "targets": [
         {
-          "expr": "sum(rate(flask_http_request_duration_seconds_count{path!=\"/api/health\"}[2m])) by (method, path)",
+          "expr": "sum(rate(flask_http_request_duration_seconds_count{path!=\"/api/health\"}[$__rate_interval])) by (method, path)",
           "legendFormat": "{{method}} {{path}}",
           "refId": "A"
         }
@@ -39,7 +39,7 @@
       "gridPos": { "x": 12, "y": 1, "w": 12, "h": 8 },
       "targets": [
         {
-          "expr": "sum(rate(flask_http_request_duration_seconds_count{status=~\"5..\"}[2m])) by (path) / sum(rate(flask_http_request_duration_seconds_count[2m])) by (path)",
+          "expr": "sum(rate(flask_http_request_duration_seconds_count{status=~\"5..\"}[$__rate_interval])) by (path) / sum(rate(flask_http_request_duration_seconds_count[$__rate_interval])) by (path)",
           "legendFormat": "{{path}}",
           "refId": "A"
         }
@@ -73,7 +73,7 @@
       "gridPos": { "x": 0, "y": 18, "w": 8, "h": 8 },
       "targets": [
         {
-          "expr": "histogram_quantile(0.50, sum(rate(flask_http_request_duration_seconds_bucket{path!=\"/api/health\"}[2m])) by (le, path))",
+          "expr": "histogram_quantile(0.50, sum(rate(flask_http_request_duration_seconds_bucket{path!=\"/api/health\"}[$__rate_interval])) by (le, path))",
           "legendFormat": "{{path}}",
           "refId": "A"
         }
@@ -92,7 +92,7 @@
       "gridPos": { "x": 8, "y": 18, "w": 8, "h": 8 },
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(flask_http_request_duration_seconds_bucket{path!=\"/api/health\"}[2m])) by (le, path))",
+          "expr": "histogram_quantile(0.95, sum(rate(flask_http_request_duration_seconds_bucket{path!=\"/api/health\"}[$__rate_interval])) by (le, path))",
           "legendFormat": "{{path}}",
           "refId": "A"
         }
@@ -111,7 +111,7 @@
       "gridPos": { "x": 16, "y": 18, "w": 8, "h": 8 },
       "targets": [
         {
-          "expr": "histogram_quantile(0.99, sum(rate(flask_http_request_duration_seconds_bucket{path!=\"/api/health\"}[2m])) by (le, path))",
+          "expr": "histogram_quantile(0.99, sum(rate(flask_http_request_duration_seconds_bucket{path!=\"/api/health\"}[$__rate_interval])) by (le, path))",
           "legendFormat": "{{path}}",
           "refId": "A"
         }
@@ -130,7 +130,7 @@
       "gridPos": { "x": 6, "y": 26, "w": 12, "h": 8 },
       "targets": [
         {
-          "expr": "round(sum(increase(flask_http_request_duration_seconds_count{path!=\"/api/health\"}[1h])) by (status))",
+          "expr": "round(sum(increase(flask_http_request_duration_seconds_count{path!=\"/api/health\"}[$__range])) by (status))",
           "legendFormat": "{{status}}",
           "refId": "A"
         }
@@ -148,12 +148,12 @@
     },
     {
       "id": 7,
-      "title": "Top API (24h)",
+      "title": "Top API",
       "type": "table",
       "gridPos": { "x": 0, "y": 10, "w": 12, "h": 7 },
       "targets": [
         {
-          "expr": "topk(8, round(sum(increase(flask_http_request_duration_seconds_count{path!=\"/api/health\"}[24h])) by (path)))",
+          "expr": "topk(8, round(sum(increase(flask_http_request_duration_seconds_count{path!=\"/api/health\"}[$__range])) by (path)))",
           "format": "table",
           "instant": true,
           "refId": "A"
