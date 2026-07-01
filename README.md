@@ -1,36 +1,150 @@
-# TONGJI-COURSE-SCHEDULER
+# 同济排课助手
+
+同济大学 1 系统（选课平台）的第三方课程浏览与排课模拟工具。提供比官方系统更友好的课程检索、课表编排、冲突检测和导出功能。
+
+## 动机
+
+1 系统的官方选课界面体验不佳：课程搜索繁琐、无法提前模拟排课、不支持课表导出。本项目最初是 *just a hobby*，后来逐步演进为功能完整的选课辅助网站，每学期稳定服务数百名同济学生。
+
+核心目标：
+
+- **提前规划**：在正式选课前浏览所有学期的课程，模拟编排课表
+- **冲突检测**：自动检测时间冲突，避免选课时的意外
+- **数据同步**：每周自动爬取 1 系统最新课程数据，保持信息准确
+- **开放生态**：支持导出到 WakeUp 课程表等第三方工具
+
+## 技术栈
+
+| 层 | 技术 |
+|---|------|
+| 前端 | Vue 3 + TypeScript + Vite + Ant Design Vue + Tailwind CSS |
+| 后端 | Python 3.11 + Flask + Gunicorn (gevent) |
+| 爬虫 | Python 3.11 + requests + BeautifulSoup + PyCryptodome |
+| 数据库 | MariaDB |
+| 缓存 / 流 | Redis |
+| 监控 | Prometheus + Grafana + Loki + Alertmanager + Promtail |
+| CI/CD | GitHub Actions + Docker + GitHub Container Registry |
+| 文档 | Vitepress |
 
 ## 使用方法
 
-访问[网站](https://xk.xialing.icu)。
+访问 **[xk.xialing.icu](https://xk.xialing.icu)**。
 
-## 单机调试方法
+详细使用指南见 [用户文档](https://xk.xialing.icu/docs/user/)。
 
-1. **配置环境**。推荐使用 `conda` 进行环境配置，创建一个虚拟环境，运行 `pip install -r requirements.txt`，使用 `backend` 或者 `crawler` 下的均可，二者内容相同；
-2. **配置文件设定**。在 `backend` 和 `crawler` 文件夹下，分别新建 `config.ini` 文件，具体字段如 `config.ini.template` 所示，需要替换为你的相关信息。关键在于补充你的学号、密码，以及 MySQL 的用户与密码，邮件部分的配置可以忽略，不影响本地调试；
-3. **数据库初始化**。先在 `crawler` 下执行 `initNewDB.py` 初始化一个数据库，并给用户赋予权限（若嫌麻烦，账户可以全写 root）；
-4. **数据获取**。还是在 `crawler` 下执行 `fetchCourseList.py`，它会根据 `config.ini` 中设定的学期和深度爬取最近几个学期的信息，请耐心等待。理论上可以通过多线程等方式优化速度，但为了避免爬坏济网，采取当前的策略；
-5. **启动后端**。在项目**根目录**下运行 `docker compose up -d --build` 运行后端容器；
-6. **启动前端**。在 `xkFrontendts` 下运行 `npm install` 安装依赖，之后运行 `npm run dev` 启动前端，并在浏览器中访问页面。
+## 本地开发
 
-## 部署项目
+### 环境要求
 
-### 前端
+如果使用容器，则只需要准备
 
-1. 运行 `npm run build`，将前端在 `dist` 下的构建产物移动到服务器 `/var/www` 下；
-2. 配置 nginx，在 `/etc/sites-available` 下增加一个 server 块配置文件，并软链接到 `sites-enabled`；
-3. （可选）购买域名与通过 `certbot` 配置 HTTPS 证书。
+- Docker + Docker Compose
 
-### 后端
+如果希望不使用容器，则需要为前后端准备依赖（不推荐）
 
-和本地调试的方法无差别。
+- Node.js 24+（前端开发）
+- Python 3.11（可选，用于不使用 Docker 调试后端/爬虫）
 
-### 数据库
+### 快速启动
 
-1. 需要将数据库的绑定地址修改为 `0.0.0.0`，这样容器中的后端才能够连接到数据库（为了安全，可以在云服务商的防火墙中配置禁止外网访问 3306）；
-2. 其余方式和本地调试相同，可能需要掌握通过 CLI 的方式与数据库交互，而不是 GUI 界面。
+```bash
+# 1. 配置文件
+cp .env.example .env   # 填写 DB_PASSWORD 等必要字段
 
-## 自动化相关
+# 2. 启动业务服务（mysql + redis + backend + frontend）
+docker compose up -d --build
 
-1. **CI/CD流水线**。使用 Github Actions，每当项目的代码更新后，ssh 到服务器，进行项目的更新（前端复制构建产物，后端重启容器）；
-2. **定时爬取**。使用 crontab 定时任务，每周六早 7 点同步课程数据；
+# 如需监控（Prometheus + Grafana + Loki...），加上监控文件：
+# docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d --build
+
+# 3. 访问
+# 前端 http://localhost:1239
+# 监控 http://localhost:1239/grafana/
+```
+
+此时数据库为空，需要爬取课程数据：
+
+```bash
+# 爬取指定学期（可多个）
+docker compose run --rm crawler -c 122
+docker compose run --rm crawler -c 122 121 -m "手动同步"
+```
+
+> Voilà!
+
+### 运行测试
+
+```bash
+# 后端测试
+docker compose -f docker-compose.test.yml up --build backend --exit-code-from backend
+
+# 爬虫测试
+docker compose -f docker-compose.test.yml up --build crawler --exit-code-from crawler
+```
+
+### Docker Compose 文件说明
+
+项目提供了三个 compose 文件，用于不同场景：
+
+| 文件 | 用途 | 启动方式 |
+|------|------|----------|
+| `docker-compose.yml` | **生产部署**。包含 mysql + redis + backend + frontend，crawler 通过 `--profile crawler` 按需运行 | `docker compose up -d` |
+| `docker-compose.test.yml` | **CI 测试**。每个服务使用独立 DB 实例，通过 pytest 入口运行测试，退出后容器自动停止 | `docker compose -f docker-compose.test.yml up --build backend` |
+| `docker-compose.monitoring.yml` | **监控套件**。Prometheus + Grafana + Loki + Alertmanager，并为 backend 开启 `/metrics` 端点。部署时始终与主文件共同使用 | `docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d` |
+
+### 项目结构
+
+```
+tongji-course-scheduler/
+├── backend/             # Flask 后端 API
+│   ├── db/              #   数据库访问层（连接池、路由、查询）
+│   ├── routes/          #   API 路由（basic、course、status）
+│   ├── utils/           #   工具（Redis 缓存、响应格式）
+│   ├── tests/           #   pytest 测试
+│   ├── app.py           #   入口
+│   └── Dockerfile
+├── crawler/             # 课程数据爬虫
+│   ├── auth/            #   登录认证与加密
+│   ├── meru/            #   邮件收发（IMAP/SMTP）
+│   ├── db/              #   蓝绿部署、数据写入、日志发布
+│   ├── tests/           #   pytest 测试
+│   ├── fetchCourseList.py  # 入口
+│   └── Dockerfile
+├── xkFrontendts/        # Vue 3 前端 SPA
+│   └── Dockerfile       #   多阶段构建（node 构建 + nginx 运行）
+├── monitoring/          # 可观测性配置
+│   ├── prometheus/      #   Prometheus 采集规则 + 告警规则
+│   ├── grafana/         #   Grafana 仪表板 + 数据源
+│   ├── alertmanager/    #   Alertmanager 邮件告警模板
+│   ├── loki/            #   Loki 日志聚合配置
+│   └── promtail/        #   Promtail 日志采集配置
+├── xkDocs/              # Vitepress 文档站
+├── .github/workflows/   # CI/CD 流水线
+├── docker-compose.yml
+├── docker-compose.test.yml
+└── docker-compose.monitoring.yml
+```
+
+## 部署
+
+项目通过 GitHub Actions 自动部署到生产服务器：
+
+1. **代码推送** → 路径过滤检测变更的组件
+2. **运行测试**（backend / crawler / frontend）
+3. **构建 Docker 镜像**并推送到 ghcr.io
+4. **SSH 到服务器**，`git pull && docker compose pull && docker compose up -d`
+
+生产部署命令（监控与业务服务同时启动）：
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
+```
+
+## 自动化
+
+- **CI/CD**：GitHub Actions（`.github/workflows/ci.yml`），路径过滤 → 测试 → 构建镜像 → 部署。仅变更的组件触发对应流程，deploy 在有任一组件构建成功时执行。
+- **定时爬取**：服务器 crontab 每周六 7:00 AM 执行 `docker compose run --rm crawler -c <最新学期>`，自动同步最新课程数据。
+
+## 许可证
+
+GLWTPL (Good Luck With That Public License)
