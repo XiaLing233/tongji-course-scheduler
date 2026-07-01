@@ -185,7 +185,7 @@ jobs:
 
   deploy:
     needs: [build-backend, build-frontend, build-crawler]
-    if: github.ref == 'refs/heads/master'
+    if: github.ref == 'refs/heads/master' && !failure()
     runs-on: ubuntu-latest
     steps:
       - name: Setup SSH
