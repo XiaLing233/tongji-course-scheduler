@@ -22,7 +22,7 @@
 | 爬虫 | Python 3.11 + requests + BeautifulSoup + PyCryptodome |
 | 数据库 | MariaDB |
 | 缓存 / 流 | Redis |
-| 监控 | Prometheus + Grafana + Loki + Alertmanager |
+| 监控 | Prometheus + Grafana + Loki + Alertmanager + Promtail |
 | CI/CD | GitHub Actions + Docker + GitHub Container Registry |
 | 文档 | Vitepress |
 
@@ -51,11 +51,15 @@
 # 1. 配置文件
 cp .env.example .env   # 填写 DB_PASSWORD 等必要字段
 
-# 2. 启动全部服务（mysql + redis + backend + frontend）
+# 2. 启动业务服务（mysql + redis + backend + frontend）
 docker compose up -d --build
 
-# 3. 访问前端
-# http://localhost:1239
+# 如需监控（Prometheus + Grafana + Loki...），加上监控文件：
+# docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d --build
+
+# 3. 访问
+# 前端 http://localhost:1239
+# 监控 http://localhost:1239/grafana/
 ```
 
 此时数据库为空，需要爬取课程数据：
@@ -65,6 +69,8 @@ docker compose up -d --build
 docker compose run --rm crawler -c 122
 docker compose run --rm crawler -c 122 121 -m "手动同步"
 ```
+
+> Voilà!
 
 ### 运行测试
 
