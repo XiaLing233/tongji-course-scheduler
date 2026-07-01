@@ -42,12 +42,12 @@
     },
     {
       "id": 2,
-      "title": "请求数 (24h)",
+      "title": "请求数",
       "type": "stat",
       "gridPos": { "x": 8, "y": 1, "w": 8, "h": 4 },
       "targets": [
         {
-          "expr": "sum(increase(flask_http_request_duration_seconds_count{path!=\"/api/health\"}[24h]))",
+          "expr": "sum(increase(flask_http_request_duration_seconds_count{path!=\"/api/health\"}[$__range]))",
           "refId": "A"
         }
       ],
@@ -65,7 +65,7 @@
       "gridPos": { "x": 16, "y": 1, "w": 8, "h": 4 },
       "targets": [
         {
-          "expr": "histogram_quantile(0.50, sum(rate(flask_http_request_duration_seconds_bucket[5m])) by (le))",
+          "expr": "histogram_quantile(0.50, sum(rate(flask_http_request_duration_seconds_bucket[$__rate_interval])) by (le))",
           "refId": "A"
         }
       ],
@@ -90,7 +90,7 @@
       "gridPos": { "x": 0, "y": 6, "w": 24, "h": 8 },
       "targets": [
         {
-          "expr": "sum(rate(flask_http_request_duration_seconds_count{path!=\"/api/health\"}[2m]))",
+          "expr": "sum(rate(flask_http_request_duration_seconds_count{path!=\"/api/health\"}[$__rate_interval]))",
           "legendFormat": "QPS",
           "refId": "A"
         }
@@ -109,7 +109,7 @@
       "gridPos": { "x": 0, "y": 14, "w": 24, "h": 8 },
       "targets": [
         {
-          "expr": "sum(increase(flask_http_request_duration_seconds_bucket{path!=\"/api/health\"}[5m])) by (le)",
+          "expr": "sum(increase(flask_http_request_duration_seconds_bucket{path!=\"/api/health\"}[$__rate_interval])) by (le)",
           "format": "heatmap",
           "refId": "A"
         }
