@@ -42,7 +42,8 @@ CREATE TABLE `major` (
   `code` varchar(200) DEFAULT NULL,
   `grade` int DEFAULT NULL,
   `name` varchar(200) DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `major_code_grade_idx` (`code`, `grade`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE `coursedetail` (
@@ -71,6 +72,7 @@ CREATE TABLE `coursedetail` (
   KEY `campusKey_idx` (`campus`),
   KEY `facultyKey_idx` (`faculty`),
   KEY `langKey_idx` (`teachingLanguage`),
+  KEY `courseCode_idx` (`courseCode`),
   CONSTRAINT `assessKey` FOREIGN KEY (`assessmentMode`) REFERENCES `assessment` (`assessmentMode`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `campusKey` FOREIGN KEY (`campus`) REFERENCES `campus` (`campus`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `facultyKey` FOREIGN KEY (`faculty`) REFERENCES `faculty` (`faculty`) ON DELETE CASCADE ON UPDATE CASCADE,
@@ -85,6 +87,7 @@ CREATE TABLE `majorandcourse` (
   PRIMARY KEY (`id`),
   KEY `courseKey_idx` (`courseId`),
   KEY `majorKeyForMajor_idx` (`majorId`),
+  KEY `course_major_idx` (`courseId`, `majorId`),
   CONSTRAINT `courseKeyForMajor` FOREIGN KEY (`courseId`) REFERENCES `coursedetail` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `majorKeyForMajor` FOREIGN KEY (`majorId`) REFERENCES `major` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
@@ -97,5 +100,7 @@ CREATE TABLE `teacher` (
   `arrangeInfoText` mediumtext,
   PRIMARY KEY (`id`),
   KEY `classKey_idx` (`teachingClassId`),
+  KEY `teacherName_idx` (`teacherName`),
+  KEY `teacherCode_idx` (`teacherCode`),
   CONSTRAINT `courseKey` FOREIGN KEY (`teachingClassId`) REFERENCES `coursedetail` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
