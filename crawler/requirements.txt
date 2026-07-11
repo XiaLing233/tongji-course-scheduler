@@ -2,6 +2,6 @@ mysql-connector-python==9.2.0
 requests==2.33.0
 beautifulsoup4==4.13.5
 pycryptodome==3.21.0
-python-dotenv==1.2.1
+python-dotenv==1.2.2
 pytest==9.0.3
 redis==5.2.1
