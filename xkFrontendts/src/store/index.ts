@@ -249,7 +249,7 @@ const store = createStore({
         setDataOutdated(state: StoreState, payload: boolean) {
             state.flags.isDataOutdated = payload;
         },
-        syncLatestData(state: StoreState) {
+        clearAndSync(state: StoreState) {
             const cid = state.majorSelected.calendarId;
             state.commonLists.stagedCourses = [];
             state.commonLists.selectedCourses = [];
@@ -257,7 +257,11 @@ const store = createStore({
             state.occupied = Array(12).fill(null).map(() => Array(7).fill(undefined).map(() => []));
             state.clickedCourseInfo = { courseCode: '', courseName: '' };
             state.updateTime = state.latestUpdateTime;
-            if (cid) _snapWrite(cid, { updateTime: state.latestUpdateTime });
+            if (cid) _snapWrite(cid, {
+                grade: state.majorSelected.grade,
+                major: state.majorSelected.major,
+                updateTime: state.latestUpdateTime
+            });
             state.flags.isDataOutdated = false;
         },
         smartSyncCourses(state: StoreState, payload: {
@@ -273,6 +277,8 @@ const store = createStore({
             state.timeTableData = payload.newTimeTableData;
             state.updateTime = state.latestUpdateTime;
             if (cid) _snapWrite(cid, {
+                grade: state.majorSelected.grade,
+                major: state.majorSelected.major,
                 stagedCourses: payload.newStagedCourses,
                 selectedCourses: payload.newSelectedCodes,
                 occupied: payload.newOccupied,

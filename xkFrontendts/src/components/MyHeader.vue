@@ -160,7 +160,7 @@ export default {
                         okType: 'primary',
                         cancelText: '取消',
                         onOk: () => {
-                            this.$store.commit("syncLatestData");
+                            this.$store.commit("clearAndSync");
                             successNotify("已同步最新数据");
                         }
                     });
@@ -302,7 +302,7 @@ export default {
                     okType: 'danger',
                     cancelText: '稍后重试',
                     onOk: () => {
-                        this.$store.commit("syncLatestData");
+                        this.$store.commit("clearAndSync");
                         successNotify("已清空课程并同步最新数据");
                     }
                 });
