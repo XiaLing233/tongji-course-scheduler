@@ -62,7 +62,7 @@ export default {
 
                 if (this.$store.state.updateTime === '') {
                     // 初次加载，不弹窗
-                    this.$store.commit("syncLatestData");
+                    this.$store.commit("clearAndSync");
                     return;
                 }
                 else if (isUpToDate(this.$store.state.updateTime, res.data.data)) {
@@ -104,7 +104,7 @@ export default {
 
                 // 如果没有课程，提示用户直接更新时间
                 if (stagedCourses.length === 0 && selectedCourses.length === 0) {
-                    this.$store.commit("syncLatestData");  // 静默更新时间
+                    this.$store.commit("clearAndSync");  // 静默更新时间
                     return;
                 }
 
@@ -232,7 +232,7 @@ export default {
                     okType: 'danger',
                     cancelText: '稍后处理',
                     onOk: async () => {
-                        this.$store.commit("syncLatestData");
+                        this.$store.commit("clearAndSync");
                         await this.waitForSpinEnd();
                         successNotify("缓存已清除，请重新选择课程");
                     }
