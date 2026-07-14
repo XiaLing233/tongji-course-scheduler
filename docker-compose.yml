@@ -11,7 +11,7 @@ services:
       - mysql_data:/var/lib/mysql
       - ./crawler/meta_template.sql:/docker-entrypoint-initdb.d/01_meta.sql:ro
     healthcheck:
-      test: ["CMD", "mariadb-admin", "-uroot", "-p$MYSQL_ROOT_PASSWORD", "ping", "-h", "localhost"]
+      test: ["CMD-SHELL", "mariadb-admin -uroot -p\"$$MYSQL_ROOT_PASSWORD\" ping -h localhost"]
       interval: 10s
       timeout: 5s
       retries: 5
