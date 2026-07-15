@@ -4,7 +4,7 @@ from datetime import datetime
 from flask import Blueprint, request
 
 from bckndSql import bckndSql
-from utils.bckndTools import arrangementTextToObj, splitEndline, optCourseQueryListGenerator
+from utils.bckndTools import optCourseQueryListGenerator, processArrangements
 from utils.response import ok, err
 from utils.redis_cache import cache_get, cache_set, cache_key
 
@@ -78,40 +78,8 @@ def query_courses(calendar_id):
         with bckndSql(calendar_id=calendar_id) as sql:
             result = sql.findCourseByMajor(grade, major)
 
-        # 处理 result 中的 locations 字段
-        # 由于 locations 字段是一个字符串，需要转换为数组
-        # 形如：关佶红(05222) 星期一3-4节 [1-17] 南129\n关佶红(05222) 星期三3-4节 [1-17单] 北301\n
-
         for res in result:
-            for course in res['courses']:
-                course['arrangementInfo'] = []
-                for location in splitEndline(course['locations']):
-                    course['arrangementInfo'].append(arrangementTextToObj(location))
-                # 按照星期（occupyDay）和节次（occupyTime第一节）排序
-                course['arrangementInfo'].sort(key=lambda x: (x['occupyDay'], x['occupyTime'][0] if x['occupyTime'] else 0))
-                del course['locations']
-
-        # 对于 code 相同的课程，合并 arrangementInfo
-        for res in result:
-            res['courses'] = sorted(res['courses'], key=lambda x: x['code'])  # 先排序
-
-            # 合并相同课号的课程
-            merged_courses = []
-            current_course = None
-            for course in res['courses']:
-                if not current_course or current_course['code'] != course['code']:
-                    merged_courses.append(course)
-                    current_course = course
-                else:
-                    # 如果arrangementInfo不同，则合并（去重）
-                    if current_course['arrangementInfo'] != course['arrangementInfo']:
-                        # 使用字典来去重 arrangementInfo（基于 arrangementText）
-                        existing_texts = {item['arrangementText'] for item in current_course['arrangementInfo']}
-                        for item in course['arrangementInfo']:
-                            if item['arrangementText'] not in existing_texts:
-                                current_course['arrangementInfo'].append(item)
-                                existing_texts.add(item['arrangementText'])
-            res['courses'] = merged_courses
+            processArrangements(res['courses'])
 
         cache_set(ck, result, 'hot')
         return ok(result)
@@ -167,36 +135,11 @@ def batch_course_detail(calendar_id):
     with bckndSql(calendar_id=calendar_id) as sql:
         result = sql.findCourseDetailByCode(codes)
 
-    def process(course_list):
-        for course in course_list:
-            course['arrangementInfo'] = []
-            for location in splitEndline(course['locations']):
-                course['arrangementInfo'].append(arrangementTextToObj(location))
-            course['arrangementInfo'].sort(key=lambda x: (x['occupyDay'], x['occupyTime'][0] if x['occupyTime'] else 0))
-            del course['locations']
+    for course_list in result.values():
+        processArrangements(course_list)
 
-        course_list = sorted(course_list, key=lambda x: x['code'])
-        merged = []
-        current = None
-        for course in course_list:
-            if not current or current['code'] != course['code']:
-                merged.append(course)
-                current = course
-            else:
-                if current['arrangementInfo'] != course['arrangementInfo']:
-                    existing_texts = {item['arrangementText'] for item in current['arrangementInfo']}
-                    for item in course['arrangementInfo']:
-                        if item['arrangementText'] not in existing_texts:
-                            current['arrangementInfo'].append(item)
-                            existing_texts.add(item['arrangementText'])
-        return merged
-
-    processed = {}
-    for course_code, course_list in result.items():
-        processed[course_code] = process(course_list)
-
-    cache_set(ck, processed, 'normal')
-    return ok(processed)
+    cache_set(ck, result, 'normal')
+    return ok(result)
 
 
 # ================================================================
@@ -261,49 +204,13 @@ def batch_course_info(calendar_id):
         return ok(cached)
 
     with bckndSql(calendar_id=calendar_id) as sql:
-        result_dict = sql.getLatestCourseInfo(major_course_codes, other_course_codes, major_info)
+        result = sql.getLatestCourseInfo(major_course_codes, other_course_codes, major_info)
 
-        # Process arrangement info for each course code
-        for course_code, course_details in result_dict.items():
-            for detail in course_details:
-                if 'arrangementInfo' in detail and isinstance(detail['arrangementInfo'], str):
-                    # Parse arrangement text - split into list and convert each element
-                    arrangement_text = detail['arrangementInfo']
-                    detail['arrangementInfo'] = []
-                    for location in splitEndline(arrangement_text):
-                        detail['arrangementInfo'].append(arrangementTextToObj(location))
+        for course_details in result.values():
+            processArrangements(course_details, source_key='arrangementInfo')
 
-                    # Sort by day and time
-                    detail['arrangementInfo'].sort(key=lambda x: (x['occupyDay'], x['occupyTime'][0] if x['occupyTime'] else 0))
-
-            # 对于每个课程代码，合并相同 code 的课程（教学班号）
-            if course_details:
-                # 先按 code 排序
-                course_details.sort(key=lambda x: x['code'])
-
-                # 合并相同 code 的课程
-                merged_details = []
-                current_detail = None
-
-                for detail in course_details:
-                    if not current_detail or current_detail['code'] != detail['code']:
-                        merged_details.append(detail)
-                        current_detail = detail
-                    else:
-                        # 合并 arrangementInfo（去重）
-                        if current_detail['arrangementInfo'] != detail['arrangementInfo']:
-                            existing_texts = {item['arrangementText'] for item in current_detail['arrangementInfo']}
-                            for item in detail['arrangementInfo']:
-                                if item['arrangementText'] not in existing_texts:
-                                    current_detail['arrangementInfo'].append(item)
-                                    existing_texts.add(item['arrangementText'])
-
-                            # 重新排序合并后的 arrangementInfo
-                            current_detail['arrangementInfo'].sort(key=lambda x: (x['occupyDay'], x['occupyTime'][0] if x['occupyTime'] else 0))
-                result_dict[course_code] = merged_details
-
-    cache_set(ck, result_dict, 'normal')
-    return ok(result_dict)
+    cache_set(ck, result, 'normal')
+    return ok(result)
 
 
 # ================================================================

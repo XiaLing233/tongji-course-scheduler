@@ -6,7 +6,7 @@ services:
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-}
       MYSQL_ROOT_HOST: "%"
       TZ: Asia/Shanghai
-    command: --default-time-zone=+08:00
+    command: --default-time-zone=+08:00 --slow-query-log=1 --long-query-time=1
     volumes:
       - mysql_data:/var/lib/mysql
       - ./crawler/meta_template.sql:/docker-entrypoint-initdb.d/01_meta.sql:ro
