@@ -62,9 +62,9 @@ class CourseQueries(ReadConnection):
             'courseNature', JSON_ARRAYAGG(DISTINCT n.courseLabelName),
             'courses', JSON_ARRAYAGG(JSON_OBJECT(
                 'code', c.code,
-                'teachers', teachers.teachers,
+                'teachers', teacher_info.teachers,
                 'campus', ca.campusI18n,
-                'locations', locations.locations,
+                'locations', teacher_info.locations,
                 'teachingLanguage', l.teachingLanguageI18n,
                 'isExclusive', IF(mac_exclusive.majorId IS NOT NULL, TRUE, FALSE)
             ))
@@ -79,13 +79,10 @@ class CourseQueries(ReadConnection):
                    JSON_ARRAYAGG(JSON_OBJECT(
                        'teacherCode', t.teacherCode,
                        'teacherName', t.teacherName
-                   )) AS teachers
+                   )) AS teachers,
+                   GROUP_CONCAT(DISTINCT t.arrangeInfoText SEPARATOR '') AS locations
             FROM teacher AS t GROUP BY t.teachingClassid
-        ) AS teachers ON c.id = teachers.teachingClassid
-        JOIN (
-            SELECT t.teachingClassid, GROUP_CONCAT(DISTINCT t.arrangeInfoText SEPARATOR '') AS locations
-            FROM teacher AS t GROUP BY t.teachingClassid
-        ) AS locations ON c.id = locations.teachingClassid
+        ) AS teacher_info ON c.id = teacher_info.teachingClassid
         JOIN (
             SELECT DISTINCT c.courseCode as myCode, m.grade, m.id as targetMajorId
             FROM major AS m
@@ -169,9 +166,9 @@ class CourseQueries(ReadConnection):
         query = f"""
         SELECT c.courseCode, JSON_OBJECT(
             'code', c.code,
-            'teachers', teachers.teachers,
+            'teachers', teacher_info.teachers,
             'campus', ca.campusI18n,
-            'locations', locations.locations,
+            'locations', teacher_info.locations,
             'teachingLanguage', l.teachingLanguageI18n
         )
         FROM coursedetail as c
@@ -182,13 +179,10 @@ class CourseQueries(ReadConnection):
                    JSON_ARRAYAGG(JSON_OBJECT(
                        'teacherCode', t.teacherCode,
                        'teacherName', t.teacherName
-                   )) AS teachers
+                   )) AS teachers,
+                   GROUP_CONCAT(DISTINCT t.arrangeInfoText SEPARATOR '') AS locations
             FROM teacher AS t GROUP BY t.teachingClassid
-        ) AS teachers ON c.id = teachers.teachingClassid
-        JOIN (
-            SELECT t.teachingClassid, GROUP_CONCAT(DISTINCT t.arrangeInfoText SEPARATOR '') AS locations
-            FROM teacher AS t GROUP BY t.teachingClassid
-        ) AS locations ON c.id = locations.teachingClassid
+        ) AS teacher_info ON c.id = teacher_info.teachingClassid
         WHERE c.courseCode IN ({placeholders})
         """
         self.cursor.execute(query, tuple(codes))
@@ -297,10 +291,10 @@ class CourseQueries(ReadConnection):
             query = f"""
             SELECT c.courseCode, JSON_OBJECT(
                 'code', c.code,
-                'teachers', teachers.teachers,
+                'teachers', teacher_info.teachers,
                 'campusI18n', ca.campusI18n,
                 'teachingLanguageI18n', l.teachingLanguageI18n,
-                'arrangementInfo', locations.locations,
+                'arrangementInfo', teacher_info.locations,
                 'isExclusive', IF(mac_exclusive.majorId IS NOT NULL, TRUE, FALSE)
             )
             FROM coursedetail as c
@@ -310,12 +304,10 @@ class CourseQueries(ReadConnection):
                 SELECT t.teachingClassid,
                        JSON_ARRAYAGG(JSON_OBJECT(
                            'teacherCode', t.teacherCode, 'teacherName', t.teacherName
-                       )) as teachers
+                       )) as teachers,
+                       GROUP_CONCAT(DISTINCT t.arrangeInfoText SEPARATOR '') as locations
                 FROM teacher as t GROUP BY t.teachingClassid
-            ) as teachers ON c.id = teachers.teachingClassid
-            JOIN (
-                SELECT t.teachingClassid, t.arrangeInfoText as locations FROM teacher as t
-            ) as locations ON c.id = locations.teachingClassid
+            ) as teacher_info ON c.id = teacher_info.teachingClassid
             LEFT JOIN (
                 SELECT DISTINCT c2.id as courseId, m2.id as targetMajorId
                 FROM major AS m2
@@ -340,10 +332,10 @@ class CourseQueries(ReadConnection):
             query = f"""
             SELECT c.courseCode, JSON_OBJECT(
                 'code', c.code,
-                'teachers', teachers.teachers,
+                'teachers', teacher_info.teachers,
                 'campusI18n', ca.campusI18n,
                 'teachingLanguageI18n', l.teachingLanguageI18n,
-                'arrangementInfo', locations.locations
+                'arrangementInfo', teacher_info.locations
             )
             FROM coursedetail as c
             JOIN campus as ca ON c.campus = ca.campus
@@ -352,12 +344,10 @@ class CourseQueries(ReadConnection):
                 SELECT t.teachingClassid,
                        JSON_ARRAYAGG(JSON_OBJECT(
                            'teacherCode', t.teacherCode, 'teacherName', t.teacherName
-                       )) as teachers
+                       )) as teachers,
+                       GROUP_CONCAT(DISTINCT t.arrangeInfoText SEPARATOR '') as locations
                 FROM teacher as t GROUP BY t.teachingClassid
-            ) as teachers ON c.id = teachers.teachingClassid
-            JOIN (
-                SELECT t.teachingClassid, t.arrangeInfoText as locations FROM teacher as t
-            ) as locations ON c.id = locations.teachingClassid
+            ) as teacher_info ON c.id = teacher_info.teachingClassid
             WHERE c.courseCode IN ({placeholders})
             """
             self.cursor.execute(query, tuple(otherCourseCodes))

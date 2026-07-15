@@ -36,7 +36,9 @@ def seed_data(db_config, test_meta_conn, test_cal_a_conn):
               "(1004, '99900001', '01班', 848, 2, 1, '999000', '测试选修课', 2.0, 1, '000034'),"
               "(2001, '10039501', '01班', 951, 1, 3, '100395', '编译原理', 3.0, 1, '000722'),"
               "(2002, '10039503', '03班', 951, 1, 3, '100395', '编译原理', 3.0, 1, '000722'),"
-              "(2003, '02052701', '01班', 951, 2, 1, '020527', '建筑设计Ⅰ（英）', 4.0, 8, '000163')")
+              "(2003, '02052701', '01班', 951, 2, 1, '020527', '建筑设计Ⅰ（英）', 4.0, 8, '000163'),"
+              # 部分重叠排课：两个教师的安排文本不完全相同，但共享同一行（生产环境真实 case）
+              "(3001, '51111201', '01班', 958, 1, 1, '511112', '生命的省思——如何过好这一生', 2.0, 1, '000034')")
 
     # 教师（含多教师场景）
     c.execute("INSERT INTO teacher VALUES "
@@ -51,7 +53,10 @@ def seed_data(db_config, test_meta_conn, test_cal_a_conn):
               # 建筑设计Ⅰ — 共同排课：3个老师，完全相同
               "(3201, 2003, '14022', '李彦伯', '李彦伯(14022),陈洁(22211),俞泳(99078) 星期三5-8节 [1-16] 学院专教C203\\n'),"
               "(3202, 2003, '22211', '陈洁', '李彦伯(14022),陈洁(22211),俞泳(99078) 星期三5-8节 [1-16] 学院专教C203\\n'),"
-              "(3203, 2003, '99078', '俞泳', '李彦伯(14022),陈洁(22211),俞泳(99078) 星期三5-8节 [1-16] 学院专教C203\\n')")
+              "(3203, 2003, '99078', '俞泳', '李彦伯(14022),陈洁(22211),俞泳(99078) 星期三5-8节 [1-16] 学院专教C203\\n'),"
+              # 部分重叠排课：赵盈和李舒怡，共享 [6] 南310 但各有独自安排
+              "(3301, 3001, '07048', '赵盈', '赵盈(07048),李舒怡(21088) 星期三9-10节 [6] 南310\\n赵盈(07048) 星期三9-10节 [1 7-16] 南310\\n'),"
+              "(3302, 3001, '21088', '李舒怡', '李舒怡(21088) 星期三9-10节 [2-5] 南310\\n赵盈(07048),李舒怡(21088) 星期三9-10节 [6] 南310\\n')")
 
     # 专业
     c.execute("INSERT INTO major (id, code, grade, name) VALUES "
@@ -224,6 +229,35 @@ class TestCourseDetails:
         assert resp.status_code == 400
 
 
+class TestCourseDetails:
+    def test_batch_details(self, client, seed_data):
+        resp = client.post('/api/calendars/999/courses/details',
+                           json={'courseCodes': ['340012']})
+        assert resp.status_code == 200
+        assert '340012' in resp.json['data']
+
+    def test_batch_details_empty(self, client):
+        resp = client.post('/api/calendars/999/courses/details',
+                           json={'courseCodes': []})
+        assert resp.status_code == 400
+
+    def test_partial_overlap_dedup(self, client, seed_data):
+        """部分重叠排课：共享行只出现一次"""
+        resp = client.post('/api/calendars/999/courses/details',
+                           json={'courseCodes': ['511112']})
+        assert resp.status_code == 200
+        details = resp.json['data']['511112']
+        assert len(details) == 1  # 一个教学班
+        arr = details[0]['arrangementInfo']
+        assert len(arr) == 3, \
+            f"去重后应为 3 条（1条共享+2条独有），实际 {len(arr)} 条"
+        # 共享行 [6] 南310 只出现一次
+        texts = [a['arrangementText'] for a in arr]
+        count_shared = sum(1 for t in texts if '[6]' in t)
+        assert count_shared == 1, \
+            f"共享行 '[6] 南310' 应出现 1 次，实际 {count_shared} 次"
+
+
 class TestSearch:
     def test_search_by_name(self, client, seed_data):
         resp = client.post('/api/calendars/999/courses/search',
@@ -253,3 +287,40 @@ class TestSyncBatch:
         resp = client.post('/api/calendars/999/courses/batch',
                            content_type='application/json')
         assert resp.status_code == 400
+
+    def test_batch_shared_arrangement(self, client, seed_data):
+        """batch: 共同排课（3个老师完全相同）→ 去重后只有 1 条 arrangementInfo"""
+        resp = client.post('/api/calendars/999/courses/batch',
+                           json={'otherCourseCodes': ['020527']})
+        assert resp.status_code == 200
+        course_list = resp.json['data']['020527']
+        assert len(course_list) == 1  # 一个教学班
+        assert len(course_list[0]['teachers']) == 3  # 3 个老师
+        assert len(course_list[0]['arrangementInfo']) == 1, \
+            f"共同排课去重后应为 1 条，实际 {len(course_list[0]['arrangementInfo'])} 条"
+
+    def test_batch_split_arrangement(self, client, seed_data):
+        """batch: 分工排课（不同老师不同安排）→ 全部保留"""
+        resp = client.post('/api/calendars/999/courses/batch',
+                           json={'otherCourseCodes': ['100395']})
+        assert resp.status_code == 200
+        course_list = resp.json['data']['100395']
+        assert len(course_list) == 2  # 两个教学班
+        for detail in course_list:
+            assert len(detail['arrangementInfo']) == 4, \
+                f"分工排课每个班应为 4 条，实际 {len(detail['arrangementInfo'])} 条"
+
+    def test_batch_partial_overlap_dedup(self, client, seed_data):
+        """batch: 部分重叠排课 → 共享行只出现一次"""
+        resp = client.post('/api/calendars/999/courses/batch',
+                           json={'otherCourseCodes': ['511112']})
+        assert resp.status_code == 200
+        course_list = resp.json['data']['511112']
+        assert len(course_list) == 1  # 一个教学班
+        arr = course_list[0]['arrangementInfo']
+        assert len(arr) == 3, \
+            f"去重后应为 3 条（1条共享+2条独有），实际 {len(arr)} 条"
+        texts = [a['arrangementText'] for a in arr]
+        count_shared = sum(1 for t in texts if '[6]' in t)
+        assert count_shared == 1, \
+            f"共享行 '[6] 南310' 应出现 1 次，实际 {count_shared} 次"

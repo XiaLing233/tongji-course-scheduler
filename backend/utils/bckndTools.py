@@ -147,10 +147,41 @@ def splitEndline(text):
     输入： "关佶红(05222) 星期一3-4节 [1-17] 南129\n关佶红(05222) 星期三3-4节 [1-17单] 北301\n"
     输出： ["关佶红(05222) 星期一3-4节 [1-17] 南129", "关佶红(05222) 星期三3-4节 [1-17单] 北301"]
     '''
-    
+
     # print(text.split("\n")[:-1])
 
     return text.split("\n")[:-1]
+
+
+def parseArrangements(course, source_key='locations'):
+    '''
+    将课程字典中的 locations/arrangementInfo 字符串解析为结构化 arrangementInfo 数组。
+    原地修改，不返回值。
+    '''
+    text = course[source_key]
+    seen = set()
+    course['arrangementInfo'] = []
+    for location in splitEndline(text):
+        obj = arrangementTextToObj(location)
+        if obj['arrangementText'] not in seen:
+            # 这一步不能省略，因为很有可能一位老师包含多个排课时段子串，这些字符串拼接起来不同，但是可能存在重复的子串
+            course['arrangementInfo'].append(obj)
+            seen.add(obj['arrangementText'])
+    course['arrangementInfo'].sort(
+        key=lambda x: (x['occupyDay'], x['occupyTime'][0] if x['occupyTime'] else 0)
+    )
+    if source_key != 'arrangementInfo':
+        del course[source_key]
+
+
+def processArrangements(details, source_key='locations'):
+    '''
+    对一个课程详情列表批量解析 arrangementInfo，并按 code 排序。
+    原地修改，不返回值。
+    '''
+    for detail in details:
+        parseArrangements(detail, source_key)
+    details.sort(key=lambda x: x['code'])
 
 def optCourseQueryListGenerator(day, section, calendarId=0):
     '''
