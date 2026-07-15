@@ -207,6 +207,16 @@ class CourseQueries(ReadConnection):
         params = []
         condition = ""
 
+        # ── 内层按需 JOIN（仅筛选所需的表）──
+        inner_joins = ""
+        if searchBody.get('teacherCode') or searchBody.get('teacherName'):
+            inner_joins += " JOIN teacher AS t ON t.teachingClassid = c.id"
+        if searchBody.get('campus'):
+            inner_joins += " JOIN campus AS ca ON ca.campus = c.campus"
+        if searchBody.get('faculty'):
+            inner_joins += " JOIN faculty AS f ON f.faculty = c.faculty"
+
+        # ── 筛选条件 ──
         if searchBody.get('courseName'):
             condition += " AND c.courseName LIKE %s"
             params.append("%" + searchBody["courseName"] + "%")
@@ -235,14 +245,20 @@ class CourseQueries(ReadConnection):
             'courseNature', JSON_ARRAYAGG(DISTINCT n.courseLabelName),
             'campus', JSON_ARRAYAGG(DISTINCT ca.campusI18n ORDER BY ca.campusI18n)
         )
-        FROM coursedetail as c
-        JOIN faculty AS f ON f.faculty = c.faculty
-        JOIN campus as ca ON ca.campus = c.campus
-        JOIN coursenature as n ON c.courseLabelId = n.courseLabelId
-        JOIN teacher as t ON t.teachingClassid = c.id
-        WHERE 1=1 {condition}
+        FROM (
+            SELECT DISTINCT c.courseCode
+            FROM coursedetail c
+            {inner_joins}
+            WHERE 1=1 {condition}
+            ORDER BY c.courseCode
+            LIMIT %s
+        ) AS codes
+        JOIN coursedetail c ON c.courseCode = codes.courseCode
+        JOIN faculty f ON f.faculty = c.faculty
+        JOIN campus ca ON ca.campus = c.campus
+        JOIN coursenature n ON n.courseLabelId = n.courseLabelId
         GROUP BY c.courseCode, c.courseName, f.facultyI18n, c.credit
-        LIMIT %s
+        ORDER BY c.courseCode
         """
         params.append(sizeLimit)
         self.cursor.execute(sql, tuple(params))
