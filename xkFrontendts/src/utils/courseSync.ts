@@ -10,7 +10,7 @@ import type {
     teacherlet,
     courseOnTable
 } from "./myInterface";
-import { CourseChangeType } from "./myInterface";
+import { CourseChangeType, CourseStatus } from "./myInterface";
 import { canAddCourse, deleteOccupied, insertOccupied } from "./courseManipulate";
 import axios from "axios";
 
@@ -398,7 +398,7 @@ export async function fetchLatestCourseInfo(
                             teachers: detail.teachers || [],
                             teachingLanguage: detail.teachingLanguageI18n,
                             arrangementInfo,
-                            status: oldCourse.courseDetail.find((d: courseDetaillet) => d.code === detail.code)?.status || 0
+                            status: oldCourse.courseDetail.find((d: courseDetaillet) => d.code === detail.code)?.status || CourseStatus.Unselected
                         };
                         
                         // 如果 API 返回了 isExclusive 字段，添加到结果中
@@ -677,16 +677,16 @@ export function applyCourseSync(
             // 课程信息有变更，使用新的课程信息
             const newCourse = newCourseMap.get(oldCourse.courseCode);
             if (newCourse) {
-                // 如果是冲突课程，需要将状态改为未选（status=0）
+                // 如果是冲突课程，需要将状态改为未选
                 if (change.changeType === CourseChangeType.ConflictAfterUpdate) {
-                    newCourse.status = 0;
+                    newCourse.status = CourseStatus.Unselected;
                     newCourse.teacher = []; // 清除已选教师
                     // 找到对应的 courseDetail 并设置为未选状态
                     const selectedCode = oldSelectedCodes.find(code => code.startsWith(oldCourse.courseCode));
                     if (selectedCode) {
                         const detail = newCourse.courseDetail.find(d => d.code === selectedCode);
                         if (detail) {
-                            detail.status = 0;
+                            detail.status = CourseStatus.Unselected;
                         }
                     }
                 }

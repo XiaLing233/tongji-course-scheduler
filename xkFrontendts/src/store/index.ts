@@ -1,6 +1,7 @@
 import { createStore } from "vuex";
 import { canAddCourse, insertOccupied, deleteOccupied, isSameCourse } from "@/utils/courseManipulate";
-import type { 
+import { CourseStatus } from "@/utils/myInterface";
+import type {
     courseDetaillet, 
     baseInfoTriplet, 
     courseInfo, 
@@ -160,10 +161,10 @@ const store = createStore({
                                         .find((course: stagedCourse) => course.courseCode === payload.code.substring(0, payload.code.length - 2));
                     if (stagedCourse) {
                         // console.log("目标", stagedCourse);
-                        const targetCourse = stagedCourse.courseDetail.find((course: courseDetaillet) => isSameCourse(course.code, payload.code) && course.status === 1);
+                        const targetCourse = stagedCourse.courseDetail.find((course: courseDetaillet) => isSameCourse(course.code, payload.code) && course.status === CourseStatus.Staged);
                         if (targetCourse) {
                             // console.log("找到了！");
-                            targetCourse.status = 0;
+                            targetCourse.status = CourseStatus.Unselected;
                         }
                     }
                 }
@@ -191,10 +192,10 @@ const store = createStore({
                 insertOccupied(state.occupied, payload.arrangementInfo, payload.code, state.clickedCourseInfo.courseName);
 
                 // 修改状态文字
-                payload.status = 1;
+                payload.status = CourseStatus.Staged;
                 const stagedCourse = state.commonLists.stagedCourses.find((course: stagedCourse) => course.courseCode === payload.code.substring(0, payload.code.length - 2));
                 if (stagedCourse) {
-                    stagedCourse.status = 1;
+                    stagedCourse.status = CourseStatus.Staged;
                     stagedCourse.teacher = payload.teachers;
                 }
 
@@ -209,18 +210,21 @@ const store = createStore({
             // 要修改两件事：1. stagedCourses 的 status 2. 添加新的 selectedCourses
             state.commonLists.stagedCourses.forEach((course: stagedCourse) => {
                 // console.log(course);
-                if (course.status === 1) {
-                    // 修改状态为 2
-                    course.status = 2;
-                    
-                    // 把 courseDetail 中的 status 也修改为 2，并且 push 到 selectedCourses 中
+                if (course.status === CourseStatus.Staged) {
+                    // 修改状态为已选
+                    course.status = CourseStatus.Selected;
+
+                    // 把 courseDetail 中的 status 也修改为已选，并且 push 到 selectedCourses 中
                     course.courseDetail.forEach((detail: courseDetaillet) => {
-                        if (detail.status === 1) {
-                            detail.status = 2;
-                            state.commonLists.selectedCourses.push(detail.code);
+                        if (detail.status === CourseStatus.Staged) {
+                            detail.status = CourseStatus.Selected;
+                            // 已保存的班级被重新选回时，code 可能已在列表中，去重避免重复班号
+                            if (!state.commonLists.selectedCourses.includes(detail.code)) {
+                                state.commonLists.selectedCourses.push(detail.code);
+                            }
                         }
-                        else if (detail.status === 2) {
-                            detail.status = 0; // 如果是之前选的课，要修改状态为未选
+                        else if (detail.status === CourseStatus.Selected) {
+                            detail.status = CourseStatus.Unselected; // 如果是之前选的课，要修改状态为未选
                             state.commonLists.selectedCourses = state.commonLists.selectedCourses.filter((code: string) => code !== detail.code);
                         }
                     });
@@ -293,7 +297,7 @@ const store = createStore({
                 grade: state.majorSelected.grade,
                 major: state.majorSelected.major,
                 stagedCourses: state.commonLists.stagedCourses,
-                selectedCourses: state.commonLists.selectedCourses,
+                selectedCourses: [...new Set(state.commonLists.selectedCourses)],
                 occupied: state.occupied,
                 timeTableData: state.timeTableData,
                 updateTime: state.updateTime,
@@ -307,7 +311,7 @@ const store = createStore({
                     if (snap.grade !== undefined) state.majorSelected.grade = snap.grade;
                     if (snap.major !== undefined) state.majorSelected.major = snap.major;
                     if (snap.stagedCourses) state.commonLists.stagedCourses = snap.stagedCourses;
-                    if (snap.selectedCourses) state.commonLists.selectedCourses = snap.selectedCourses;
+                    if (Array.isArray(snap.selectedCourses)) state.commonLists.selectedCourses = [...new Set(snap.selectedCourses as string[])];
                     if (snap.occupied) state.occupied = snap.occupied;
                     if (snap.timeTableData) state.timeTableData = snap.timeTableData;
                     if (snap.updateTime) state.updateTime = snap.updateTime;

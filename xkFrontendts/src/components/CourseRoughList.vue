@@ -34,7 +34,7 @@
                             <!-- .stop 是为了事件不冒泡 -->
                             <a-button type="link" @click.stop="handleRemoveCourse(record)">
                                 <div class=" text-red-500">
-                                    <span v-if="record.status === 2" >退课</span>
+                                    <span v-if="record.status === CourseStatus.Selected" >退课</span>
                                     <span v-else>清除</span>
                                 </div>
                             </a-button>
@@ -51,11 +51,12 @@ import axios from 'axios';
 import { Modal } from 'ant-design-vue';
 import { mapStatusToChinese } from '@/utils/statusManipulate';
 import { errorNotify } from '@/utils/notify';
-import type { teacherlet, courseInfo } from '@/utils/myInterface';
+import { CourseStatus, type teacherlet, type courseInfo } from '@/utils/myInterface';
 
 export default {
     data() {
         return {
+            CourseStatus,
             columns: [
             {
                 title: '课程名称',
@@ -180,11 +181,11 @@ export default {
         mapStatusToChinese,
         getStatusTextColor(status: number) {
             switch(status) {
-                case 0:
+                case CourseStatus.Unselected:
                     return '';
-                case 1:
+                case CourseStatus.Staged:
                     return 'text-yellow-300';
-                case 2:
+                case CourseStatus.Selected:
                     return 'text-green-400';
                 default:
                     return '';
@@ -195,8 +196,8 @@ export default {
             this.$store.commit('solidify');
         },
         handleRemoveCourse(record: courseInfo) {
-            // 只有退课(status === 2)时才需要二次确认
-            if (record.status === 2) {
+            // 只有退课(已选)时才需要二次确认
+            if (record.status === CourseStatus.Selected) {
                 Modal.confirm({
                     title: '确认退课',
                     content: `确定要退掉 ${record.courseName} 课程吗？`,

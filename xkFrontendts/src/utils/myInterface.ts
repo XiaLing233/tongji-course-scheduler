@@ -1,3 +1,10 @@
+// 课程选择状态。数字枚举：JSON 序列化为纯数字，与 localStorage 历史快照兼容，勿改数值。
+export enum CourseStatus {
+    Unselected = 0, // 未选
+    Staged = 1,     // 备选（已加入课表，未保存）
+    Selected = 2,   // 已选（已保存）
+}
+
 // occupy 三维数组一个单元的数据结构
 export interface occupyCell {
     code: string;
@@ -36,7 +43,7 @@ export interface courseDetaillet {
     campus: string;
     code: string;
     isExclusive?: boolean;
-    status?: number;
+    status?: CourseStatus;
     teachers: teacherlet[];
     teachingLanguage: string;
 }
@@ -48,7 +55,7 @@ export interface courseInfo {
     courseCode: string;
     courseType: string;
     credit: number;
-    status: number,
+    status: CourseStatus,
     teacher: string[];
     courseDetail: courseDetaillet[];
     grade?: number;
@@ -82,7 +89,7 @@ export interface stagedCourse {
     credit: number;
     courseType: string;
     teacher: teacherlet[];
-    status: number;
+    status: CourseStatus;
     courseDetail: courseDetaillet[];
 }
 
