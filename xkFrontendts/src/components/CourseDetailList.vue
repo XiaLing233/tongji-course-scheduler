@@ -37,7 +37,7 @@
 
 <script lang="ts">
 import { mapStatusToChinese } from '@/utils/statusManipulate';
-import type { teacherlet, arrangementInfolet, courseDetaillet, stagedCourse } from '@/utils/myInterface';
+import { CourseStatus, type teacherlet, type arrangementInfolet, type courseDetaillet, type stagedCourse } from '@/utils/myInterface';
 
     export default {
         data() {
@@ -127,11 +127,11 @@ import type { teacherlet, arrangementInfolet, courseDetaillet, stagedCourse } fr
             getStatusTextColor(status: number) {
                 // console.log("132", status);
                 switch (status) {
-                    case 0:
+                    case CourseStatus.Unselected:
                         return '';
-                    case 1:
+                    case CourseStatus.Staged:
                         return 'text-yellow-300';
-                    case 2:
+                    case CourseStatus.Selected:
                         return 'text-red-500';
                     default:
                         return '';
@@ -139,14 +139,14 @@ import type { teacherlet, arrangementInfolet, courseDetaillet, stagedCourse } fr
             },
             getRowClass(record: {status: number}, index: number) {
                 let className = index % 2 === 0 ? 'bg-white' : 'bg-gray-50';
-                
+
                 switch (record.status) {
-                    case 0: // 未选
+                    case CourseStatus.Unselected: // 未选
                         break;
-                    case 1: // 备选
+                    case CourseStatus.Staged: // 备选
                         className =  'bg-blue-500/60';
                         break;
-                    case 2:
+                    case CourseStatus.Selected:
                         className += ' ' + 'text-red-500';
                         break;
                     default:

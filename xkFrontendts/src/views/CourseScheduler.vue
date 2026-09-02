@@ -39,7 +39,7 @@ import axios from 'axios';
 import { defineAsyncComponent } from 'vue';
 import { errorNotify } from '../utils/notify';
 import { getRowSection } from '../utils/timetable';
-import type { courseInfo } from '../utils/myInterface';
+import { CourseStatus, type courseInfo } from '../utils/myInterface';
 
 export default {
   name: 'CourseScheduler',
@@ -118,10 +118,10 @@ export default {
           credit: originalCourse.credit,
           courseType: "必",
           teacher: [],
-          status: 0,
+          status: CourseStatus.Unselected,
           courseDetail: originalCourse.courses.map((course: Record<string, unknown>) => ({
             ...course,
-            status: 0
+            status: CourseStatus.Unselected
           }))
         }
 
@@ -161,10 +161,10 @@ export default {
                 credit: _roughCourse.credit,
                 courseType: "选",
                 teacher: [],
-                status: 0,
+                status: CourseStatus.Unselected,
                 courseDetail: _detailCourse.map((course: Record<string, unknown>) => ({
                   ...course,
-                  status: 0
+                  status: CourseStatus.Unselected
                 }))
               }
 
@@ -209,10 +209,10 @@ export default {
                 credit: _roughCourse.credit,
                 courseType: "查",
                 teacher: [],
-                status: 0,
+                status: CourseStatus.Unselected,
                 courseDetail: _detailCourse.map((course: Record<string, unknown>) => ({
                   ...course,
-                  status: 0
+                  status: CourseStatus.Unselected
                 }))
               }
 
