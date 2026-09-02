@@ -18,14 +18,17 @@ class MetaQueries(ReadConnection):
         return [json.loads(row[0]) for row in self.cursor.fetchall()]
 
     def getLatestUpdateTime(self, calendarId=None):
+        """最近一次「成功」同步的开始时间——失败日志不算数据更新。"""
         if calendarId is not None:
             self.cursor.execute(
                 'SELECT startTime FROM fetchlog WHERE calendarId = %s '
+                "AND status = 'completed' "
                 'ORDER BY startTime DESC LIMIT 1', (calendarId,)
             )
         else:
             self.cursor.execute(
-                'SELECT startTime FROM fetchlog ORDER BY startTime DESC LIMIT 1'
+                "SELECT startTime FROM fetchlog WHERE status = 'completed' "
+                'ORDER BY startTime DESC LIMIT 1'
             )
         rows = self.cursor.fetchall()
         return rows[0][0] if rows else None

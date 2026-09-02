@@ -41,3 +41,21 @@ class TestDbRouter:
         r1 = DbRouter()
         r2 = DbRouter()
         assert r1._pools is not r2._pools
+
+    def test_invalidate_pool_rebuilds(self):
+        """invalidate_pool 后 get_pool 重建新池（模拟蓝绿切换）"""
+        r = DbRouter()
+        pool1 = r.get_pool(999)
+        r.invalidate_pool(999)
+        pool2 = r.get_pool(999)
+        assert pool1 is not pool2
+        conn = pool2.get_connection()
+        c = conn.cursor()
+        c.execute('SELECT DATABASE()')
+        assert c.fetchone()[0] == 'calendar_999_a'
+        conn.close()
+
+    def test_invalidate_pool_unknown_calendar_noop(self):
+        """未建池的 calendarId 调用 invalidate_pool 不抛异常"""
+        r = DbRouter()
+        r.invalidate_pool(12345)
