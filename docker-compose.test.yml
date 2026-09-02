@@ -71,6 +71,7 @@ services:
       REDIS_PORT: "6379"
       REDIS_DB: "0"
       REDIS_STREAM_KEY: crawler:log
+      REDIS_MAXLEN: "5000"
     depends_on:
       crawler-db:
         condition: service_healthy

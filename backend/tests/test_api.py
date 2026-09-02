@@ -267,10 +267,53 @@ class TestSearch:
 
 
 class TestUpdateTime:
+    @staticmethod
+    def _clear_update_time_cache():
+        from utils.redis_cache import cache_key
+        from utils.redis_client import state
+        r = state['r']
+        if r:
+            r.delete(cache_key(999, 'update-time'))
+
     def test_update_time(self, client, seed_data):
+        self._clear_update_time_cache()
         resp = client.get('/api/calendars/999/update-time')
         assert resp.status_code == 200
         assert resp.json['data'] is not None
+
+    def test_update_time_ignores_failed_log(self, client, seed_data, test_meta_conn):
+        """失败的同步日志不应被当作最新更新时间"""
+        mc = test_meta_conn.cursor()
+        mc.execute("INSERT INTO fetchlog (calendarId, startTime, endTime, status, "
+                   "totalCourses, totalPages) "
+                   "VALUES (999, '2026-09-01 08:00:00', '2026-09-01 08:10:00', "
+                   "'failed', 0, 0)")
+        test_meta_conn.commit()
+        try:
+            self._clear_update_time_cache()
+            resp = client.get('/api/calendars/999/update-time')
+            assert resp.status_code == 200
+            assert resp.json['data'] == '2026-06-01 08:00'  # 仍是成功日志的时间
+        finally:
+            mc.execute("DELETE FROM fetchlog "
+                       "WHERE calendarId = 999 AND status = 'failed'")
+            test_meta_conn.commit()
+            self._clear_update_time_cache()
+
+    def test_update_time_none_when_only_failed(self, client, seed_data, test_meta_conn):
+        """没有成功日志时返回 None"""
+        mc = test_meta_conn.cursor()
+        mc.execute("UPDATE fetchlog SET status = 'failed' WHERE calendarId = 999")
+        test_meta_conn.commit()
+        try:
+            self._clear_update_time_cache()
+            resp = client.get('/api/calendars/999/update-time')
+            assert resp.status_code == 200
+            assert resp.json['data'] is None
+        finally:
+            mc.execute("UPDATE fetchlog SET status = 'completed' WHERE calendarId = 999")
+            test_meta_conn.commit()
+            self._clear_update_time_cache()
 
 
 class TestSyncBatch:

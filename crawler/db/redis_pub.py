@@ -41,7 +41,8 @@ def publish(fetchlog_id, calendar_id, calendar_name, level, message, seq=0):
 
 
 def cache_invalidate(calendar_id):
-    """同步完成后清除该学期缓存 + 全局日历列表缓存，返回清除的 key 数量。"""
+    """同步完成后清除该学期缓存 + 全局日历列表缓存，并通知 backend 重建
+    该学期连接池（蓝绿切换后 active_suffix 已翻转）。返回清除的 key 数量。"""
     try:
         r = _get_redis()
         deleted = 0
@@ -51,6 +52,8 @@ def cache_invalidate(calendar_id):
         for key in r.scan_iter("cache:cal:0:*"):
             r.delete(key)
             deleted += 1
+        # 频道常量与 backend/utils/pool_refresh.py 保持一致
+        r.publish('backend:pool-refresh', str(calendar_id))
         return deleted
     except redis.RedisError:
         return 0
