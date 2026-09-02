@@ -39,6 +39,7 @@
 如果使用容器，则只需要准备
 
 - Docker + Docker Compose
+- make（可选，用于 `make xxx` 快捷命令；Linux/macOS 自带，Windows 请到 [GNUWin32](https://gnuwin32.sourceforge.net/packages/make.htm) 下载安装）
 
 如果希望不使用容器，则需要为前后端准备依赖（不推荐）
 
@@ -46,6 +47,18 @@
 - Python 3.11（可选，用于不使用 Docker 调试后端/爬虫）
 
 ### 快速启动
+
+#### 使用 make（推荐）
+
+```bash
+make init        # 首次使用：复制 .env.example 为 .env，再手动填写 DB_PASSWORD 等必要字段
+make up          # 启动业务服务（mysql + redis + backend + frontend）
+make up-monitoring  # 如需监控（Prometheus + Grafana + Loki...），用这个代替 make up
+```
+
+所有命令见 `make help`。
+
+#### 不使用 make
 
 ```bash
 # 1. 配置文件
@@ -56,16 +69,21 @@ docker compose up -d --build
 
 # 如需监控（Prometheus + Grafana + Loki...），加上监控文件：
 # docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d --build
-
-# 3. 访问
-# 前端 http://localhost:1239
-# 监控 http://localhost:1239/grafana/
 ```
 
-此时数据库为空，需要爬取课程数据：
+访问：
+
+- 前端 http://localhost:1239
+- 监控 http://localhost:1239/grafana/
+
+此时数据库为空，需要爬取课程数据（爬取指定学期，可多个）：
 
 ```bash
-# 爬取指定学期（可多个）
+# make
+make crawl CALENDARS="122"
+make crawl CALENDARS="122 121" MESSAGE="手动同步"
+
+# 无 make
 docker compose run --rm crawler -c 122
 docker compose run --rm crawler -c 122 121 -m "手动同步"
 ```
@@ -75,10 +93,13 @@ docker compose run --rm crawler -c 122 121 -m "手动同步"
 ### 运行测试
 
 ```bash
-# 后端测试
-docker compose -f docker-compose.test.yml up --build backend --exit-code-from backend
+# make（测试结束后自动清理测试容器）
+make test            # 后端 + 爬虫
+make test-backend    # 仅后端
+make test-crawler    # 仅爬虫
 
-# 爬虫测试
+# 无 make
+docker compose -f docker-compose.test.yml up --build backend --exit-code-from backend
 docker compose -f docker-compose.test.yml up --build crawler --exit-code-from crawler
 ```
 
@@ -134,9 +155,11 @@ tongji-course-scheduler/
 3. **构建 Docker 镜像**并推送到 ghcr.io
 4. **SSH 到服务器**，`git pull && docker compose pull && docker compose up -d`
 
-生产部署命令（监控与业务服务同时启动）：
+生产部署命令（监控与业务服务同时启动，拉取镜像不构建）：
 
 ```bash
+make deploy
+# 或
 docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
 ```
 
